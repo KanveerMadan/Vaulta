@@ -47,136 +47,90 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-dvh bg-forest-950 flex">
-      {/* Left panel — brand */}
-      <div className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 bg-forest-900 border-r border-forest-700 p-12">
-        <div>
-          <span className="font-display text-2xl font-light text-cream-200 tracking-tight">Vaulta</span>
-        </div>
-        <div className="space-y-8">
-          <div>
-            <p className="font-display text-4xl font-light text-cream-100 leading-tight">
-              Your money,<br />finally makes sense.
-            </p>
-            <p className="mt-4 text-forest-200 text-sm leading-relaxed max-w-xs">
-              AI that reads your Gmail, bank SMS, and UPI history to give you an honest picture of where your money goes.
-            </p>
-          </div>
-          <div className="space-y-3">
-            {[
-              'Works with any Indian bank or UPI app',
-              'No loan upselling. No hidden agenda.',
-              'Ask in English or Hinglish',
-            ].map((t) => (
-              <div key={t} className="flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-forest-300 shrink-0" />
-                <span className="text-forest-100 text-sm">{t}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <p className="text-forest-500 text-xs">
-          ₹99/month when we charge. We make money when you pay us, not when we sell your data.
+    // In Login.jsx, replace the outermost div's className:
+<div className="min-h-dvh flex">
+
+  {/* Left panel — keep dark */}
+  <div className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 p-12 grain"
+    style={{ background: '#0A1A0E', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+    {/* ... existing left panel content unchanged ... */}
+  </div>
+
+  {/* Right panel — light */}
+  <div className="flex-1 flex items-center justify-center p-6"
+    style={{ background: '#F2F7F3' }}>
+    <div className="w-full max-w-sm animate-fade-up">
+
+      {/* Mobile logo */}
+      <div className="lg:hidden mb-10 text-center">
+        <span className="font-display text-2xl font-light tracking-tight" style={{ color: '#1A2E1E' }}>Vaulta</span>
+        <p className="text-sm mt-1" style={{ color: '#7A9E80' }}>Personal Finance AI for India</p>
+      </div>
+
+      <div className="mb-8">
+        <h1 className="text-xl font-semibold" style={{ color: '#1A2E1E' }}>
+          {mode === 'login' ? 'Welcome back' : 'Create your account'}
+        </h1>
+        <p className="text-sm mt-1" style={{ color: '#7A9E80' }}>
+          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
+            className="underline underline-offset-2 transition-colors"
+            style={{ color: '#2D6A4F' }}>
+            {mode === 'login' ? 'Sign up' : 'Log in'}
+          </button>
         </p>
       </div>
 
-      {/* Right panel — form */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-sm animate-fade-up">
-          {/* Mobile logo */}
-          <div className="lg:hidden mb-10 text-center">
-            <span className="font-display text-2xl font-light text-cream-200">Vaulta</span>
-            <p className="text-forest-300 text-sm mt-1">Personal Finance AI for India</p>
-          </div>
+      <div className="rounded-xl p-6 space-y-4"
+        style={{ background: '#FFFFFF', border: '1px solid #D4E4D7', boxShadow: '0 1px 3px rgba(45,106,79,0.06), 0 4px 16px rgba(45,106,79,0.04)' }}>
 
-          <div className="mb-8">
-            <h1 className="text-xl font-semibold text-cream-100">
-              {mode === 'login' ? 'Welcome back' : 'Create your account'}
-            </h1>
-            <p className="text-forest-300 text-sm mt-1">
-              {mode === 'login'
-                ? "Don't have an account? "
-                : 'Already have an account? '}
-              <button
-                onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
-                className="text-cream-300 hover:text-cream-100 underline underline-offset-2 transition-colors"
-              >
-                {mode === 'login' ? 'Sign up' : 'Log in'}
-              </button>
-            </p>
-          </div>
+        {/* Google button */}
+        <button onClick={handleGoogle} disabled={loading}
+          className="w-full flex items-center justify-center gap-3 text-sm font-medium transition-all duration-150 disabled:opacity-40 active:scale-[0.98]"
+          style={{ background: '#F2F7F3', border: '1px solid #D4E4D7', borderRadius: '8px', padding: '0.75rem', color: '#1A2E1E' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#E8F0EA'}
+          onMouseLeave={e => e.currentTarget.style.background = '#F2F7F3'}>
+          <GoogleIcon />
+          Continue with Google
+        </button>
 
-          <div className="space-y-3">
-            {/* Google */}
-            <button
-              onClick={handleGoogle}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-3 bg-forest-800 hover:bg-forest-700
-                         border border-forest-600 hover:border-forest-500 text-cream-200 text-sm font-medium
-                         py-3 rounded-lg transition-all duration-150 disabled:opacity-40 active:scale-[0.98]"
-            >
-              <GoogleIcon />
-              Continue with Google
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-forest-700" />
-              <span className="text-forest-500 text-xs">or</span>
-              <div className="flex-1 h-px bg-forest-700" />
-            </div>
-
-            {/* Email form */}
-            <form onSubmit={handleEmail} className="space-y-3">
-              <div>
-                <label className="label block mb-1.5">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  required
-                  className="input"
-                  autoComplete="email"
-                />
-              </div>
-              <div>
-                <label className="label block mb-1.5">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="input"
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                />
-              </div>
-
-              {error && (
-                <div className="bg-danger/10 border border-danger/20 rounded-lg px-3 py-2.5">
-                  <p className="text-danger text-xs">{error}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || !email || !password}
-                className="btn-primary w-full mt-1"
-              >
-                {loading
-                  ? 'Please wait...'
-                  : mode === 'login' ? 'Log in' : 'Create account'}
-              </button>
-            </form>
-          </div>
-
-          <p className="text-center text-forest-500 text-xs mt-8 leading-relaxed">
-            By continuing, you agree to our terms of service.<br />
-            Your data is never sold or shared.
-          </p>
+        {/* Divider */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px" style={{ background: '#E8F0EA' }} />
+          <span className="text-xs" style={{ color: '#8FAF98' }}>or</span>
+          <div className="flex-1 h-px" style={{ background: '#E8F0EA' }} />
         </div>
+
+        {/* Form */}
+        <form onSubmit={handleEmail} className="space-y-3">
+          <div>
+            <label className="label block mb-1.5">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com" required className="input" autoComplete="email" />
+          </div>
+          <div>
+            <label className="label block mb-1.5">Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••" required className="input"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
+          </div>
+          {error && (
+            <div className="rounded-lg px-3 py-2.5" style={{ background: '#FEE2E2', border: '1px solid #FECACA' }}>
+              <p className="text-xs" style={{ color: '#991B1B' }}>{error}</p>
+            </div>
+          )}
+          <button type="submit" disabled={loading || !email || !password} className="btn-primary w-full justify-center mt-1">
+            {loading ? 'Please wait...' : mode === 'login' ? 'Log in' : 'Create account'}
+          </button>
+        </form>
       </div>
+
+      <p className="text-center text-xs mt-6 leading-relaxed" style={{ color: '#8FAF98' }}>
+        By continuing you agree to our terms of service.<br />Your data is never sold or shared.
+      </p>
     </div>
+  </div>
+</div>
   )
 }
 

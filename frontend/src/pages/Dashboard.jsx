@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useFinanceStore } from '../store/financeStore'
 import { useAuthStore } from '../store/authStore'
 import { Link } from 'react-router-dom'
@@ -9,11 +9,11 @@ import InsightCard from '../components/InsightCard'
 const MOCK_SUMMARY = { spent: 24800, budgetLeft: 15200, predicted: 8400, budget: 40000 }
 
 const MOCK_CATEGORIES = [
-  { name: 'Food & Delivery', amount: 9200,  pct: 37, color: '#166534' },
+  { name: 'Food & Delivery', amount: 9200,  pct: 37, color: '#2D6A4F' },
   { name: 'Shopping',        amount: 7400,  pct: 30, color: '#4A9955' },
   { name: 'Transport',       amount: 3100,  pct: 13, color: '#6DB87A' },
-  { name: 'Subscriptions',   amount: 2840,  pct: 11, color: '#C9A84C' },
-  { name: 'Other',           amount: 2260,  pct: 9,  color: '#A8D9B0' },
+  { name: 'Subscriptions',   amount: 2840,  pct: 11, color: '#B5852A' },
+  { name: 'Other',           amount: 2260,  pct: 9,  color: '#B8CFC0' },
 ]
 
 const MOCK_TXN = [
@@ -41,26 +41,26 @@ function useCountUp(target, duration = 1200) {
   return value
 }
 
-function MetricCard({ label, value, sub, subColor = 'text-forest-500', progress, delay = 0 }) {
+function MetricCard({ label, value, sub, subColor, progress, delay = 0 }) {
   const count = useCountUp(value)
+  const pctColor = progress > 80 ? '#C0392B' : '#2D6A4F'
+
   return (
-    <div className="card shadow-card p-5 animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
+    <div className="card p-5 animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
       <p className="label mb-3">{label}</p>
-      <p className="font-display text-3xl font-light text-forest-900 tracking-tight tabular-nums">
+      <p className="font-display tracking-tight tabular-nums"
+        style={{ fontSize: '1.875rem', fontWeight: 300, color: '#1A2E1E', lineHeight: 1 }}>
         ₹{count.toLocaleString('en-IN')}
       </p>
       {progress !== undefined && (
-        <div className="mt-3 h-1 bg-cream-300 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-1000 ease-out"
-            style={{
-              width: `${Math.min(progress, 100)}%`,
-              backgroundColor: progress > 80 ? '#C0392B' : '#166534',
-            }}
-          />
+        <div className="mt-3 rounded-full overflow-hidden" style={{ height: '3px', background: '#E8F0EA' }}>
+          <div className="h-full rounded-full transition-all duration-1000 ease-out"
+            style={{ width: `${Math.min(progress, 100)}%`, background: pctColor }} />
         </div>
       )}
-      {sub && <p className={`text-xs mt-2 ${subColor}`}>{sub}</p>}
+      {sub && (
+        <p className="text-xs mt-2" style={{ color: subColor || '#7A9E80' }}>{sub}</p>
+      )}
     </div>
   )
 }
@@ -76,7 +76,6 @@ export default function Dashboard() {
 
   const firstName = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
   const budgetPct = Math.round((MOCK_SUMMARY.spent / MOCK_SUMMARY.budget) * 100)
-
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
@@ -85,14 +84,17 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-start justify-between animate-fade-up">
         <div>
-          <h1 className="font-display text-2xl font-light text-cream-100 tracking-tight">
+          <h1 className="font-display font-light tracking-tight"
+            style={{ fontSize: '1.625rem', color: '#1A2E1E' }}>
             {greeting}, {firstName}
           </h1>
-          <p className="text-forest-400 text-sm mt-0.5">
-            {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })} · {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate()} days remaining
+          <p className="text-sm mt-0.5" style={{ color: '#7A9E80' }}>
+            {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })} ·{' '}
+            {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate()} days remaining
           </p>
         </div>
-        <Link to="/connect" className="btn-ghost text-xs hidden sm:flex items-center gap-2">
+        <Link to="/connect"
+          className="btn-ghost hidden sm:flex items-center gap-2 text-xs">
           Connect accounts
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
@@ -101,31 +103,30 @@ export default function Dashboard() {
       </div>
 
       {/* Demo banner */}
-      <div className="card-glass rounded-xl px-4 py-3 flex items-center justify-between gap-4 animate-fade-up delay-75">
+      <div className="card-subtle rounded-xl px-4 py-3 flex items-center justify-between gap-4 animate-fade-up delay-75"
+        style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-gold animate-pulse shrink-0" />
+          <div className="w-2 h-2 rounded-full animate-pulse shrink-0" style={{ background: '#B5852A' }} />
           <div>
-            <p className="text-cream-200 text-sm font-medium">Showing demo data</p>
-            <p className="text-forest-400 text-xs">Connect Gmail or bank SMS to see your real spending</p>
+            <p className="text-sm font-medium" style={{ color: '#92400E' }}>Showing demo data</p>
+            <p className="text-xs" style={{ color: '#B45309' }}>Connect Gmail or bank SMS to see your real spending</p>
           </div>
         </div>
-        <Link to="/connect" className="btn-primary shrink-0 !py-1.5 !px-3 text-xs whitespace-nowrap">
+        <Link to="/connect" className="btn-primary !py-1.5 !px-3 !text-xs shrink-0 whitespace-nowrap">
           Connect now
         </Link>
       </div>
 
-      {/* Metric cards */}
+      {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <MetricCard label="Spent this month" value={24800}
           sub={`${budgetPct}% of ₹40,000 budget`}
-          subColor={budgetPct > 80 ? 'text-danger' : 'text-forest-500'}
+          subColor={budgetPct > 80 ? '#C0392B' : '#7A9E80'}
           progress={budgetPct} delay={100} />
         <MetricCard label="Remaining budget" value={15200}
-          sub="₹543/day left to spend"
-          subColor="text-safe" delay={175} />
+          sub="₹543/day left to spend" subColor="#2D6A4F" delay={175} />
         <MetricCard label="Predicted month-end" value={8400}
-          sub="Based on current velocity"
-          subColor="text-forest-500" delay={250} />
+          sub="Based on current velocity" delay={250} />
       </div>
 
       {/* Chart + Insight */}
