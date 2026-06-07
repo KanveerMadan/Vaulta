@@ -13,14 +13,17 @@ function PrivateRoute() {
   return user ? <Outlet /> : <Navigate to="/login" replace />
 }
 
-function FullScreenLoader() {
+function Loader() {
   return (
-    <div className="min-h-dvh bg-bg flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 rounded-2xl bg-brand flex items-center justify-center">
-          <span className="text-white font-bold text-lg">V</span>
+    <div className="min-h-dvh bg-forest-950 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-5">
+        <span className="font-display text-2xl font-light text-cream-200 tracking-tight">Vaulta</span>
+        <div className="flex gap-1.5">
+          {[0,1,2].map(i => (
+            <div key={i} className="w-1.5 h-1.5 rounded-full bg-forest-300 animate-skeleton"
+              style={{ animationDelay: `${i * 0.2}s` }} />
+          ))}
         </div>
-        <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     </div>
   )
@@ -30,14 +33,14 @@ export default function App() {
   const { user, loading, setUser, setLoading } = useAuthStore()
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser)
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u)
       setLoading(false)
     })
     return unsub
   }, [])
 
-  if (loading) return <FullScreenLoader />
+  if (loading) return <Loader />
 
   return (
     <Routes>

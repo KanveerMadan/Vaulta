@@ -1,130 +1,135 @@
 import { useState } from 'react'
-import { Mail, MessageSquare, Building2, FileUp, CheckCircle2, ChevronRight } from 'lucide-react'
 import clsx from 'clsx'
 
 const SOURCES = [
   {
     id: 'gmail',
-    icon: <Mail size={18} />,
+    icon: '✉',
     title: 'Gmail',
-    description: 'Order confirmations from Swiggy, Zomato, Amazon, Flipkart',
-    phase: 'Connect now',
+    description: 'Parse order confirmations from Swiggy, Zomato, Amazon, Flipkart automatically.',
+    badge: 'Recommended first',
+    badgeColor: 'text-safe bg-safe/10 border-safe/20',
     available: true,
-    color: '#6C63FF',
   },
   {
     id: 'sms',
-    icon: <MessageSquare size={18} />,
+    icon: '💬',
     title: 'Bank SMS',
-    description: 'Real-time transaction alerts from any bank via WhatsApp bot',
-    phase: 'Connect now',
+    description: 'Forward transaction alerts from any Indian bank via our WhatsApp bot.',
+    badge: 'Easy setup',
+    badgeColor: 'text-cream-300 bg-forest-800 border-forest-600',
     available: true,
-    color: '#10B981',
   },
   {
     id: 'aa',
-    icon: <Building2 size={18} />,
+    icon: '🏦',
     title: 'Account Aggregator',
-    description: 'Full bank history — RBI regulated, read-only, 50+ banks',
-    phase: 'Coming in Phase 5',
+    description: 'Full bank history via RBI-regulated framework. Read-only. 50+ banks supported.',
+    badge: 'Phase 5',
+    badgeColor: 'text-forest-400 bg-forest-800 border-forest-700',
     available: false,
-    color: '#F59E0B',
   },
   {
     id: 'csv',
-    icon: <FileUp size={18} />,
-    title: 'UPI CSV / Statement',
-    description: 'Upload GPay/PhonePe CSV or credit card PDF',
-    phase: 'Coming soon',
+    icon: '📄',
+    title: 'UPI CSV / Statement PDF',
+    description: 'Upload exports from GPay, PhonePe, or credit card statements.',
+    badge: 'Coming soon',
+    badgeColor: 'text-forest-400 bg-forest-800 border-forest-700',
     available: false,
-    color: '#8888AA',
   },
+]
+
+const PRIVACY_ROWS = [
+  { can: true,  text: 'Order confirmation emails from Swiggy, Zomato, Amazon, Flipkart' },
+  { can: true,  text: 'Bank SMS messages you have explicitly forwarded to us' },
+  { can: true,  text: 'Transaction history via RBI Account Aggregator (read-only)' },
+  { can: false, text: 'Your Gmail inbox — we cannot read anything except order emails' },
+  { can: false, text: 'Your bank login credentials — we never ask for these' },
+  { can: false, text: 'Your UPI PIN or OTP — architecturally impossible for us to see' },
 ]
 
 export default function Connect() {
   const [connected, setConnected] = useState({})
 
-  const handleConnect = (id) => {
-    // Real OAuth flows go here in Phase 1
-    setConnected((prev) => ({ ...prev, [id]: true }))
-  }
-
   return (
-    <div className="space-y-6 animate-fade-up max-w-xl">
+    <div className="max-w-2xl space-y-8 animate-fade-up">
       <div>
-        <h1 className="text-xl font-semibold text-t1">Connect your accounts</h1>
-        <p className="text-t3 text-sm mt-1">
-          We earn the right to each data source separately. Start with Gmail — one jaw-dropping insight first.
+        <h1 className="font-display text-2xl font-light text-cream-100 tracking-tight">Connect your accounts</h1>
+        <p className="text-forest-300 text-sm mt-2 leading-relaxed">
+          We earn the right to each data source separately. Start with Gmail — get one real insight first, then decide if you want to go deeper.
         </p>
       </div>
 
-      {/* Trust pill */}
-      <div className="flex items-center gap-2 bg-positive/10 border border-positive/20 rounded-xl px-4 py-2.5 w-fit">
-        <div className="w-1.5 h-1.5 rounded-full bg-positive animate-pulse" />
-        <p className="text-positive text-xs font-medium">
-          We never see your bank login, password, or UPI PIN — architecturally impossible
+      {/* Trust signal */}
+      <div className="flex items-start gap-3 bg-safe/5 border border-safe/20 rounded-xl px-4 py-3.5">
+        <div className="w-5 h-5 rounded-full bg-safe/20 flex items-center justify-center shrink-0 mt-0.5">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#27AE60" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <p className="text-forest-100 text-sm leading-relaxed">
+          We never see your bank login, password, or UPI PIN. The Account Aggregator framework is RBI-regulated — you consent directly with your bank, not us.
         </p>
       </div>
 
-      {/* Sources */}
+      {/* Data sources */}
       <div className="space-y-3">
-        {SOURCES.map((source) => (
-          <div
-            key={source.id}
-            className={clsx(
-              'bg-card border rounded-2xl p-4 flex items-center gap-4 transition-all',
-              source.available ? 'border-border hover:border-t3' : 'border-border opacity-50'
-            )}
-          >
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              style={{ backgroundColor: `${source.color}18`, color: source.color }}
-            >
-              {source.icon}
+        <p className="label">Data sources</p>
+        {SOURCES.map((src) => (
+          <div key={src.id} className={clsx('card p-4 flex items-center gap-4', !src.available && 'opacity-50')}>
+            <div className="w-10 h-10 rounded-lg bg-forest-800 border border-forest-700 flex items-center justify-center text-lg shrink-0">
+              {src.icon}
             </div>
-
             <div className="flex-1 min-w-0">
-              <p className="text-t1 text-sm font-medium">{source.title}</p>
-              <p className="text-t3 text-xs mt-0.5 leading-relaxed">{source.description}</p>
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-cream-200 text-sm font-medium">{src.title}</p>
+                <span className={`text-xs border px-1.5 py-px rounded ${src.badgeColor}`}>{src.badge}</span>
+              </div>
+              <p className="text-forest-300 text-xs leading-relaxed">{src.description}</p>
             </div>
-
-            {connected[source.id] ? (
-              <div className="flex items-center gap-1.5 text-positive text-xs font-medium shrink-0">
-                <CheckCircle2 size={14} />
+            {connected[src.id] ? (
+              <div className="flex items-center gap-1.5 text-safe text-xs font-medium shrink-0">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
                 Connected
               </div>
-            ) : source.available ? (
+            ) : src.available ? (
               <button
-                onClick={() => handleConnect(source.id)}
-                className="flex items-center gap-1 text-xs font-medium text-brand hover:text-brand-light transition-colors shrink-0"
+                onClick={() => setConnected(p => ({ ...p, [src.id]: true }))}
+                className="btn-primary shrink-0 !py-1.5 !px-3 text-xs"
               >
-                Connect <ChevronRight size={13} />
+                Connect
               </button>
             ) : (
-              <span className="text-xs text-t3 shrink-0">{source.phase}</span>
+              <span className="text-forest-600 text-xs shrink-0">Soon</span>
             )}
           </div>
         ))}
       </div>
 
-      {/* What we see / don't see */}
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-        <h3 className="text-t1 text-sm font-medium">What Vaulta can and cannot see</h3>
-        <div className="space-y-2">
-          {[
-            { can: true,  text: 'Order confirmation emails from Swiggy, Zomato, Amazon' },
-            { can: true,  text: 'Bank SMS messages you have forwarded' },
-            { can: false, text: 'Your Gmail inbox — we cannot read other emails' },
-            { can: false, text: 'Your bank login credentials — we never ask' },
-            { can: false, text: 'Your UPI PIN — technically impossible for us to see' },
-          ].map((item, i) => (
-            <div key={i} className="flex items-start gap-2.5">
-              <span className={clsx('text-xs mt-0.5', item.can ? 'text-positive' : 'text-negative')}>
-                {item.can ? '✓' : '✗'}
+      {/* Privacy table */}
+      <div className="card overflow-hidden">
+        <div className="px-5 py-4 border-b border-forest-700">
+          <p className="text-cream-200 text-sm font-medium">What Vaulta can and cannot see</p>
+          <p className="text-forest-400 text-xs mt-0.5">Plain English. Not a privacy policy.</p>
+        </div>
+        <div className="divide-y divide-forest-800">
+          {PRIVACY_ROWS.map((row, i) => (
+            <div key={i} className="px-5 py-3 flex items-start gap-3">
+              <span className={`text-xs font-bold shrink-0 mt-0.5 ${row.can ? 'text-safe' : 'text-danger'}`}>
+                {row.can ? '✓' : '✗'}
               </span>
-              <span className="text-t2 text-xs leading-relaxed">{item.text}</span>
+              <span className="text-forest-100 text-sm leading-relaxed">{row.text}</span>
             </div>
           ))}
+        </div>
+        <div className="px-5 py-4 border-t border-forest-700 bg-forest-950/50">
+          <p className="text-forest-400 text-xs leading-relaxed">
+            The code that touches your data is publicly auditable on GitHub. 99% of users will never read it.
+            The fact that there's nothing to hide is the trust signal.
+          </p>
         </div>
       </div>
     </div>

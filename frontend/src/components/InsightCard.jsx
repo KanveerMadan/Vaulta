@@ -1,18 +1,23 @@
-import { Sparkles, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 
 const INSIGHTS = [
   {
-    text: "You order food every time you're awake past midnight. It's happened 12 times this month — ₹4,200 spent.",
-    type: 'warning',
+    headline: 'Late-night food habit',
+    body: "You order food every time you're awake past midnight. It's happened 12 times this month — ₹4,200 spent.",
+    tag: 'Pattern detected',
+    tagColor: 'text-gold border-gold/30 bg-gold/10',
   },
   {
-    text: "You haven't opened Zee5 in 47 days. It's costing you ₹499/month silently.",
-    type: 'alert',
+    headline: 'Silent subscription drain',
+    body: "You haven't opened Zee5 in 47 days. It's costing you ₹499/month without any use.",
+    tag: 'Action needed',
+    tagColor: 'text-danger border-danger/30 bg-danger/10',
   },
   {
-    text: "Your food spend is 37% of total expenses — ₹9,200. The Indian average is 22%.",
-    type: 'info',
+    headline: 'Food spend above average',
+    body: 'Your food spend is 37% of total expenses. The Indian urban average is 22%.',
+    tag: 'Benchmark',
+    tagColor: 'text-forest-200 border-forest-500 bg-forest-800',
   },
 ]
 
@@ -21,27 +26,33 @@ export default function InsightCard() {
   const insight = INSIGHTS[idx]
 
   return (
-    <div className="bg-card border border-brand/20 rounded-2xl p-5 h-full flex flex-col relative overflow-hidden">
-      {/* Glow */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-brand opacity-[0.04] rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
+    <div className="card p-5 h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Sparkles size={13} className="text-brand" />
-          <span className="text-brand text-xs font-medium">AI Insight</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6DB87A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p className="text-forest-200 text-xs font-medium uppercase tracking-widest">AI Insight</p>
         </div>
-        <button
-          onClick={() => setIdx((idx + 1) % INSIGHTS.length)}
-          className="text-t3 hover:text-t1 transition-colors"
-        >
-          <RefreshCw size={12} />
-        </button>
+        <div className="flex items-center gap-2">
+          {INSIGHTS.map((_, i) => (
+            <button key={i} onClick={() => setIdx(i)}
+              className={`w-1.5 h-1.5 rounded-full transition-all ${i === idx ? 'bg-cream-300' : 'bg-forest-700'}`}
+            />
+          ))}
+        </div>
       </div>
 
-      <p className="text-t1 text-sm leading-relaxed flex-1">{insight.text}</p>
+      <div className="flex-1 space-y-3">
+        <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded border ${insight.tagColor}`}>
+          {insight.tag}
+        </span>
+        <p className="font-display text-lg font-light text-cream-100 leading-snug">{insight.headline}</p>
+        <p className="text-forest-200 text-sm leading-relaxed">{insight.body}</p>
+      </div>
 
-      <div className="mt-4 pt-3 border-t border-border">
-        <p className="text-t3 text-xs">Updated daily · Powered by Groq</p>
+      <div className="mt-4 pt-4 border-t border-forest-700">
+        <p className="text-forest-500 text-xs">Updated daily · Powered by Groq</p>
       </div>
     </div>
   )

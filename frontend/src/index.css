@@ -2,22 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
 
-body {
-  background: #0D0D14;
-  color: #EEEEFF;
-  font-family: 'DM Sans', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  min-height: 100dvh;
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #0A1A0E;
+    color: #F5F0E4;
+    font-family: 'Instrument Sans', sans-serif;
+    min-height: 100dvh;
+  }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1E4826; border-radius: 99px; }
+
+  ::selection { background: #27602F; color: #FBF8F0; }
 }
 
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: #0D0D14; }
-::-webkit-scrollbar-thumb { background: #252535; border-radius: 99px; }
+@layer components {
+  .card {
+    @apply bg-forest-900 border border-forest-700 rounded-xl;
+  }
 
-.shimmer {
-  background: linear-gradient(90deg, #1A1A28 25%, #252535 50%, #1A1A28 75%);
-  background-size: 400px 100%;
-  animation: shimmer 1.8s infinite;
+  .card-elevated {
+    @apply bg-forest-800 border border-forest-600 rounded-xl;
+  }
+
+  .btn-primary {
+    @apply bg-cream-200 text-forest-900 font-semibold px-5 py-2.5 rounded-lg
+           hover:bg-cream-50 active:scale-[0.98] transition-all duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed text-sm;
+  }
+
+  .btn-ghost {
+    @apply border border-forest-600 text-cream-300 px-5 py-2.5 rounded-lg
+           hover:border-forest-400 hover:text-cream-100 active:scale-[0.98]
+           transition-all duration-150 text-sm;
+  }
+
+  .input {
+    @apply bg-forest-800 border border-forest-600 text-cream-100 placeholder-forest-400
+           rounded-lg px-4 py-3 w-full text-sm
+           focus:outline-none focus:border-forest-300 focus:ring-1 focus:ring-forest-300/30
+           transition-all duration-150;
+  }
+
+  .label {
+    @apply text-xs font-medium text-forest-200 uppercase tracking-widest;
+  }
+
+  .skeleton {
+    @apply bg-forest-800 rounded animate-skeleton;
+  }
+
+  .tag-positive {
+    @apply text-xs font-medium text-safe bg-safe/10 border border-safe/20 px-2 py-0.5 rounded;
+  }
+
+  .tag-negative {
+    @apply text-xs font-medium text-danger bg-danger/10 border border-danger/20 px-2 py-0.5 rounded;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, #A8D9B0 0%, #FBF8F0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-top    { padding-top:    env(safe-area-inset-top); }
 }

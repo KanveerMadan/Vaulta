@@ -1,28 +1,18 @@
 import { create } from 'zustand'
 
 export const useFinanceStore = create((set) => ({
-  // Summary data
-  spentThisMonth: 0,
-  budgetLeft: 0,
-  predictedBalance: 0,
-
-  // Transactions
+  summary: null,
+  summaryLoading: true,
   transactions: [],
-  transactionsLoading: false,
-
-  // Category spending
+  transactionsLoading: true,
   categorySpend: [],
-
-  // AI chat
   chatMessages: [],
   chatLoading: false,
 
-  // Actions
-  setSummary: (data) => set(data),
-  setTransactions: (transactions) => set({ transactions }),
-  setTransactionsLoading: (v) => set({ transactionsLoading: v }),
-  setCategorySpend: (data) => set({ categorySpend: data }),
+  setSummary: (summary) => set({ summary, summaryLoading: false }),
+  setTransactions: (transactions) => set({ transactions, transactionsLoading: false }),
+  setCategorySpend: (categorySpend) => set({ categorySpend }),
   addChatMessage: (msg) => set((s) => ({ chatMessages: [...s.chatMessages, msg] })),
-  setChatLoading: (v) => set({ chatLoading: v }),
+  setChatLoading: (chatLoading) => set({ chatLoading }),
   clearChat: () => set({ chatMessages: [] }),
 }))
