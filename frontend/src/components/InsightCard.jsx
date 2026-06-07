@@ -2,22 +2,22 @@ import { useState } from 'react'
 
 const INSIGHTS = [
   {
-    headline: 'Late-night food habit',
-    body: "You order food every time you're awake past midnight. It's happened 12 times this month — ₹4,200 spent.",
     tag: 'Pattern detected',
-    tagColor: 'text-gold border-gold/30 bg-gold/10',
+    tagClass: 'tag-warning',
+    headline: 'Late-night food habit',
+    body: "You order food every time you're awake past midnight. 12 times this month — ₹4,200 spent.",
   },
   {
-    headline: 'Silent subscription drain',
-    body: "You haven't opened Zee5 in 47 days. It's costing you ₹499/month without any use.",
     tag: 'Action needed',
-    tagColor: 'text-danger border-danger/30 bg-danger/10',
+    tagClass: 'tag-negative',
+    headline: 'Silent subscription drain',
+    body: "You haven't opened Zee5 in 47 days. It's costing ₹499/month silently.",
   },
   {
+    tag: 'Benchmark',
+    tagClass: 'tag-positive',
     headline: 'Food spend above average',
     body: 'Your food spend is 37% of total expenses. The Indian urban average is 22%.',
-    tag: 'Benchmark',
-    tagColor: 'text-forest-200 border-forest-500 bg-forest-800',
   },
 ]
 
@@ -26,33 +26,34 @@ export default function InsightCard() {
   const insight = INSIGHTS[idx]
 
   return (
-    <div className="card p-5 h-full flex flex-col">
+    <div className="card shadow-card p-5 h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6DB87A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#27602F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
           </svg>
-          <p className="text-forest-200 text-xs font-medium uppercase tracking-widest">AI Insight</p>
+          <p className="text-forest-600 text-xs font-semibold uppercase tracking-widest">AI Insight</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {INSIGHTS.map((_, i) => (
             <button key={i} onClick={() => setIdx(i)}
-              className={`w-1.5 h-1.5 rounded-full transition-all ${i === idx ? 'bg-cream-300' : 'bg-forest-700'}`}
+              className={`rounded-full transition-all duration-200 ${i === idx ? 'w-4 h-1.5 bg-forest-600' : 'w-1.5 h-1.5 bg-cream-400 hover:bg-cream-500'}`}
             />
           ))}
         </div>
       </div>
 
       <div className="flex-1 space-y-3">
-        <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded border ${insight.tagColor}`}>
-          {insight.tag}
-        </span>
-        <p className="font-display text-lg font-light text-cream-100 leading-snug">{insight.headline}</p>
-        <p className="text-forest-200 text-sm leading-relaxed">{insight.body}</p>
+        <span className={insight.tagClass}>{insight.tag}</span>
+        <p className="font-display text-xl font-light text-forest-900 leading-snug mt-2">{insight.headline}</p>
+        <p className="text-forest-600 text-sm leading-relaxed">{insight.body}</p>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-forest-700">
-        <p className="text-forest-500 text-xs">Updated daily · Powered by Groq</p>
+      <div className="mt-4 pt-4 border-t border-cream-300 flex items-center justify-between">
+        <p className="text-forest-400 text-xs">Updated daily · Groq</p>
+        <button className="text-forest-600 hover:text-forest-900 text-xs font-medium transition-colors">
+          Ask AI →
+        </button>
       </div>
     </div>
   )

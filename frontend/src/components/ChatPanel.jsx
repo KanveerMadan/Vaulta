@@ -7,7 +7,7 @@ const STARTERS = [
   'How much did I spend on food this month?',
   'What are my top 3 expenses?',
   'Am I going to overshoot my budget?',
-  'Kitna kharch hua last hafte food pe?',
+  'Kitna kharch hua last hafte?',
 ]
 
 export default function ChatPanel() {
@@ -29,44 +29,40 @@ export default function ChatPanel() {
       const { data } = await api.post('/api/chat', { message })
       addChatMessage({ role: 'assistant', content: data.reply })
     } catch {
-      addChatMessage({ role: 'assistant', content: "I couldn't reach the server. Please try again." })
-    } finally {
-      setChatLoading(false)
-    }
+      addChatMessage({ role: 'assistant', content: "Couldn't reach the server. Please try again." })
+    } finally { setChatLoading(false) }
   }
 
   return (
-    <aside className="w-72 shrink-0 hidden lg:flex flex-col rounded-xl border border-forest-700 bg-forest-900 overflow-hidden sticky top-20 h-[calc(100vh-5.5rem)]">
-      <div className="px-4 py-3.5 border-b border-forest-700 flex items-center justify-between">
+    <aside className="w-72 shrink-0 hidden lg:flex flex-col rounded-xl border border-white/5 bg-forest-900/60 backdrop-blur-sm overflow-hidden sticky top-20 h-[calc(100vh-5.5rem)]">
+      <div className="px-4 py-3.5 border-b border-white/5 flex items-center justify-between">
         <div>
           <p className="text-cream-200 text-sm font-medium">AI Assistant</p>
           <p className="text-forest-400 text-xs mt-0.5">Ask about your money</p>
         </div>
-        <div className="w-2 h-2 rounded-full bg-safe animate-pulse" title="Online" />
+        <div className="w-2 h-2 rounded-full bg-safe animate-pulse" />
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {chatMessages.length === 0 ? (
           <div className="space-y-2 animate-fade-in">
-            <p className="text-forest-400 text-xs mb-3">Suggested questions</p>
-            {STARTERS.map((s) => (
-              <button
-                key={s}
-                onClick={() => send(s)}
-                className="w-full text-left text-xs text-forest-200 hover:text-cream-100 bg-forest-800 hover:bg-forest-700 border border-forest-700 hover:border-forest-500 rounded-lg px-3 py-2.5 transition-all duration-150 leading-relaxed"
-              >
+            <p className="text-forest-500 text-xs mb-3">Suggested questions</p>
+            {STARTERS.map(s => (
+              <button key={s} onClick={() => send(s)}
+                className="w-full text-left text-xs text-forest-200 hover:text-cream-100
+                           bg-forest-800/60 hover:bg-forest-800 border border-white/5 hover:border-white/10
+                           rounded-lg px-3 py-2.5 transition-all duration-150 leading-relaxed">
                 {s}
               </button>
             ))}
           </div>
         ) : (
           chatMessages.map((msg, i) => (
-            <div key={i} className={clsx('flex animate-fade-in', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-              <div className={clsx(
-                'max-w-[88%] rounded-xl px-3 py-2 text-xs leading-relaxed',
+            <div key={i} className={clsx('flex animate-fade-up', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+              <div className={clsx('max-w-[88%] rounded-xl px-3 py-2 text-xs leading-relaxed',
                 msg.role === 'user'
                   ? 'bg-forest-600 text-cream-100 rounded-br-sm'
-                  : 'bg-forest-800 border border-forest-700 text-cream-200 rounded-bl-sm'
+                  : 'bg-cream-50 border border-cream-200 text-forest-900 rounded-bl-sm shadow-card'
               )}>
                 {msg.content}
               </div>
@@ -76,9 +72,9 @@ export default function ChatPanel() {
 
         {chatLoading && (
           <div className="flex justify-start">
-            <div className="bg-forest-800 border border-forest-700 rounded-xl rounded-bl-sm px-3 py-2.5 flex gap-1">
+            <div className="bg-cream-50 border border-cream-200 rounded-xl rounded-bl-sm px-3.5 py-3 flex gap-1 shadow-card">
               {[0,1,2].map(i => (
-                <div key={i} className="w-1 h-1 rounded-full bg-forest-300 animate-skeleton"
+                <div key={i} className="w-1.5 h-1.5 rounded-full bg-forest-300 animate-skeleton"
                   style={{ animationDelay: `${i * 0.15}s` }} />
               ))}
             </div>
@@ -87,22 +83,20 @@ export default function ChatPanel() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-3 border-t border-forest-700">
+      <div className="p-3 border-t border-white/5">
         <div className="flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && send()}
+          <input value={input} onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && send()}
             placeholder="Ask anything..."
-            className="flex-1 bg-forest-800 border border-forest-700 focus:border-forest-400 rounded-lg px-3 py-2 text-xs text-cream-200 placeholder-forest-500 focus:outline-none transition-colors"
+            className="flex-1 bg-forest-800/60 border border-white/8 focus:border-forest-400/50
+                       rounded-lg px-3 py-2 text-xs text-cream-200 placeholder-forest-500
+                       focus:outline-none focus:ring-1 focus:ring-forest-400/20 transition-all"
           />
-          <button
-            onClick={() => send()}
-            disabled={!input.trim() || chatLoading}
-            className="w-8 h-8 rounded-lg bg-cream-200 hover:bg-cream-50 disabled:opacity-30 flex items-center justify-center transition-all active:scale-95 shrink-0"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0A1A0E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+          <button onClick={() => send()} disabled={!input.trim() || chatLoading}
+            className="w-8 h-8 rounded-lg bg-cream-200 hover:bg-cream-50 disabled:opacity-30
+                       flex items-center justify-center transition-all active:scale-95 shrink-0">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0A1A0E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
           </button>
         </div>

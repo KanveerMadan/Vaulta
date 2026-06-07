@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from './lib/firebase'
 import { useAuthStore } from './store/authStore'
+import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Connect from './pages/Connect'
@@ -44,6 +45,7 @@ export default function App() {
 
   return (
     <Routes>
+      <Route path="/welcome" element={<Landing />} />
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
       <Route element={<PrivateRoute />}>
         <Route element={<Layout />}>
@@ -51,7 +53,7 @@ export default function App() {
           <Route path="/connect" element={<Connect />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={user ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />} />
     </Routes>
   )
 }
