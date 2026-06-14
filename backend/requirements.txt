@@ -7,8 +7,8 @@ psycopg2-binary==2.9.9
 alembic==1.13.1
 
 # Config & validation
-pydantic[email]==2.7.1
-pydantic-settings==2.2.1
+pydantic[email]==2.9.2
+pydantic-settings==2.5.2
 email-validator==2.1.1
 
 # Firebase

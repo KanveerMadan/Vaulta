@@ -52,4 +52,5 @@ const useFinanceStore = create((set) => ({
     }),
 }));
 
+export { useFinanceStore };
 export default useFinanceStore;
