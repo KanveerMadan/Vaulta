@@ -1,9 +1,7 @@
 import { useState } from "react";
-import useAuthStore from "../store/authStore";
+import { useAuthStore } from "../store/authStore";
 import CSVUpload from "../components/CSVUpload";
-import useFinanceStore from "../store/financeStore";
 import { useCallback } from "react";
-import api from "../lib/api";
 
 // ─────────────────────────────────────────────
 // Data source definitions
@@ -176,7 +174,6 @@ function PrivacyTable() {
 
 export default function Connect() {
   const { user } = useAuthStore();
-  const { fetchSummary, fetchTransactions } = useFinanceStore();
   const [showCSVUpload, setShowCSVUpload] = useState(false);
 
   const sources = useDataSources(user);
@@ -188,15 +185,9 @@ export default function Connect() {
     // Gmail OAuth: Phase 2 — will navigate to /api/gmail/auth
   };
 
-  const handleCSVSuccess = useCallback(async () => {
-    // Refresh dashboard data after successful upload
-    // financeStore fetches are triggered by Dashboard on mount,
-    // but if the user navigates back we want fresh data
-    try {
-      await api.get("/api/transactions/summary");
-    } catch (_) {
-      // Non-critical — dashboard will re-fetch on visit
-    }
+  const handleCSVSuccess = useCallback(() => {
+    // Dashboard re-fetches summary/transactions on mount,
+    // so no action needed here — just close the modal.
   }, []);
 
   return (

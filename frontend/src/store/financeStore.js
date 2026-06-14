@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-const useFinanceStore = create((set) => ({
+export const useFinanceStore = create((set) => ({
   // ── Summary ──────────────────────────────────────────────────────────────
   summary: null,
   summaryLoading: false,
@@ -51,6 +51,3 @@ const useFinanceStore = create((set) => ({
       chatLoading: false,
     }),
 }));
-
-export { useFinanceStore };
-export default useFinanceStore;

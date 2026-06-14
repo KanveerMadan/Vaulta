@@ -2,8 +2,8 @@ import { useEffect, useCallback } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
-import useFinanceStore from "../store/financeStore";
-import useAuthStore from "../store/authStore";
+import { useFinanceStore } from "../store/financeStore";
+import { useAuthStore } from "../store/authStore";
 import api from "../lib/api";
 import {
   SkeletonMetricCard,
