@@ -1,137 +1,255 @@
-import { useState } from 'react'
-import clsx from 'clsx'
+import { useState } from "react";
+import useAuthStore from "../store/authStore";
+import CSVUpload from "../components/CSVUpload";
+import useFinanceStore from "../store/financeStore";
+import { useCallback } from "react";
+import api from "../lib/api";
 
-const SOURCES = [
-  {
-    id: 'gmail',
-    icon: '✉',
-    title: 'Gmail',
-    description: 'Parse order confirmations from Swiggy, Zomato, Amazon, Flipkart automatically.',
-    badge: 'Recommended first',
-    badgeColor: 'text-safe bg-safe/10 border-safe/20',
-    available: true,
-  },
-  {
-    id: 'sms',
-    icon: '💬',
-    title: 'Bank SMS',
-    description: 'Forward transaction alerts from any Indian bank via our WhatsApp bot.',
-    badge: 'Easy setup',
-    badgeColor: 'text-cream-300 bg-forest-800 border-forest-600',
-    available: true,
-  },
-  {
-    id: 'aa',
-    icon: '🏦',
-    title: 'Account Aggregator',
-    description: 'Full bank history via RBI-regulated framework. Read-only. 50+ banks supported.',
-    badge: 'Phase 5',
-    badgeColor: 'text-forest-400 bg-forest-800 border-forest-700',
-    available: false,
-  },
-  {
-    id: 'csv',
-    icon: '📄',
-    title: 'UPI CSV / Statement PDF',
-    description: 'Upload exports from GPay, PhonePe, or credit card statements.',
-    badge: 'Coming soon',
-    badgeColor: 'text-forest-400 bg-forest-800 border-forest-700',
-    available: false,
-  },
-]
+// ─────────────────────────────────────────────
+// Data source definitions
+// ─────────────────────────────────────────────
 
-const PRIVACY_ROWS = [
-  { can: true,  text: 'Order confirmation emails from Swiggy, Zomato, Amazon, Flipkart' },
-  { can: true,  text: 'Bank SMS messages you have explicitly forwarded to us' },
-  { can: true,  text: 'Transaction history via RBI Account Aggregator (read-only)' },
-  { can: false, text: 'Your Gmail inbox — we cannot read anything except order emails' },
-  { can: false, text: 'Your bank login credentials — we never ask for these' },
-  { can: false, text: 'Your UPI PIN or OTP — architecturally impossible for us to see' },
-]
+function useDataSources(user) {
+  return [
+    {
+      id: "csv",
+      label: "Bank Statement CSV",
+      description: "Import transactions from any Indian bank instantly. Download your statement as CSV from net banking — no login sharing required.",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      available: true,
+      connected: false,  // CSV is stateless — always show "Import"
+      action: "import",
+      badge: "Instant",
+      badgeColor: "safe",
+      supportedBanks: ["HDFC", "ICICI", "SBI", "Axis", "Kotak"],
+    },
+    {
+      id: "gmail",
+      label: "Gmail",
+      description: "Automatically pull receipts and order confirmations from Swiggy, Zomato, Amazon, Flipkart, IRCTC, and more. Read-only access to transaction emails only — never your personal mail.",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+      available: false,  // Phase 2
+      connected: user?.gmail_connected,
+      action: "connect",
+      badge: "Coming in Phase 2",
+      badgeColor: "neutral",
+    },
+    {
+      id: "sms",
+      label: "Bank SMS",
+      description: "Transaction SMS alerts from your bank, read directly on your phone. Available in the Vaulta mobile app.",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+      ),
+      available: false,  // Requires native app (Capacitor, Phase 6)
+      connected: user?.sms_connected,
+      action: "connect",
+      badge: "Mobile app only",
+      badgeColor: "neutral",
+    },
+    {
+      id: "aa",
+      label: "Account Aggregator",
+      description: "RBI's Account Aggregator framework — the most complete picture of your finances, including FDs, mutual funds, and credit cards, with your explicit consent.",
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      ),
+      available: false,  // Phase 2+
+      connected: user?.aa_connected,
+      action: "connect",
+      badge: "Coming soon",
+      badgeColor: "neutral",
+    },
+  ];
+}
 
-export default function Connect() {
-  const [connected, setConnected] = useState({})
+// ─────────────────────────────────────────────
+// Source card
+// ─────────────────────────────────────────────
+
+function SourceCard({ source, onImport }) {
+  const isConnected = source.connected;
+  const isAvailable = source.available;
 
   return (
-    <div className="max-w-2xl space-y-8 animate-fade-up">
+    <div className={`
+      card p-5 flex flex-col gap-4 transition-all
+      ${!isAvailable ? "opacity-60" : ""}
+    `}>
+      <div className="flex items-start gap-3">
+        <div className={`
+          w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+          ${isConnected ? "bg-safe/15 text-safe" : isAvailable ? "bg-forest-100 text-forest-600" : "bg-sage-100 text-ink-400"}
+        `}>
+          {source.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-medium text-ink-900">{source.label}</h3>
+            <span className={`
+              inline-block text-xs px-2 py-0.5 rounded-full font-medium
+              ${source.badgeColor === "safe" ? "bg-safe/15 text-safe" : "bg-sage-100 text-ink-500"}
+              ${isConnected ? "!bg-safe/15 !text-safe" : ""}
+            `}>
+              {isConnected ? "Connected" : source.badge}
+            </span>
+          </div>
+          <p className="text-sm text-ink-500 mt-1 leading-relaxed">{source.description}</p>
+          {source.supportedBanks && (
+            <p className="text-xs text-ink-400 mt-1.5">
+              Supports: {source.supportedBanks.join(", ")}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {isAvailable && (
+        <button
+          onClick={() => onImport?.(source.id)}
+          className={isConnected ? "btn-ghost text-sm py-2" : "btn-primary-light text-sm py-2"}
+        >
+          {isConnected ? "Manage" : source.action === "import" ? "Import statement" : "Connect"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Privacy table
+// ─────────────────────────────────────────────
+
+const PRIVACY_ROWS = [
+  { can: "Read transaction amounts and merchant names", cannot: "Read email body text or personal messages" },
+  { can: "Categorize your spending automatically", cannot: "Access your contacts or attachments" },
+  { can: "Show you patterns in your spending", cannot: "Share your data with advertisers" },
+  { can: "Help you understand where your money goes", cannot: "Sell your data or profit from your behaviour" },
+];
+
+function PrivacyTable() {
+  return (
+    <div className="card overflow-hidden">
+      <div className="px-5 py-4 border-b border-sage-100">
+        <h3 className="font-medium text-ink-900">What Vaulta can and cannot see</h3>
+      </div>
+      <div className="divide-y divide-sage-50">
+        {PRIVACY_ROWS.map((row, i) => (
+          <div key={i} className="grid grid-cols-2 text-sm">
+            <div className="flex items-start gap-2 px-5 py-3 bg-safe/5">
+              <svg className="w-4 h-4 text-safe mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-ink-700">{row.can}</span>
+            </div>
+            <div className="flex items-start gap-2 px-5 py-3">
+              <svg className="w-4 h-4 text-danger mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <span className="text-ink-500">{row.cannot}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Main Connect page
+// ─────────────────────────────────────────────
+
+export default function Connect() {
+  const { user } = useAuthStore();
+  const { fetchSummary, fetchTransactions } = useFinanceStore();
+  const [showCSVUpload, setShowCSVUpload] = useState(false);
+
+  const sources = useDataSources(user);
+
+  const handleSourceAction = (sourceId) => {
+    if (sourceId === "csv") {
+      setShowCSVUpload(true);
+    }
+    // Gmail OAuth: Phase 2 — will navigate to /api/gmail/auth
+  };
+
+  const handleCSVSuccess = useCallback(async () => {
+    // Refresh dashboard data after successful upload
+    // financeStore fetches are triggered by Dashboard on mount,
+    // but if the user navigates back we want fresh data
+    try {
+      await api.get("/api/transactions/summary");
+    } catch (_) {
+      // Non-critical — dashboard will re-fetch on visit
+    }
+  }, []);
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+
+      {/* Page header */}
       <div>
-        <h1 className="font-display text-2xl font-light text-cream-100 tracking-tight">Connect your accounts</h1>
-        <p className="text-forest-300 text-sm mt-2 leading-relaxed">
-          We earn the right to each data source separately. Start with Gmail — get one real insight first, then decide if you want to go deeper.
+        <h1 className="font-display text-2xl font-semibold text-ink-900">Connect your accounts</h1>
+        <p className="text-ink-500 mt-1 text-sm">
+          The more sources you connect, the more complete your picture. Start with a CSV — it takes 30 seconds.
         </p>
       </div>
 
       {/* Trust signal */}
-      <div className="flex items-start gap-3 bg-safe/5 border border-safe/20 rounded-xl px-4 py-3.5">
-        <div className="w-5 h-5 rounded-full bg-safe/20 flex items-center justify-center shrink-0 mt-0.5">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#27AE60" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-        </div>
-        <p className="text-forest-100 text-sm leading-relaxed">
-          We never see your bank login, password, or UPI PIN. The Account Aggregator framework is RBI-regulated — you consent directly with your bank, not us.
+      <div className="flex items-center gap-3 bg-forest-50 border border-forest-200 rounded-xl px-4 py-3">
+        <svg className="w-4 h-4 text-forest-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+        <p className="text-sm text-forest-800">
+          Vaulta's revenue is your subscription — not your data.{" "}
+          <a
+            href="https://github.com/vaulta-finance"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline underline-offset-2"
+          >
+            The code is publicly auditable.
+          </a>
         </p>
       </div>
 
-      {/* Data sources */}
-      <div className="space-y-3">
-        <p className="label">Data sources</p>
-        {SOURCES.map((src) => (
-          <div key={src.id} className={clsx('card p-4 flex items-center gap-4', !src.available && 'opacity-50')}>
-            <div className="w-10 h-10 rounded-lg bg-forest-800 border border-forest-700 flex items-center justify-center text-lg shrink-0">
-              {src.icon}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <p className="text-cream-200 text-sm font-medium">{src.title}</p>
-                <span className={`text-xs border px-1.5 py-px rounded ${src.badgeColor}`}>{src.badge}</span>
-              </div>
-              <p className="text-forest-300 text-xs leading-relaxed">{src.description}</p>
-            </div>
-            {connected[src.id] ? (
-              <div className="flex items-center gap-1.5 text-safe text-xs font-medium shrink-0">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                Connected
-              </div>
-            ) : src.available ? (
-              <button
-                onClick={() => setConnected(p => ({ ...p, [src.id]: true }))}
-                className="btn-primary shrink-0 !py-1.5 !px-3 text-xs"
-              >
-                Connect
-              </button>
-            ) : (
-              <span className="text-forest-600 text-xs shrink-0">Soon</span>
-            )}
-          </div>
+      {/* Source cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {sources.map((source) => (
+          <SourceCard
+            key={source.id}
+            source={source}
+            onImport={handleSourceAction}
+          />
         ))}
       </div>
 
       {/* Privacy table */}
-      <div className="card overflow-hidden">
-        <div className="px-5 py-4 border-b border-forest-700">
-          <p className="text-cream-200 text-sm font-medium">What Vaulta can and cannot see</p>
-          <p className="text-forest-400 text-xs mt-0.5">Plain English. Not a privacy policy.</p>
-        </div>
-        <div className="divide-y divide-forest-800">
-          {PRIVACY_ROWS.map((row, i) => (
-            <div key={i} className="px-5 py-3 flex items-start gap-3">
-              <span className={`text-xs font-bold shrink-0 mt-0.5 ${row.can ? 'text-safe' : 'text-danger'}`}>
-                {row.can ? '✓' : '✗'}
-              </span>
-              <span className="text-forest-100 text-sm leading-relaxed">{row.text}</span>
-            </div>
-          ))}
-        </div>
-        <div className="px-5 py-4 border-t border-forest-700 bg-forest-950/50">
-          <p className="text-forest-400 text-xs leading-relaxed">
-            The code that touches your data is publicly auditable on GitHub. 99% of users will never read it.
-            The fact that there's nothing to hide is the trust signal.
-          </p>
-        </div>
-      </div>
+      <PrivacyTable />
+
+      {/* CSV Upload modal */}
+      {showCSVUpload && (
+        <CSVUpload
+          onSuccess={handleCSVSuccess}
+          onClose={() => setShowCSVUpload(false)}
+        />
+      )}
     </div>
-  )
+  );
 }

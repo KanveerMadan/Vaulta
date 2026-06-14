@@ -1,10 +1,40 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-psycopg2-binary
-python-dotenv
-alembic
-firebase-admin
-pydantic[email]
-pydantic-settings
-email-validator
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+
+# Database
+sqlalchemy==2.0.30
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# Config & validation
+pydantic[email]==2.7.1
+pydantic-settings==2.2.1
+email-validator==2.1.1
+
+# Firebase
+firebase-admin==6.5.0
+
+# Security — Fernet symmetric encryption for OAuth token storage
+cryptography==42.0.7
+
+# HTTP client (Phase 2: Gmail OAuth)
+httpx==0.27.0
+
+# CSV & data parsing (stdlib csv used, but chardet helps with encoding detection)
+chardet==5.2.0
+
+# Celery + Redis (Phase 2)
+# celery==5.4.0
+# redis==5.0.4
+
+# Payments (Phase 2)
+# razorpay==1.4.1
+
+# AI inference (Phase 3)
+# groq==0.8.0
+
+# PDF generation (Phase 4)
+# weasyprint==62.1
+
+# Image generation (Phase 4 — share cards)
+# Pillow==10.3.0
