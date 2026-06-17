@@ -11,6 +11,7 @@ import {
   SkeletonTransactionFeed,
   SkeletonInsightCard,
 } from "../components/Skeletons";
+import SubscriptionBanner from "../components/SubscriptionBanner";
 
 // ─────────────────────────────────────────────
 // Category colour palette (matches SpendChart)
@@ -185,6 +186,9 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+
+      {/* Subscription status — trial/past_due/cancelled banners */}
+      <SubscriptionBanner />
 
       {/* Demo banner — only shown when no data source connected */}
       {!hasDataSource && (

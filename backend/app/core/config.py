@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""
+    RAZORPAY_PLAN_ID: str = ""  # ₹99/month plan created in Razorpay dashboard
 
     # ── Redis / Celery (Phase 2) ──────────────────────────────────────────────
     REDIS_URL: str = ""
@@ -59,8 +60,21 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = ""
 
+    def require(self, *field_names: str) -> None:
+        """
+        Raise a clear, actionable error if any of the named config fields are empty.
+        Used by Phase 2 services (Gmail OAuth, Razorpay, Celery) so that missing
+        credentials produce a helpful 503 instead of a confusing downstream crash.
+        """
+        missing = [name for name in field_names if not getattr(self, name, "")]
+        if missing:
+            raise RuntimeError(
+                f"Missing required configuration: {', '.join(missing)}. "
+                f"Set these in your .env (local) or Render environment variables (production)."
+            )
+
     class Config:
-        env_file = "backend/.env"
+        env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
 

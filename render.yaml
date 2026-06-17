@@ -1,0 +1,52 @@
+# render.yaml — Phase 2 additions
+#
+# This file documents the TWO additional services needed for Gmail background sync.
+# If you're using Render's dashboard (not Blueprints), create these manually:
+#
+# ── Service 1: Celery Worker (Background Worker) ────────────────────────────
+#   Type: Background Worker
+#   Root Directory: backend
+#   Build Command: pip install -r requirements.txt
+#   Start Command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+#   Environment: same env vars as the web service (DATABASE_URL, ENCRYPTION_KEY,
+#                FIREBASE_SERVICE_ACCOUNT_JSON, REDIS_URL, GOOGLE_*, etc.)
+#   Plan: Free tier works for low volume; upgrade if sync queue backs up.
+#
+# ── Service 2: Celery Beat (Cron-like scheduler) ────────────────────────────
+#   Type: Background Worker (separate from the worker above — Beat must run
+#         as a single instance to avoid duplicate scheduling)
+#   Root Directory: backend
+#   Build Command: pip install -r requirements.txt
+#   Start Command: celery -A app.workers.celery_app beat --loglevel=info
+#   Environment: same as above (only needs REDIS_URL + DATABASE_URL really,
+#                but sharing the full env is simpler)
+#
+# IMPORTANT: Both services need PYTHON_VERSION=3.12.7 set (same fix as the web service).
+#
+# ── Blueprint version (if using Render Blueprints / render.yaml) ───────────
+services:
+  - type: worker
+    name: vaulta-celery-worker
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - fromGroup: vaulta-shared-env  # Create this env var group in Render dashboard
+                                        # containing DATABASE_URL, ENCRYPTION_KEY,
+                                        # FIREBASE_SERVICE_ACCOUNT_JSON, REDIS_URL,
+                                        # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
+                                        # GOOGLE_REDIRECT_URI, RAZORPAY_*, SECRET_KEY
+
+  - type: worker
+    name: vaulta-celery-beat
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A app.workers.celery_app beat --loglevel=info
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - fromGroup: vaulta-shared-env

@@ -27,9 +27,18 @@ class User(Base):
     gmail_refresh_token = Column(String, nullable=True)
     gmail_last_sync_at = Column(DateTime(timezone=True), nullable=True)
 
-    # --- Subscription status (added Phase 2, column here for schema completeness) ---
+    # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled
     subscription_status = Column(String, nullable=True, default="trial")
+
+    # Razorpay subscription ID — set when create-subscription is called.
+    # Used to reconcile webhook events and fetch current period info.
+    razorpay_subscription_id = Column(String, nullable=True, index=True)
+
+    # End of the current billing period (from Razorpay subscription.charged event).
+    # Used to compute the 3-day grace period when status == past_due:
+    #   grace_deadline = current_period_end + 3 days
+    current_period_end = Column(DateTime(timezone=True), nullable=True)
 
     # --- Phase 6: Family Finance Dashboard prep ---
     # household_id added NOW so every auth check written in Phases 0-5 can account

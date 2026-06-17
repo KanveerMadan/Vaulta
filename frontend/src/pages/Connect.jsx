@@ -1,7 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "../store/authStore";
 import CSVUpload from "../components/CSVUpload";
-import { useCallback } from "react";
+import api from "../lib/api";
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+
+function timeAgo(isoString) {
+  if (!isoString) return null;
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+const GMAIL_ERROR_MESSAGES = {
+  denied: "Gmail connection was cancelled.",
+  invalid_request: "Something went wrong starting the Gmail connection. Please try again.",
+  invalid_state: "Your session expired during the Gmail connection. Please try again.",
+  user_not_found: "We couldn't find your account. Try signing out and back in.",
+  token_exchange_failed: "Google couldn't verify the connection. Please try again.",
+  no_refresh_token: "Gmail needs full permission to connect. Please remove Vaulta's access at myaccount.google.com/permissions and try again.",
+};
 
 // ─────────────────────────────────────────────
 // Data source definitions
@@ -36,11 +61,12 @@ function useDataSources(user) {
             d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
       ),
-      available: false,  // Phase 2
+      available: true,
       connected: user?.gmail_connected,
       action: "connect",
-      badge: "Coming in Phase 2",
-      badgeColor: "neutral",
+      badge: "Read-only",
+      badgeColor: "safe",
+      lastSync: user?.gmail_last_sync_at,
     },
     {
       id: "sms",
@@ -81,9 +107,10 @@ function useDataSources(user) {
 // Source card
 // ─────────────────────────────────────────────
 
-function SourceCard({ source, onImport }) {
+function SourceCard({ source, onImport, onConnect, onDisconnect, onSync, syncing }) {
   const isConnected = source.connected;
   const isAvailable = source.available;
+  const isGmail = source.id === "gmail";
 
   return (
     <div className={`
@@ -114,16 +141,44 @@ function SourceCard({ source, onImport }) {
               Supports: {source.supportedBanks.join(", ")}
             </p>
           )}
+          {isGmail && isConnected && (
+            <p className="text-xs text-ink-400 mt-1.5">
+              {source.lastSync ? `Last synced ${timeAgo(source.lastSync)}` : "Sync pending..."}
+            </p>
+          )}
         </div>
       </div>
 
-      {isAvailable && (
+      {isAvailable && !isGmail && (
         <button
           onClick={() => onImport?.(source.id)}
           className={isConnected ? "btn-ghost text-sm py-2" : "btn-primary-light text-sm py-2"}
         >
           {isConnected ? "Manage" : source.action === "import" ? "Import statement" : "Connect"}
         </button>
+      )}
+
+      {isGmail && (
+        <div className="flex gap-2">
+          {isConnected ? (
+            <>
+              <button
+                onClick={onSync}
+                disabled={syncing}
+                className="btn-ghost text-sm py-2 flex-1 disabled:opacity-50"
+              >
+                {syncing ? "Syncing..." : "Sync now"}
+              </button>
+              <button onClick={onDisconnect} className="btn-ghost text-sm py-2 px-4 text-danger">
+                Disconnect
+              </button>
+            </>
+          ) : (
+            <button onClick={onConnect} className="btn-primary-light text-sm py-2 flex-1">
+              Connect Gmail
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -173,22 +228,91 @@ function PrivacyTable() {
 // ─────────────────────────────────────────────
 
 export default function Connect() {
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const [showCSVUpload, setShowCSVUpload] = useState(false);
+  const [gmailSyncing, setGmailSyncing] = useState(false);
+  const [gmailNotice, setGmailNotice] = useState(null); // {type: "success"|"error", message}
 
   const sources = useDataSources(user);
 
+  // ── Handle redirect back from Gmail OAuth ────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("gmail_connected");
+    const error = params.get("gmail_error");
+
+    if (connected === "true") {
+      setGmailNotice({ type: "success", message: "Gmail connected! We're syncing your transactions now — this may take a minute." });
+      // Refresh user object so gmail_connected reflects in UI
+      api.get("/api/auth/me").then(({ data }) => setUser(data)).catch(() => {});
+    } else if (error) {
+      setGmailNotice({ type: "error", message: GMAIL_ERROR_MESSAGES[error] || "Something went wrong connecting Gmail." });
+    }
+
+    if (connected || error) {
+      // Clean up the URL so a refresh doesn't re-trigger this
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [setUser]);
+
+  // ── CSV import ────────────────────────────────────────────────────────────
   const handleSourceAction = (sourceId) => {
     if (sourceId === "csv") {
       setShowCSVUpload(true);
     }
-    // Gmail OAuth: Phase 2 — will navigate to /api/gmail/auth
   };
 
   const handleCSVSuccess = useCallback(() => {
     // Dashboard re-fetches summary/transactions on mount,
     // so no action needed here — just close the modal.
   }, []);
+
+  // ── Gmail connect ─────────────────────────────────────────────────────────
+  const handleGmailConnect = async () => {
+    setGmailNotice(null);
+    try {
+      const { data } = await api.get("/api/gmail/auth");
+      window.location.href = data.auth_url;
+    } catch (err) {
+      const msg = err?.response?.data?.detail || "Gmail connection isn't available right now.";
+      setGmailNotice({ type: "error", message: msg });
+    }
+  };
+
+  // ── Gmail manual sync ────────────────────────────────────────────────────
+  const handleGmailSync = async () => {
+    setGmailSyncing(true);
+    setGmailNotice(null);
+    try {
+      const { data } = await api.post("/api/gmail/sync");
+      setGmailNotice({
+        type: "success",
+        message: `Synced ${data.inserted} new transaction${data.inserted === 1 ? "" : "s"} from ${data.messages_scanned} email${data.messages_scanned === 1 ? "" : "s"}.`,
+      });
+      const { data: freshUser } = await api.get("/api/auth/me");
+      setUser(freshUser);
+    } catch (err) {
+      if (err?.response?.status === 409) {
+        setGmailNotice({ type: "error", message: "Your Gmail connection expired. Please reconnect." });
+      } else {
+        setGmailNotice({ type: "error", message: "Sync failed. Please try again in a few minutes." });
+      }
+    } finally {
+      setGmailSyncing(false);
+    }
+  };
+
+  // ── Gmail disconnect ──────────────────────────────────────────────────────
+  const handleGmailDisconnect = async () => {
+    try {
+      await api.post("/api/gmail/disconnect");
+      const { data: freshUser } = await api.get("/api/auth/me");
+      setUser(freshUser);
+      setGmailNotice({ type: "success", message: "Gmail disconnected." });
+    } catch (err) {
+      setGmailNotice({ type: "error", message: "Couldn't disconnect Gmail. Try again." });
+    }
+  };
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
@@ -200,6 +324,26 @@ export default function Connect() {
           The more sources you connect, the more complete your picture. Start with a CSV — it takes 30 seconds.
         </p>
       </div>
+
+      {/* Gmail OAuth notice */}
+      {gmailNotice && (
+        <div className={`
+          flex items-start gap-3 rounded-xl px-4 py-3 border
+          ${gmailNotice.type === "success" ? "bg-safe/10 border-safe/30" : "bg-danger/5 border-danger/20"}
+        `}>
+          <svg className={`w-4 h-4 mt-0.5 shrink-0 ${gmailNotice.type === "success" ? "text-safe" : "text-danger"}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {gmailNotice.type === "success" ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            )}
+          </svg>
+          <p className={`text-sm ${gmailNotice.type === "success" ? "text-ink-700" : "text-danger"}`}>
+            {gmailNotice.message}
+          </p>
+        </div>
+      )}
 
       {/* Trust signal */}
       <div className="flex items-center gap-3 bg-forest-50 border border-forest-200 rounded-xl px-4 py-3">
@@ -227,6 +371,10 @@ export default function Connect() {
             key={source.id}
             source={source}
             onImport={handleSourceAction}
+            onConnect={handleGmailConnect}
+            onDisconnect={handleGmailDisconnect}
+            onSync={handleGmailSync}
+            syncing={gmailSyncing}
           />
         ))}
       </div>

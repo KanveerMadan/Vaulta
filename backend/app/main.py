@@ -90,11 +90,14 @@ async def security_headers(request: Request, call_next):
     return response
 
 # ── Routers ────────────────────────────────────────────────────────────────────
-from app.api.routes import auth, transactions, csv_upload
+from app.api.routes import auth, transactions, csv_upload, budgets, gmail, payments
 
 app.include_router(auth.router)
 app.include_router(transactions.router)
 app.include_router(csv_upload.router)
+app.include_router(budgets.router)
+app.include_router(gmail.router)
+app.include_router(payments.router)
 
 # ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/health", tags=["ops"])

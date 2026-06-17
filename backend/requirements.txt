@@ -24,11 +24,11 @@ httpx==0.27.0
 chardet==5.2.0
 
 # Celery + Redis (Phase 2)
-# celery==5.4.0
-# redis==5.0.4
+celery==5.4.0
+redis==5.0.4
 
 # Payments (Phase 2)
-# razorpay==1.4.1
+razorpay==1.4.2
 
 # AI inference (Phase 3)
 # groq==0.8.0
