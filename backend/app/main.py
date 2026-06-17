@@ -90,29 +90,14 @@ async def security_headers(request: Request, call_next):
     return response
 
 # ── Routers ────────────────────────────────────────────────────────────────────
-from app.api.routes import auth, transactions, csv_upload, budgets, gmail
+from app.api.routes import auth, transactions, csv_upload, budgets, gmail, payments
 
 app.include_router(auth.router)
 app.include_router(transactions.router)
 app.include_router(csv_upload.router)
 app.include_router(budgets.router)
 app.include_router(gmail.router)
-
-# Payments router is loaded defensively: if the razorpay SDK or its
-# transitive dependencies fail to import (e.g. a packaging issue),
-# the rest of the app must still come up. Once Razorpay credentials
-# are configured, payments.py's own route handlers raise a clean 503
-# via settings.require() — but that protection only applies AFTER
-# import succeeds, so the import itself is guarded here too.
-try:
-    from app.api.routes import payments
-    app.include_router(payments.router)
-    logger.info("Payments router loaded")
-except Exception as e:
-    logger.warning(
-        f"Payments router failed to load and will be unavailable "
-        f"(/api/payments/* will 404): {e}"
-    )
+app.include_router(payments.router)
 
 # ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/health", tags=["ops"])
