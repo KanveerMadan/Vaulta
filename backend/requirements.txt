@@ -28,6 +28,7 @@ celery==5.4.0
 redis==5.0.4
 
 # Payments (Phase 2)
+setuptools>=69.0.0  # provides pkg_resources, required by razorpay SDK
 razorpay==1.4.2
 
 # AI inference (Phase 3)
