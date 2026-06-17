@@ -1,6 +1,16 @@
+from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
+
+# Absolute path to backend/.env, computed from this file's own location —
+# independent of the working directory the process was launched from.
+# This matters because alembic is typically run from vaulta/ (repo root)
+# while uvicorn/gunicorn may run from vaulta/backend/ — a relative path
+# like "backend/.env" or ".env" resolves differently in each case and
+# silently produces an empty config (pydantic sees {} and reports every
+# required field as "missing", which is confusing to debug).
+_ENV_FILE_PATH = Path(__file__).resolve().parent.parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -74,7 +84,7 @@ class Settings(BaseSettings):
             )
 
     class Config:
-        env_file = ".env"
+        env_file = str(_ENV_FILE_PATH)
         env_file_encoding = "utf-8"
         case_sensitive = True
 
