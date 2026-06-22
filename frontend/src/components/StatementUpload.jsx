@@ -69,7 +69,8 @@ export default function StatementUpload({ onSuccess, onClose }) {
     form.append("file", file);
     try {
       const { data } = await api.post("/api/statements/upload", form, {
-        headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 120000,
       });
       setResult(data);
       onSuccess?.();
