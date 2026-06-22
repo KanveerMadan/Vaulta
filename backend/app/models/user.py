@@ -17,12 +17,18 @@ class User(Base):
     full_name = Column(String, nullable=True)
 
     # --- Data source connection flags ---
+    # NOTE: gmail_connected is DEPRECATED — Gmail integration was removed entirely
+    # (see Master Prompt Section 4/9: Google's restricted-scope OAuth verification
+    # requires an ongoing paid annual security audit and caps unverified apps at
+    # 100 test users, incompatible with Vaulta's fully-public goal). Column is
+    # kept (not dropped) to avoid a destructive migration, but nothing writes to
+    # it anymore and it should always read False for all users going forward.
     gmail_connected = Column(Boolean, default=False, nullable=False)
     sms_connected = Column(Boolean, default=False, nullable=False)
     aa_connected = Column(Boolean, default=False, nullable=False)
 
-    # --- OAuth tokens (stored Fernet-encrypted, never plaintext) ---
-    # Encrypted via app.core.encryption.encrypt_token / decrypt_token
+    # --- DEPRECATED — Gmail OAuth tokens, no longer written to. Kept only to
+    # avoid a destructive column-drop migration. Safe to ignore/remove later. ---
     gmail_access_token = Column(String, nullable=True)
     gmail_refresh_token = Column(String, nullable=True)
     gmail_last_sync_at = Column(DateTime(timezone=True), nullable=True)

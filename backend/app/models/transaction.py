@@ -20,6 +20,19 @@ class TransactionSource(str, enum.Enum):
     aa = "aa"  # Account Aggregator
 
 
+class TransactionNature(str, enum.Enum):
+    """
+    Classifies *what kind* of money movement this transaction represents,
+    independent of TransactionSource (which channel it was ingested from).
+    See VAULTA master prompt, Section 5.
+    """
+    expense = "expense"
+    income = "income"
+    peer_payment_sent = "peer_payment_sent"
+    peer_payment_received = "peer_payment_received"
+    self_transfer = "self_transfer"
+
+
 class Transaction(Base):
     __tablename__ = "transactions"
 
@@ -34,6 +47,17 @@ class Transaction(Base):
     merchant_clean = Column(String, nullable=True)
     # Category ("Food & Dining") — from normalizer or user override
     category = Column(String, nullable=True)
+
+    # What kind of money movement this is (expense / income / peer payment / self-transfer).
+    # Defaults to "expense" at the DB level for backfill safety — all rows ingested before
+    # this field existed (CSV-only) were de facto merchant spending. New UPI-statement rows
+    # must set this explicitly per the classification logic in upi_statement_parser.py;
+    # do not rely on this default for anything written going forward.
+    transaction_nature = Column(
+        SAEnum(TransactionNature),
+        nullable=False,
+        server_default=TransactionNature.expense.value,
+    )
 
     # DECIMAL, never FLOAT — money is exact
     amount = Column(Numeric(precision=12, scale=2), nullable=False)
@@ -55,12 +79,19 @@ class Transaction(Base):
 
     # Relationships
     user = relationship("User", back_populates="transactions")
+    # All raw per-source evidence rows that contributed to (or were matched
+    # against) this canonical transaction. See app/models/transaction_source.py
+    # and Master Prompt Section 4. No cascade delete here on purpose — the FK
+    # on the other side is ON DELETE SET NULL, so source evidence outlives the
+    # canonical record it was merged into.
+    source_records = relationship("TransactionSourceRecord", back_populates="transaction")
 
     __table_args__ = (
         UniqueConstraint("user_id", "idempotency_key", name="uq_transaction_user_idempotency"),
         Index("ix_transactions_user_date", "user_id", "transaction_date"),
         Index("ix_transactions_user_category", "user_id", "category"),
         Index("ix_transactions_user_merchant", "user_id", "merchant_clean"),
+        Index("ix_transactions_user_nature", "user_id", "transaction_nature"),
     )
 
     def __repr__(self) -> str:

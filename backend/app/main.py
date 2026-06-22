@@ -5,8 +5,9 @@ Startup sequence:
   1. Validate config (fail fast on missing env vars)
   2. Verify database connection
   3. Initialize Firebase Admin SDK
-  4. Mount middleware (CORS, security headers, rate limiting)
-  5. Register routers
+  4. Validate encryption key
+  5. Mount middleware (CORS, security headers)
+  6. Register routers
 
 Alembic manages schema — Base.metadata.create_all() is intentionally absent.
 Run migrations with: alembic upgrade head
@@ -14,9 +15,6 @@ Run migrations with: alembic upgrade head
 
 import logging
 import sys
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
@@ -57,6 +55,8 @@ except Exception as e:
     sys.exit(1)
 
 # ── App ────────────────────────────────────────────────────────────────────────
+from fastapi import FastAPI
+
 app = FastAPI(
     title="Vaulta API",
     description="AI-powered personal finance platform for India",
@@ -66,6 +66,8 @@ app = FastAPI(
 )
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins(),
@@ -90,14 +92,28 @@ async def security_headers(request: Request, call_next):
     return response
 
 # ── Routers ────────────────────────────────────────────────────────────────────
-from app.api.routes import auth, transactions, csv_upload, budgets, gmail, payments
+from app.api.routes import auth, transactions, statements, budgets
 
 app.include_router(auth.router)
 app.include_router(transactions.router)
-app.include_router(csv_upload.router)
+app.include_router(statements.router)
 app.include_router(budgets.router)
-app.include_router(gmail.router)
-app.include_router(payments.router)
+
+# Payments router loaded defensively: if the Razorpay SDK or its transitive
+# dependencies fail to import (e.g. a packaging issue on a fresh deploy),
+# the rest of the app must still come up cleanly. Once credentials are
+# configured, the route handlers raise a clean 503 via settings.require() —
+# but that only applies after import succeeds, so the import itself is
+# guarded here too.
+try:
+    from app.api.routes import payments
+    app.include_router(payments.router)
+    logger.info("Payments router loaded")
+except Exception as e:
+    logger.warning(
+        f"Payments router failed to load and will be unavailable "
+        f"(/api/payments/* will 404): {e}"
+    )
 
 # ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/health", tags=["ops"])

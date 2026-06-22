@@ -13,9 +13,6 @@ import {
 } from "../components/Skeletons";
 import SubscriptionBanner from "../components/SubscriptionBanner";
 
-// ─────────────────────────────────────────────
-// Category colour palette (matches SpendChart)
-// ─────────────────────────────────────────────
 const CATEGORY_COLORS = [
   "#2d6a4f", "#40916c", "#52b788", "#74c69d", "#95d5b2",
   "#b7e4c7", "#d8f3dc", "#1b4332", "#081c15",
@@ -25,9 +22,9 @@ const CATEGORY_COLORS = [
 // Sub-components
 // ─────────────────────────────────────────────
 
-function MetricCard({ label, value, sub, progress, progressDanger }) {
+function MetricCard({ label, value, sub, progress, progressDanger, highlight }) {
   return (
-    <div className="card p-5 space-y-2">
+    <div className={`card p-5 space-y-2 ${highlight ? "ring-1 ring-forest-300" : ""}`}>
       <p className="text-xs font-medium text-ink-400 uppercase tracking-widest">{label}</p>
       <p className="font-mono text-2xl font-semibold text-ink-900">{value}</p>
       {progress !== undefined && (
@@ -56,8 +53,10 @@ function InsightCard({ insight }) {
 }
 
 function TransactionRow({ txn }) {
-  const sign = txn.amount >= 0 ? "-" : "+";
-  const isCredit = txn.amount < 0;
+  const isCredit = txn.transaction_nature === "peer_payment_received"
+    || txn.transaction_nature === "income";
+  const isSelfTransfer = txn.transaction_nature === "self_transfer";
+
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-sage-50 last:border-0">
       <div className="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center text-ink-500 text-sm shrink-0">
@@ -74,8 +73,11 @@ function TransactionRow({ txn }) {
           })}
         </p>
       </div>
-      <p className={`font-mono text-sm font-medium shrink-0 ${isCredit ? "text-safe" : "text-ink-800"}`}>
-        {isCredit ? "+" : "-"}₹{Math.abs(txn.amount).toLocaleString("en-IN")}
+      <p className={`font-mono text-sm font-medium shrink-0 ${
+        isCredit ? "text-safe" : isSelfTransfer ? "text-ink-400" : "text-ink-800"
+      }`}>
+        {isSelfTransfer ? "↔" : isCredit ? "+" : "-"}
+        ₹{Math.abs(txn.amount).toLocaleString("en-IN")}
       </p>
     </div>
   );
@@ -112,16 +114,11 @@ export default function Dashboard() {
     categorySpend, setCategorySpend,
   } = useFinanceStore();
 
-  const hasDataSource =
-    user?.gmail_connected || user?.sms_connected || user?.aa_connected;
-
-  // ── Fetch summary ──────────────────────────────────────────────────────────
   const fetchSummary = useCallback(async () => {
     setSummaryLoading(true);
     try {
       const { data } = await api.get("/api/transactions/summary");
       setSummary(data);
-      // Derive categorySpend for SpendChart
       setCategorySpend(
         (data.categories || []).map((c, i) => ({
           name: c.category,
@@ -142,7 +139,6 @@ export default function Dashboard() {
     }
   }, [setSummary, setSummaryLoading, setSummaryError, setCategorySpend]);
 
-  // ── Fetch transactions ─────────────────────────────────────────────────────
   const fetchTransactions = useCallback(async () => {
     setTransactionsLoading(true);
     try {
@@ -161,14 +157,17 @@ export default function Dashboard() {
   }, [fetchSummary, fetchTransactions]);
 
   // ── Derived values ─────────────────────────────────────────────────────────
-  const totalSpend = summary ? parseFloat(summary.total_spend) : 0;
-  const totalBudget = summary?.total_budget ? parseFloat(summary.total_budget) : null;
-  const budgetPct = totalBudget ? (totalSpend / totalBudget) * 100 : null;
-  const daysRemaining = summary?.days_remaining ?? null;
-  const momDelta = summary?.mom_total_delta ? parseFloat(summary.mom_total_delta) : null;
-  const momPct = summary?.mom_total_delta_pct ? parseFloat(summary.mom_total_delta_pct) : null;
+  const totalSpend     = summary ? parseFloat(summary.total_spend)    : 0;
+  const totalReceived  = summary ? parseFloat(summary.total_received) : 0;
+  const netCashFlow    = summary ? parseFloat(summary.net_cash_flow)  : 0;
+  const totalBudget    = summary?.total_budget ? parseFloat(summary.total_budget) : null;
+  const budgetPct      = totalBudget ? (totalSpend / totalBudget) * 100 : null;
+  const daysRemaining  = summary?.days_remaining ?? null;
+  const momDelta       = summary?.mom_total_delta ? parseFloat(summary.mom_total_delta) : null;
+  const momPct         = summary?.mom_total_delta_pct ? parseFloat(summary.mom_total_delta_pct) : null;
 
-  // Synthetic insights from summary data (Phase 3 will replace with real AI)
+  const netPositive = netCashFlow >= 0;
+
   const insights = summary?.categories?.length
     ? [
         summary.categories[0] && {
@@ -181,65 +180,80 @@ export default function Dashboard() {
             : `You've spent ₹${Math.abs(momDelta).toLocaleString("en-IN")} less than last month. Good going.`,
           sub: "Month-over-month",
         },
+        totalReceived > 0 && {
+          text: `₹${totalReceived.toLocaleString("en-IN")} came in this month across payments received and income.`,
+          sub: "Money in",
+        },
       ].filter(Boolean)
     : [];
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
-      {/* Subscription status — trial/past_due/cancelled banners */}
       <SubscriptionBanner />
 
-      {/* Demo banner — only shown when no data source connected */}
-      {!hasDataSource && (
+      {/* Prompt to upload more — only shown when data exists (something to add to) */}
+      {summary && summary.transaction_count > 0 && (
         <div className="flex items-center gap-3 bg-gold/10 border border-gold/30 rounded-xl px-4 py-3">
           <svg className="w-4 h-4 text-gold shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-sm text-ink-700">
-            You're looking at real data from your uploaded statements.{" "}
+            Upload your UPI app statement alongside your bank CSV for a complete picture.{" "}
             <a href="/connect" className="font-medium text-forest-600 hover:underline">
-              Connect more sources
-            </a>{" "}
-            for a complete picture.
+              Add another source →
+            </a>
           </p>
         </div>
       )}
 
-      {/* Metric cards */}
+      {/* Metric cards — 6 cards, 2 col mobile / 3 col desktop */}
       <section>
         <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest mb-3">
           {new Date().toLocaleString("en-IN", { month: "long", year: "numeric" })}
         </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {summaryLoading ? (
             <>
               <SkeletonMetricCard />
               <SkeletonMetricCard />
               <SkeletonMetricCard />
               <SkeletonMetricCard />
+              <SkeletonMetricCard />
+              <SkeletonMetricCard />
             </>
           ) : summaryError ? (
-            <div className="col-span-2 lg:col-span-4">
+            <div className="col-span-2 lg:col-span-3">
               <ErrorRetry message={summaryError} onRetry={fetchSummary} />
             </div>
           ) : summary ? (
             <>
+              {/* Row 1 — money flow */}
               <MetricCard
                 label="Total spent"
                 value={`₹${totalSpend.toLocaleString("en-IN")}`}
                 sub={momDelta !== null
                   ? `${momDelta > 0 ? "▲" : "▼"} ${Math.abs(momPct ?? 0).toFixed(1)}% vs last month`
-                  : undefined
+                  : "Merchant spend + payments to people"
                 }
               />
               <MetricCard
+                label="Money in"
+                value={`₹${totalReceived.toLocaleString("en-IN")}`}
+                sub="Income + payments received"
+              />
+              <MetricCard
+                label="Net cash flow"
+                value={`${netPositive ? "+" : "−"}₹${Math.abs(netCashFlow).toLocaleString("en-IN")}`}
+                sub={netPositive ? "You're ahead this month" : "Spending exceeded income"}
+                highlight={netPositive}
+              />
+
+              {/* Row 2 — budget & activity */}
+              <MetricCard
                 label="Budget used"
-                value={totalBudget
-                  ? `${budgetPct?.toFixed(0)}%`
-                  : "—"
-                }
+                value={totalBudget ? `${budgetPct?.toFixed(0)}%` : "—"}
                 progress={budgetPct ?? undefined}
                 progressDanger={budgetPct !== null && budgetPct > 80}
                 sub={totalBudget
@@ -250,7 +264,7 @@ export default function Dashboard() {
               <MetricCard
                 label="Transactions"
                 value={summary.transaction_count.toLocaleString("en-IN")}
-                sub={`This month`}
+                sub="This month"
               />
               <MetricCard
                 label="Days left"
@@ -259,7 +273,7 @@ export default function Dashboard() {
               />
             </>
           ) : (
-            <div className="col-span-2 lg:col-span-4 card p-6 text-center">
+            <div className="col-span-2 lg:col-span-3 card p-6 text-center">
               <p className="text-ink-400 text-sm">No data yet.</p>
               <a href="/connect" className="text-forest-600 text-sm font-medium hover:underline mt-1 inline-block">
                 Upload a bank statement to get started →
@@ -319,7 +333,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Insights */}
         <div className="space-y-3">
           {summaryLoading ? (
             <>

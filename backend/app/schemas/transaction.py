@@ -7,7 +7,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel, field_validator, ConfigDict
 
-from app.models.transaction import TransactionSource
+from app.models.transaction import TransactionSource, TransactionNature
 
 
 # ─────────────────────────────────────────────
@@ -22,6 +22,7 @@ class TransactionBase(BaseModel):
     currency: str = "INR"
     transaction_date: datetime
     source: TransactionSource
+    transaction_nature: TransactionNature = TransactionNature.expense
 
     @field_validator("amount")
     @classmethod
@@ -71,37 +72,36 @@ class CategorySummary(BaseModel):
     total: Decimal
     transaction_count: int
     percentage_of_spend: Decimal
-    # Per-category budget limit (null if no budget set for this category)
     budget_limit: Optional[Decimal] = None
-    # Percentage of budget consumed (null if no budget set)
     budget_consumed_pct: Optional[Decimal] = None
-    # Month-over-month delta: positive = spent more, negative = spent less
     mom_delta: Optional[Decimal] = None
     mom_delta_pct: Optional[Decimal] = None
 
 
 class MonthlySummary(BaseModel):
     """
-    Summary for a given month. Shape is final — wired to Dashboard.jsx MetricCards.
-    budget_* fields come from the budgets table (per-category), aggregated here.
+    Summary for a given month. Wired to Dashboard.jsx MetricCards.
+
+    total_spend    — expense + peer_payment_sent rows only (money that genuinely
+                     left the user's hand, Section 5).
+    total_received — income + peer_payment_received rows (money that arrived).
+    net_cash_flow  — total_received - total_spend.
+    self_transfer rows are excluded from all three figures.
     """
     period_start: datetime
     period_end: datetime
-    total_spend: Decimal
-    transaction_count: int
 
-    # Overall budget = sum of active per-category budget limits, or null if none set
+    total_spend: Decimal
+    total_received: Decimal
+    net_cash_flow: Decimal
+
+    transaction_count: int
     total_budget: Optional[Decimal] = None
-    # Days remaining in current period (used by Dashboard countdown)
     days_remaining: int
 
-    # Category breakdown — each entry carries its own budget_limit
     categories: List[CategorySummary]
-
-    # Top merchants by spend this month
     top_merchants: List[dict]  # [{merchant_clean, total, count}]
 
-    # Month-over-month total delta
     mom_total_delta: Optional[Decimal] = None
     mom_total_delta_pct: Optional[Decimal] = None
 
@@ -111,7 +111,6 @@ class MonthlySummary(BaseModel):
 # ─────────────────────────────────────────────
 
 class BudgetCreate(BaseModel):
-    # NULL category = total monthly budget
     category: Optional[str] = None
     monthly_limit: Decimal
 

@@ -17,15 +17,11 @@ firebase-admin==6.5.0
 # Security — Fernet symmetric encryption for OAuth token storage
 cryptography==42.0.7
 
-# HTTP client (Phase 2: Gmail OAuth)
-httpx==0.27.0
-
 # CSV & data parsing (stdlib csv used, but chardet helps with encoding detection)
 chardet==5.2.0
 
-# Celery + Redis (Phase 2)
-celery==5.4.0
-redis==5.0.4
+# PDF parsing — UPI app statement uploads (Google Pay, PhonePe, Paytm)
+pdfplumber==0.11.4
 
 # Payments (Phase 2)
 setuptools>=69.0.0  # provides pkg_resources, required by razorpay SDK

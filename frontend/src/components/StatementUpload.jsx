@@ -1,33 +1,51 @@
 import { useState, useRef, useCallback } from "react";
 import api from "../lib/api";
 
-const SUPPORTED_BANKS = [
-  { id: "hdfc", label: "HDFC Bank", hint: "Net Banking → Accounts → Download Statement → CSV" },
-  { id: "icici", label: "ICICI Bank", hint: "iMobile / Net Banking → Statement → Download as CSV" },
-  { id: "sbi", label: "SBI", hint: "YONO / Net Banking → Account Statement → Excel/CSV" },
-  { id: "axis", label: "Axis Bank", hint: "Net Banking → Statements → Download CSV" },
-  { id: "kotak", label: "Kotak Mahindra", hint: "Net Banking → Account Statement → CSV Export" },
-];
+// Matches backend MAX_FILE_SIZE_BYTES in statements.py
+const MAX_FILE_SIZE_MB = 20;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-export default function CSVUpload({ onSuccess, onClose }) {
+function _formatSourceLabel(result) {
+  // CSV result: { bank: "hdfc", ... }
+  // UPI result: { source: "google_pay", ... }
+  if (result.bank) return result.bank.toUpperCase();
+  if (result.source) {
+    return result.source
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+  }
+  return "Unknown";
+}
+
+function _getPeerPaymentCount(result) {
+  // UPI results carry a by_nature breakdown; CSV results don't.
+  if (!result.by_nature) return 0;
+  return (result.by_nature.peer_payment_sent ?? 0)
+    + (result.by_nature.peer_payment_received ?? 0);
+}
+
+export { _formatSourceLabel as formatSourceLabel };
+
+export default function StatementUpload({ onSuccess, onClose }) {
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
-  const [selectedBank, setSelectedBank] = useState(null);
   const inputRef = useRef(null);
 
   const handleFile = useCallback((f) => {
     setError(null);
     setResult(null);
     if (!f) return;
-    if (!f.name.toLowerCase().endsWith(".csv")) {
-      setError("Only .csv files are accepted. Export your bank statement as CSV first.");
+    const lower = f.name.toLowerCase();
+    if (!lower.endsWith(".csv") && !lower.endsWith(".pdf")) {
+      setError("Only .csv or .pdf files are accepted.");
       return;
     }
-    if (f.size > 10 * 1024 * 1024) {
-      setError("File is too large (max 10 MB). Try a shorter date range.");
+    if (f.size > MAX_FILE_SIZE_BYTES) {
+      setError(`File is too large (max ${MAX_FILE_SIZE_MB} MB).`);
       return;
     }
     setFile(f);
@@ -50,16 +68,16 @@ export default function CSVUpload({ onSuccess, onClose }) {
     const form = new FormData();
     form.append("file", file);
     try {
-      const { data } = await api.post("/api/csv/upload", form, {
+      const { data } = await api.post("/api/statements/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setResult(data);
       onSuccess?.();
     } catch (err) {
-      const msg =
+      setError(
         err?.response?.data?.detail ||
-        "Upload failed. Check your file is a valid bank statement CSV.";
-      setError(msg);
+        "Upload failed. Check your file is a valid statement."
+      );
     } finally {
       setUploading(false);
     }
@@ -69,7 +87,6 @@ export default function CSVUpload({ onSuccess, onClose }) {
     setFile(null);
     setError(null);
     setResult(null);
-    setSelectedBank(null);
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -80,8 +97,8 @@ export default function CSVUpload({ onSuccess, onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-sage-100">
           <div>
-            <h2 className="font-display text-lg font-semibold text-ink-900">Upload Bank Statement</h2>
-            <p className="text-sm text-ink-500 mt-0.5">CSV export from your bank's net banking portal</p>
+            <h2 className="font-display text-lg font-semibold text-ink-900">Upload Statement</h2>
+            <p className="text-sm text-ink-500 mt-0.5">Bank CSV · Google Pay PDF · PhonePe PDF · Paytm PDF</p>
           </div>
           <button
             onClick={onClose}
@@ -96,31 +113,50 @@ export default function CSVUpload({ onSuccess, onClose }) {
 
         <div className="px-6 py-5 space-y-5">
 
-          {/* Success state */}
           {result ? (
+            // ── Success state ──────────────────────────────────────────────
             <div className="space-y-4">
               <div className="bg-safe/10 border border-safe/30 rounded-xl p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-safe/20 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-safe/20 flex items-center justify-center shrink-0">
                     <svg className="w-4 h-4 text-safe" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <p className="font-medium text-ink-900">Statement imported</p>
+                  <p className="font-medium text-ink-900">
+                    Detected: {_formatSourceLabel(result)}
+                  </p>
                 </div>
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 text-center">
                   {[
-                    { label: "Bank detected", value: result.bank?.toUpperCase() },
-                    { label: "Transactions added", value: result.inserted },
-                    { label: "Already existed", value: result.skipped_duplicate },
+                    { label: "Added",         value: result.inserted },
+                    { label: "Matched existing", value: result.matched_existing ?? 0 },
+                    { label: "Duplicates skipped", value: result.skipped_duplicate },
+                    { label: "Peer payments", value: _getPeerPaymentCount(result) },
                   ].map(({ label, value }) => (
                     <div key={label} className="bg-white rounded-lg p-2.5 border border-sage-100">
                       <p className="font-mono text-lg font-semibold text-ink-900">{value}</p>
-                      <p className="text-xs text-ink-400 mt-0.5">{label}</p>
+                      <p className="text-xs text-ink-400 mt-0.5 leading-tight">{label}</p>
                     </div>
                   ))}
                 </div>
+
+                {/* Contextual note for UPI uploads with peer payments */}
+                {_getPeerPaymentCount(result) > 0 && (
+                  <p className="text-xs text-ink-500 mt-3 leading-relaxed">
+                    Peer payments are kept separate from your spending total automatically.
+                  </p>
+                )}
+
+                {/* Note if cross-source matches happened */}
+                {(result.matched_existing ?? 0) > 0 && (
+                  <p className="text-xs text-ink-500 mt-2 leading-relaxed">
+                    {result.matched_existing} transaction{result.matched_existing !== 1 ? "s were" : " was"} matched
+                    to records from another source — no duplicates in your feed.
+                  </p>
+                )}
               </div>
+
               <div className="flex gap-3">
                 <button onClick={reset} className="btn-ghost flex-1 text-sm py-2">
                   Upload another
@@ -132,36 +168,6 @@ export default function CSVUpload({ onSuccess, onClose }) {
             </div>
           ) : (
             <>
-              {/* Bank selector */}
-              <div>
-                <p className="label mb-2">Select your bank</p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {SUPPORTED_BANKS.map((bank) => (
-                    <button
-                      key={bank.id}
-                      onClick={() => setSelectedBank(selectedBank === bank.id ? null : bank.id)}
-                      className={`
-                        text-left px-3 py-2.5 rounded-xl border text-sm font-medium transition-all
-                        ${selectedBank === bank.id
-                          ? "border-forest-600 bg-forest-50 text-forest-700"
-                          : "border-sage-200 text-ink-700 hover:border-forest-400 hover:bg-sage-50"
-                        }
-                      `}
-                    >
-                      {bank.label}
-                    </button>
-                  ))}
-                </div>
-                {selectedBank && (
-                  <p className="mt-2 text-xs text-ink-400 flex items-start gap-1.5">
-                    <svg className="w-3.5 h-3.5 mt-0.5 shrink-0 text-forest-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {SUPPORTED_BANKS.find(b => b.id === selectedBank)?.hint}
-                  </p>
-                )}
-              </div>
-
               {/* Drop zone */}
               <div
                 onDrop={onDrop}
@@ -171,13 +177,16 @@ export default function CSVUpload({ onSuccess, onClose }) {
                 className={`
                   relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer
                   ${dragActive ? "border-forest-500 bg-forest-50" : ""}
-                  ${file ? "border-forest-400 bg-forest-50/50 cursor-default" : "border-sage-300 hover:border-forest-400 hover:bg-sage-50"}
+                  ${file
+                    ? "border-forest-400 bg-forest-50/50 cursor-default"
+                    : "border-sage-300 hover:border-forest-400 hover:bg-sage-50"
+                  }
                 `}
               >
                 <input
                   ref={inputRef}
                   type="file"
-                  accept=".csv,text/csv"
+                  accept=".csv,.pdf,text/csv,application/pdf"
                   className="hidden"
                   onChange={(e) => handleFile(e.target.files?.[0])}
                 />
@@ -186,7 +195,8 @@ export default function CSVUpload({ onSuccess, onClose }) {
                   <div className="flex items-center justify-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-forest-100 flex items-center justify-center shrink-0">
                       <svg className="w-5 h-5 text-forest-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
                     <div className="text-left min-w-0">
@@ -206,12 +216,15 @@ export default function CSVUpload({ onSuccess, onClose }) {
                 ) : (
                   <>
                     <svg className="mx-auto w-8 h-8 text-ink-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                     <p className="text-sm text-ink-600">
-                      Drop your CSV here, or <span className="text-forest-600 font-medium">browse</span>
+                      Drop your file here, or <span className="text-forest-600 font-medium">browse</span>
                     </p>
-                    <p className="text-xs text-ink-400 mt-1">Bank format is detected automatically</p>
+                    <p className="text-xs text-ink-400 mt-1">
+                      Bank or app is detected automatically — CSV or PDF, up to {MAX_FILE_SIZE_MB} MB
+                    </p>
                   </>
                 )}
               </div>
@@ -220,19 +233,18 @@ export default function CSVUpload({ onSuccess, onClose }) {
               {error && (
                 <div className="flex items-start gap-2 bg-danger/5 border border-danger/20 rounded-xl px-4 py-3">
                   <svg className="w-4 h-4 text-danger mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <p className="text-sm text-danger">{error}</p>
                 </div>
               )}
 
-              {/* Privacy note */}
               <p className="text-xs text-ink-400 text-center leading-relaxed">
                 Your file is processed on our servers and never shared.
-                Only debit transactions are imported.
+                Payments to people are kept separate from your spending total automatically.
               </p>
 
-              {/* Upload button */}
               <button
                 onClick={handleUpload}
                 disabled={!file || uploading}

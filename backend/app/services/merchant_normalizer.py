@@ -41,7 +41,7 @@ class NormalizedMerchant:
 _PATTERNS: List[Tuple[str, str, str, float]] = [
 
     # ── Food & Dining ────────────────────────────────────────────────────────
-    (r"swiggy", "Swiggy", "Food & Dining", 0.97),
+    (r"swiggy|bundl\s?technologies", "Swiggy", "Food & Dining", 0.97),
     (r"zomato", "Zomato", "Food & Dining", 0.97),
     (r"blinkit|grofers", "Blinkit", "Groceries", 0.96),
     (r"zepto", "Zepto", "Groceries", 0.96),
