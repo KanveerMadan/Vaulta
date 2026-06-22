@@ -100,10 +100,11 @@ async def upload_statement(
             )
 
     except (CSVParseError, UPIParseError) as e:
+        logger.error(f"Parse error: {e}")  # ADD THIS LINE
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e),
-        )
+    )
     except Exception as e:
         logger.error(
             f"Statement upload failed: user={current_user.id}, file={filename!r}: {e}",
