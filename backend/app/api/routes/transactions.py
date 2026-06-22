@@ -29,14 +29,6 @@ def list_transactions(
     date_floor: Optional[datetime] = Depends(get_data_date_floor),
     db: Session = Depends(get_db),
 ):
-    """
-    Paginated, filterable transaction list for the authenticated user.
-    Scoped strictly to current_user — cross-user access is impossible by design.
-
-    Trial/free-tier users (subscription_status != "active") are limited to the
-    last 30 days of data — `date_floor` (from get_data_date_floor) is applied
-    as a lower bound regardless of the requested `date_from`.
-    """
     effective_date_from = date_from
     if date_floor and (date_from is None or date_from < date_floor):
         effective_date_from = date_floor
@@ -56,6 +48,7 @@ def list_transactions(
 
 @router.get("/summary", response_model=MonthlySummary)
 def get_summary(
+    period: str = Query(default="month", pattern="^(month|year|lifetime)$"),
     year: Optional[int] = Query(default=None, ge=2020, le=2100),
     month: Optional[int] = Query(default=None, ge=1, le=12),
     current_user: User = Depends(get_current_user),
@@ -63,18 +56,17 @@ def get_summary(
     date_floor: Optional[datetime] = Depends(get_data_date_floor),
     db: Session = Depends(get_db),
 ):
-    """
-    Monthly summary: total spend, category breakdown with budget status,
-    MoM deltas, and top merchants. Defaults to current month.
-
-    This is what Dashboard.jsx MetricCards and SpendChart consume.
-
-    Trial/free-tier users cannot request a summary for a month entirely
-    before their 30-day data window — returns 402 in that case.
-    """
     now = datetime.utcnow()
     target_year = year or now.year
     target_month = month or now.month
+
+    if period in ("year", "lifetime"):
+        return transaction_service.get_period_summary(
+            db=db,
+            user=current_user,
+            period=period,
+            year=target_year if period == "year" else None,
+        )
 
     if date_floor:
         from calendar import monthrange

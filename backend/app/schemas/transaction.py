@@ -10,10 +10,6 @@ from pydantic import BaseModel, field_validator, ConfigDict
 from app.models.transaction import TransactionSource, TransactionNature
 
 
-# ─────────────────────────────────────────────
-# Transaction schemas
-# ─────────────────────────────────────────────
-
 class TransactionBase(BaseModel):
     merchant_raw: str
     merchant_clean: Optional[str] = None
@@ -63,10 +59,6 @@ class TransactionListResponse(BaseModel):
     has_more: bool
 
 
-# ─────────────────────────────────────────────
-# Summary schemas
-# ─────────────────────────────────────────────
-
 class CategorySummary(BaseModel):
     category: str
     total: Decimal
@@ -79,17 +71,9 @@ class CategorySummary(BaseModel):
 
 
 class MonthlySummary(BaseModel):
-    """
-    Summary for a given month. Wired to Dashboard.jsx MetricCards.
-
-    total_spend    — expense + peer_payment_sent rows only (money that genuinely
-                     left the user's hand, Section 5).
-    total_received — income + peer_payment_received rows (money that arrived).
-    net_cash_flow  — total_received - total_spend.
-    self_transfer rows are excluded from all three figures.
-    """
     period_start: datetime
     period_end: datetime
+    period: str = "month"  # "month" | "year" | "lifetime"
 
     total_spend: Decimal
     total_received: Decimal
@@ -97,18 +81,15 @@ class MonthlySummary(BaseModel):
 
     transaction_count: int
     total_budget: Optional[Decimal] = None
-    days_remaining: int
+    days_remaining: Optional[int] = None
+    avg_monthly_spend: Optional[Decimal] = None  # year/lifetime only
 
     categories: List[CategorySummary]
-    top_merchants: List[dict]  # [{merchant_clean, total, count}]
+    top_merchants: List[dict]
 
     mom_total_delta: Optional[Decimal] = None
     mom_total_delta_pct: Optional[Decimal] = None
 
-
-# ─────────────────────────────────────────────
-# Budget schemas
-# ─────────────────────────────────────────────
 
 class BudgetCreate(BaseModel):
     category: Optional[str] = None

@@ -162,7 +162,9 @@ export default function StatementUpload({ onSuccess, onClose }) {
                 <button onClick={reset} className="btn-ghost flex-1 text-sm py-2">
                   Upload another
                 </button>
-                <button onClick={onClose} className="btn-primary flex-1 text-sm py-2">
+                <button 
+                  onClick={() => { onClose?.(); window.location.href = "/dashboard"; }} 
+                  className="btn-primary flex-1 text-sm py-2">
                   View dashboard
                 </button>
               </div>

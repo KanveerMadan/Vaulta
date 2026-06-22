@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
@@ -16,6 +16,12 @@ import SubscriptionBanner from "../components/SubscriptionBanner";
 const CATEGORY_COLORS = [
   "#2d6a4f", "#40916c", "#52b788", "#74c69d", "#95d5b2",
   "#b7e4c7", "#d8f3dc", "#1b4332", "#081c15",
+];
+
+const PERIOD_OPTIONS = [
+  { value: "month",    label: "Month"    },
+  { value: "year",     label: "Year"     },
+  { value: "lifetime", label: "All Time" },
 ];
 
 // ─────────────────────────────────────────────
@@ -106,6 +112,8 @@ function ErrorRetry({ message, onRetry }) {
 
 export default function Dashboard() {
   const { user } = useAuthStore();
+  const [period, setPeriod] = useState("month");
+
   const {
     summary, summaryLoading, summaryError,
     setSummary, setSummaryLoading, setSummaryError,
@@ -116,8 +124,9 @@ export default function Dashboard() {
 
   const fetchSummary = useCallback(async () => {
     setSummaryLoading(true);
+    setSummaryError(null);
     try {
-      const { data } = await api.get("/api/transactions/summary");
+      const { data } = await api.get(`/api/transactions/summary?period=${period}`);
       setSummary(data);
       setCategorySpend(
         (data.categories || []).map((c, i) => ({
@@ -137,7 +146,7 @@ export default function Dashboard() {
     } finally {
       setSummaryLoading(false);
     }
-  }, [setSummary, setSummaryLoading, setSummaryError, setCategorySpend]);
+  }, [period, setSummary, setSummaryLoading, setSummaryError, setCategorySpend]);
 
   const fetchTransactions = useCallback(async () => {
     setTransactionsLoading(true);
@@ -153,35 +162,45 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchSummary();
+  }, [fetchSummary]);
+
+  useEffect(() => {
     fetchTransactions();
-  }, [fetchSummary, fetchTransactions]);
+  }, [fetchTransactions]);
 
   // ── Derived values ─────────────────────────────────────────────────────────
-  const totalSpend     = summary ? parseFloat(summary.total_spend)    : 0;
-  const totalReceived  = summary ? parseFloat(summary.total_received) : 0;
-  const netCashFlow    = summary ? parseFloat(summary.net_cash_flow)  : 0;
-  const totalBudget    = summary?.total_budget ? parseFloat(summary.total_budget) : null;
-  const budgetPct      = totalBudget ? (totalSpend / totalBudget) * 100 : null;
-  const daysRemaining  = summary?.days_remaining ?? null;
-  const momDelta       = summary?.mom_total_delta ? parseFloat(summary.mom_total_delta) : null;
-  const momPct         = summary?.mom_total_delta_pct ? parseFloat(summary.mom_total_delta_pct) : null;
+  const totalSpend        = summary ? parseFloat(summary.total_spend)       : 0;
+  const totalReceived     = summary ? parseFloat(summary.total_received)    : 0;
+  const netCashFlow       = summary ? parseFloat(summary.net_cash_flow)     : 0;
+  const totalBudget       = summary?.total_budget ? parseFloat(summary.total_budget) : null;
+  const budgetPct         = totalBudget ? (totalSpend / totalBudget) * 100 : null;
+  const daysRemaining     = summary?.days_remaining ?? null;
+  const avgMonthlySpend   = summary?.avg_monthly_spend ? parseFloat(summary.avg_monthly_spend) : null;
+  const momDelta          = summary?.mom_total_delta ? parseFloat(summary.mom_total_delta) : null;
+  const momPct            = summary?.mom_total_delta_pct ? parseFloat(summary.mom_total_delta_pct) : null;
+  const netPositive       = netCashFlow >= 0;
+  const isMonth           = period === "month";
 
-  const netPositive = netCashFlow >= 0;
+  const periodLabel = isMonth
+    ? new Date().toLocaleString("en-IN", { month: "long", year: "numeric" })
+    : period === "year"
+    ? new Date().getFullYear().toString()
+    : "All Time";
 
   const insights = summary?.categories?.length
     ? [
         summary.categories[0] && {
-          text: `${summary.categories[0].category} is your biggest spend category this month at ₹${parseFloat(summary.categories[0].total).toLocaleString("en-IN")}.`,
+          text: `${summary.categories[0].category} is your biggest spend category at ₹${parseFloat(summary.categories[0].total).toLocaleString("en-IN")}.`,
           sub: `${summary.categories[0].transaction_count} transactions`,
         },
-        momDelta !== null && {
+        isMonth && momDelta !== null && {
           text: momDelta > 0
             ? `You've spent ₹${Math.abs(momDelta).toLocaleString("en-IN")} more than last month (${Math.abs(momPct ?? 0).toFixed(1)}% up).`
             : `You've spent ₹${Math.abs(momDelta).toLocaleString("en-IN")} less than last month. Good going.`,
           sub: "Month-over-month",
         },
         totalReceived > 0 && {
-          text: `₹${totalReceived.toLocaleString("en-IN")} came in this month across payments received and income.`,
+          text: `₹${totalReceived.toLocaleString("en-IN")} received across payments and income.`,
           sub: "Money in",
         },
       ].filter(Boolean)
@@ -192,7 +211,6 @@ export default function Dashboard() {
 
       <SubscriptionBanner />
 
-      {/* Prompt to upload more — only shown when data exists (something to add to) */}
       {summary && summary.transaction_count > 0 && (
         <div className="flex items-center gap-3 bg-gold/10 border border-gold/30 rounded-xl px-4 py-3">
           <svg className="w-4 h-4 text-gold shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -208,11 +226,30 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Metric cards — 6 cards, 2 col mobile / 3 col desktop */}
+      {/* Period toggle + section header */}
       <section>
-        <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest mb-3">
-          {new Date().toLocaleString("en-IN", { month: "long", year: "numeric" })}
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">
+            {periodLabel}
+          </h2>
+          <div className="flex gap-1 bg-sage-100 rounded-lg p-1">
+            {PERIOD_OPTIONS.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setPeriod(value)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  period === value
+                    ? "bg-white text-ink-900 shadow-sm"
+                    : "text-ink-500 hover:text-ink-700"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Metric cards */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {summaryLoading ? (
             <>
@@ -233,7 +270,7 @@ export default function Dashboard() {
               <MetricCard
                 label="Total spent"
                 value={`₹${totalSpend.toLocaleString("en-IN")}`}
-                sub={momDelta !== null
+                sub={isMonth && momDelta !== null
                   ? `${momDelta > 0 ? "▲" : "▼"} ${Math.abs(momPct ?? 0).toFixed(1)}% vs last month`
                   : "Merchant spend + payments to people"
                 }
@@ -246,30 +283,38 @@ export default function Dashboard() {
               <MetricCard
                 label="Net cash flow"
                 value={`${netPositive ? "+" : "−"}₹${Math.abs(netCashFlow).toLocaleString("en-IN")}`}
-                sub={netPositive ? "You're ahead this month" : "Spending exceeded income"}
+                sub={netPositive ? "You're ahead" : "Spending exceeded income"}
                 highlight={netPositive}
               />
 
-              {/* Row 2 — budget & activity */}
+              {/* Row 2 — budget / avg / activity */}
               <MetricCard
                 label="Budget used"
-                value={totalBudget ? `${budgetPct?.toFixed(0)}%` : "—"}
-                progress={budgetPct ?? undefined}
-                progressDanger={budgetPct !== null && budgetPct > 80}
-                sub={totalBudget
-                  ? `₹${(totalBudget - totalSpend).toLocaleString("en-IN")} remaining`
-                  : "No budget set"
+                value={isMonth && totalBudget ? `${budgetPct?.toFixed(0)}%` : "—"}
+                progress={isMonth ? (budgetPct ?? undefined) : undefined}
+                progressDanger={isMonth && budgetPct !== null && budgetPct > 80}
+                sub={isMonth
+                  ? (totalBudget
+                      ? `₹${(totalBudget - totalSpend).toLocaleString("en-IN")} remaining`
+                      : "No budget set")
+                  : "Budget tracking is monthly only"
                 }
               />
               <MetricCard
                 label="Transactions"
                 value={summary.transaction_count.toLocaleString("en-IN")}
-                sub="This month"
+                sub={isMonth ? "This month" : period === "year" ? "This year" : "All time"}
               />
               <MetricCard
-                label="Days left"
-                value={daysRemaining ?? "—"}
-                sub="In this billing period"
+                label={isMonth ? "Days left" : "Avg monthly spend"}
+                value={
+                  isMonth
+                    ? (daysRemaining ?? "—")
+                    : avgMonthlySpend !== null
+                    ? `₹${avgMonthlySpend.toLocaleString("en-IN")}`
+                    : "—"
+                }
+                sub={isMonth ? "In this billing period" : "Based on available data"}
               />
             </>
           ) : (
