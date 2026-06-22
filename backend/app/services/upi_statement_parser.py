@@ -41,7 +41,7 @@ from decimal import Decimal, InvalidOperation
 from enum import Enum
 from typing import List, Optional, Tuple
 
-import pdfplumber
+import fitz  # pymupdf
 
 from app.services.merchant_normalizer import normalize
 
@@ -290,12 +290,11 @@ def parse_upi_statement(file_bytes: bytes, filename: str = "") -> Tuple[UPISourc
         source (PhonePe/Paytm currently), or malformed/empty PDF.
     """
     try:
-        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-            full_text = ""
-            for page in pdf.pages:
-                page_text = page.extract_text(layout=True)
-                if page_text:
-                    full_text += page_text + "\n"
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        full_text = ""
+        for page in doc:
+            full_text += page.get_text() + "\n"
+        doc.close()
     except Exception as e:
         raise UPIParseError(f"Could not read PDF file: {e}") from e
 
