@@ -87,20 +87,7 @@ class RawUPITransaction:
 # ─────────────────────────────────────────────
 
 def _detect_source(full_text: str) -> UPISource:
-    """
-    Identify which UPI app generated this statement.
-
-    Detection strategy: brand names are not reliable anchors because
-    Google Pay's branding appears only as a logo image (not extractable
-    text) until the footer note at the bottom of each page. Instead we
-    use structural text patterns that are unique to each app's format.
-
-    Google Pay (verified against real export):
-      - "UPITransactionID:" appears on every transaction row (unspaced).
-      - "Paidto" / "Receivedfrom" direction labels are present.
-      - The footer note contains "GooglePayapp" (space-stripped).
-    PhonePe / Paytm: brand name appears as readable text — check first.
-    """
+    # Strip spaces for consistent matching — this PDF glues words together
     sample = full_text[:500].replace(" ", "").lower()
 
     if "phonepe" in sample:
@@ -108,16 +95,15 @@ def _detect_source(full_text: str) -> UPISource:
     if "paytm" in sample:
         return UPISource.PAYTM
 
-    # Google Pay: structural fingerprint — UTR label + direction label
-    # Both appear in the very first transaction block, within first 500 chars.
+    # Google Pay structural fingerprint — both present in first 500 chars (verified)
     has_utr = "upitransactionid:" in sample
     has_direction = "paidto" in sample or "receivedfrom" in sample or "selftransferto" in sample
     if has_utr and has_direction:
         return UPISource.GOOGLE_PAY
 
-    # Fallback: check full text for GPay footer note (last resort)
+    # Fallback: GPay footer note appears later in the document
     full_stripped = full_text.replace(" ", "").lower()
-    if "googlepay" in full_stripped or "googlepayapp" in full_stripped:
+    if "googlepay" in full_stripped:
         return UPISource.GOOGLE_PAY
 
     return UPISource.UNKNOWN
