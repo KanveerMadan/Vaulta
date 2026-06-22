@@ -293,7 +293,7 @@ def parse_upi_statement(file_bytes: bytes, filename: str = "") -> Tuple[UPISourc
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             full_text = ""
             for page in pdf.pages:
-                page_text = page.extract_text()
+                page_text = page.extract_text(layout=True)
                 if page_text:
                     full_text += page_text + "\n"
     except Exception as e:
