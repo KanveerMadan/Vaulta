@@ -87,27 +87,24 @@ class RawUPITransaction:
 # ─────────────────────────────────────────────
 
 def _detect_source(full_text: str) -> UPISource:
-    # Strip spaces for consistent matching — this PDF glues words together
     sample = full_text[:500].replace(" ", "").lower()
+    logger.info(f"DETECT sample[:150]={sample[:150]!r} has_utr={'upitransactionid:' in sample} has_direction={'paidto' in sample or 'receivedfrom' in sample}")
 
     if "phonepe" in sample:
         return UPISource.PHONEPE
     if "paytm" in sample:
         return UPISource.PAYTM
 
-    # Google Pay structural fingerprint — both present in first 500 chars (verified)
     has_utr = "upitransactionid:" in sample
     has_direction = "paidto" in sample or "receivedfrom" in sample or "selftransferto" in sample
     if has_utr and has_direction:
         return UPISource.GOOGLE_PAY
 
-    # Fallback: GPay footer note appears later in the document
     full_stripped = full_text.replace(" ", "").lower()
     if "googlepay" in full_stripped:
         return UPISource.GOOGLE_PAY
 
     return UPISource.UNKNOWN
-
 
 # ─────────────────────────────────────────────
 # Name de-mangling (display only — NOT used for classification)
