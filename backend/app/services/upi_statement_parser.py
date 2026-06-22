@@ -2,37 +2,20 @@
 UPI Statement Parser Service — Phase 1.5 (post-Gmail/AA pivot)
 
 Parses transaction-history PDFs exported from UPI apps (Google Pay, PhonePe, Paytm).
-Unlike bank CSVs, these are PDFs with a consistent per-entry text block, extracted
-via pdfplumber.
+Uses pymupdf (fitz) for PDF text extraction — correctly handles font encoding on Linux.
 
-IMPORTANT — PDF text extraction quirk (verified against a real Google Pay export):
-  pdfplumber strips inter-word spaces from this PDF's text layer (a font/encoding
-  artifact, not a pdfplumber bug — confirmed both default and layout=True modes
-  produce "PaidtoZEPTOMARKETPLACE..." with no spaces). This is NOT something we
-  can fix at the extraction layer — regexes below match against the UNSPACED
-  text directly, anchored on fixed label tokens ("Paidto", "Receivedfrom",
-  "UPITransactionID:") rather than relying on whitespace boundaries.
-
-  Counterparty names extracted this way are also unspaced (e.g. "ArjunMehra",
-  "ZEPTOMARKETPLACEPRIVATELIMITED") and are de-mangled separately via
-  _humanize_name() for display purposes — but classification (business vs.
-  person) does NOT rely on casing/spacing heuristics, because real data shows
-  this is unreliable: some personal names render in ALL CAPS too (e.g.
-  "SUPREETKAUR" is a person, not a business). Classification instead runs the
-  raw name through the merchant normalizer first; only names with NO confident
-  merchant match fall back to peer-payment classification.
+pymupdf extracts this PDF with spaces: "Paid to ZEPTO MARKETPLACE PRIVATE LIMITED",
+"UPI Transaction ID: 612456562367". Regexes match the spaced format.
 
 Supported sources:
   - Google Pay (verified against real export, Phase 1.5)
-  - PhonePe (NOT YET IMPLEMENTED — stub raises UPIParseError with a clear message
-    until a real sample PDF is available to verify the format against)
-  - Paytm (NOT YET IMPLEMENTED — same as above)
+  - PhonePe (NOT YET IMPLEMENTED — stub raises UPIParseError)
+  - Paytm  (NOT YET IMPLEMENTED — stub raises UPIParseError)
 """
 
 from __future__ import annotations
 
 import hashlib
-import io
 import logging
 import re
 from dataclasses import dataclass
@@ -50,17 +33,17 @@ logger = logging.getLogger(__name__)
 
 class UPISource(str, Enum):
     GOOGLE_PAY = "google_pay"
-    PHONEPE = "phonepe"
-    PAYTM = "paytm"
-    UNKNOWN = "unknown"
+    PHONEPE    = "phonepe"
+    PAYTM      = "paytm"
+    UNKNOWN    = "unknown"
 
 
 class TransactionNature(str, Enum):
-    expense = "expense"
-    income = "income"
-    peer_payment_sent = "peer_payment_sent"
+    expense               = "expense"
+    income                = "income"
+    peer_payment_sent     = "peer_payment_sent"
     peer_payment_received = "peer_payment_received"
-    self_transfer = "self_transfer"
+    self_transfer         = "self_transfer"
 
 
 class UPIParseError(Exception):
@@ -70,13 +53,13 @@ class UPIParseError(Exception):
 
 @dataclass
 class RawUPITransaction:
-    merchant_raw: str               # De-mangled counterparty name, for display
-    merchant_raw_unspaced: str       # Original glued string, for normalizer matching
+    merchant_raw: str            # counterparty name with spaces, for display
+    merchant_raw_unspaced: str   # spaces removed, for normalizer matching
     amount: Decimal
     transaction_date: datetime
-    direction: str                   # "paid" | "received" | "self_transfer"
-    utr: str                         # UPI Transaction ID — strongest dedup key
-    linked_bank: str                 # e.g. "Kotak Mahindra Bank"
+    direction: str               # "paid" | "received" | "self_transfer"
+    utr: str
+    linked_bank: str
     linked_bank_last4: str
     idempotency_key: str
     raw_row: dict
@@ -87,76 +70,23 @@ class RawUPITransaction:
 # ─────────────────────────────────────────────
 
 def _detect_source(full_text: str) -> UPISource:
-    sample = full_text[:500].replace(" ", "").lower()
-    logger.info(f"DETECT sample[:150]={sample[:150]!r} has_utr={'upitransactionid:' in sample} has_direction={'paidto' in sample or 'receivedfrom' in sample}")
+    lower = full_text.lower()
 
-    if "phonepe" in sample:
+    if "phonepe" in lower:
         return UPISource.PHONEPE
-    if "paytm" in sample:
+    if "paytm" in lower:
         return UPISource.PAYTM
-
-    has_utr = "upitransactionid:" in sample
-    has_direction = "paidto" in sample or "receivedfrom" in sample or "selftransferto" in sample
-    if has_utr and has_direction:
+    if "google pay" in lower or "googlepay" in lower:
         return UPISource.GOOGLE_PAY
-
-    full_stripped = full_text.replace(" ", "").lower()
-    if "googlepay" in full_stripped:
+    # Structural fallback
+    if "upi transaction id" in lower and ("paid to" in lower or "received from" in lower):
         return UPISource.GOOGLE_PAY
 
     return UPISource.UNKNOWN
 
-# ─────────────────────────────────────────────
-# Name de-mangling (display only — NOT used for classification)
-# ─────────────────────────────────────────────
-
-def _humanize_name(raw: str) -> str:
-    """
-    Best-effort insertion of spaces into glued PDF text, for display purposes.
-    Does not need to be perfect — it's cosmetic. Classification logic below
-    uses the merchant normalizer against the raw unspaced string instead,
-    since that's more reliable than this heuristic.
-    """
-    s = raw.strip()
-    # lowercase -> uppercase transition: "ArjunMehra" -> "Arjun Mehra"
-    s = re.sub(r"([a-z])([A-Z])", r"\1 \2", s)
-    # Known business suffixes glued at the end of an all-caps run
-    for suffix, spaced in [
-        ("PRIVATELIMITED", "PRIVATE LIMITED"),
-        ("PVTLTD", "PVT LTD"),
-    ]:
-        s = s.replace(suffix, f" {spaced}")
-    return re.sub(r"\s+", " ", s).strip()
-
 
 # ─────────────────────────────────────────────
-# Classification (business/merchant vs. peer payment)
-# ─────────────────────────────────────────────
-
-def _classify_counterparty(raw_unspaced: str) -> Tuple[Optional[str], Optional[str], float]:
-    """
-    Determine whether a counterparty is a recognized merchant or a person.
-
-    Returns: (merchant_clean, category, confidence)
-      - If merchant normalizer finds a confident match (>=0.5): treated as a
-        real merchant, merchant_clean/category populated.
-      - If no confident match: all None, signaling "peer payment" to the
-        caller — default classification, user can recategorize as a real
-        expense later if the normalizer was wrong.
-
-    Design note: classification does NOT use casing/all-caps heuristics.
-    Real Google Pay data shows personal names sometimes render in ALL CAPS
-    (e.g. "SUPREETKAUR"), so casing alone is not a reliable signal. The
-    normalizer match is the only thing classification trusts.
-    """
-    normalized = normalize(raw_unspaced)
-    if normalized.confidence >= 0.5:
-        return normalized.merchant_clean, normalized.category, normalized.confidence
-    return None, None, 0.0
-
-
-# ─────────────────────────────────────────────
-# Amount / date parsing
+# Amount / date helpers
 # ─────────────────────────────────────────────
 
 def _parse_amount(raw: str) -> Optional[Decimal]:
@@ -168,81 +98,85 @@ def _parse_amount(raw: str) -> Optional[Decimal]:
         return None
 
 
-def _parse_gpay_date(date_str: str, time_str: str) -> datetime:
-    """
-    Parses Google Pay's glued date format: "04May,2026" + "05:23AM"
-    -> datetime(2026, 5, 4, 5, 23)
-    """
-    cleaned_date = re.sub(r"(\d{2})([A-Za-z]+),?(\d{4})", r"\1 \2 \3", date_str)
-    cleaned_time = re.sub(r"(\d{2}:\d{2})([AP]M)", r"\1 \2", time_str)
-    combined = f"{cleaned_date} {cleaned_time}"
-    return datetime.strptime(combined, "%d %b %Y %I:%M %p")
-
-
 def _make_idempotency_key(source: str, utr: str) -> str:
-    """UTR is globally unique per UPI transaction — strongest possible dedup key."""
     return hashlib.sha256(f"upi|{source}|{utr}".encode()).hexdigest()
 
 
 # ─────────────────────────────────────────────
-# Google Pay parser (VERIFIED against real export)
+# Google Pay parser
 # ─────────────────────────────────────────────
 
-# Anchored on fixed label tokens, not whitespace — required because this PDF's
-# text layer has no inter-word spaces (see module docstring).
+# pymupdf extracts this PDF with spaces.
+# Each transaction block looks like:
+#   04 May, 2026\n05:23 AM\nPaid to ZEPTO MARKETPLACE PRIVATE LIMITED\nUPI Transaction ID: 612456562367\nPaid by IndusInd Bank 8250\n₹129
 _GPAY_PATTERN = re.compile(
-    r"(\d{2}[A-Za-z]+,?\d{4})\s*"                          # date: "04May,2026"
-    r"(Paidto|Receivedfrom|Selftransferto)"                 # direction
-    r"(.+?)"                                                 # counterparty (lazy)
-    r"₹([\d,]+\.?\d*)\s*"                                   # amount
-    r"(\d{2}:\d{2}[AP]M)\s*"                                # time
-    r"UPITransactionID:(\d+)\s*"                            # UTR
-    r"(Paidby|Paidto)(.+?)(\d{3,4})"                        # linked bank + last 3-4 digits
+    r"(\d{2}\s+[A-Za-z]+,?\s*\d{4})\n"           # date: "04 May, 2026"
+    r"(\d{2}:\d{2}\s*[AP]M)\n"                    # time: "05:23 AM"
+    r"(Paid to|Received from|Self transfer to)\s+" # direction
+    r"(.+?)\n"                                     # counterparty
+    r"UPI Transaction ID:\s*(\d+)\n"               # UTR
+    r"(?:Paid by|Paid to)\s+(.+?)\s+(\d{3,4})\n"  # bank + last digits
+    r"₹([\d,]+\.?\d*)",                            # amount
+    re.MULTILINE,
 )
 
 
 def _parse_google_pay(full_text: str) -> List[RawUPITransaction]:
     transactions = []
     matches = _GPAY_PATTERN.findall(full_text)
+    logger.info(f"GPay regex matches: {len(matches)}")
 
     for match in matches:
-        (date_str, direction_raw, counterparty_raw, amount_str,
-         time_str, utr, _bank_prefix, bank_name_raw, bank_last_digits) = match
-
-        try:
-            txn_date = _parse_gpay_date(date_str, time_str)
-        except ValueError as e:
-            logger.warning(f"Google Pay row: failed to parse date {date_str!r}+{time_str!r}: {e} — skipping")
-            continue
+        (date_str, time_str, direction_raw, counterparty_raw,
+         utr, bank_name_raw, bank_last_digits, amount_str) = match
 
         amount = _parse_amount(amount_str)
         if not amount:
             continue
 
-        counterparty_raw = counterparty_raw.strip()
+        # Parse date + time
+        try:
+            date_clean = re.sub(r"\s+", " ", date_str.strip().rstrip(","))
+            time_clean = re.sub(r"\s+", " ", time_str.strip())
+            combined = f"{date_clean} {time_clean}"
+            txn_date = None
+            for fmt in ("%d %b %Y %I:%M %p", "%d %b, %Y %I:%M %p"):
+                try:
+                    txn_date = datetime.strptime(combined, fmt)
+                    break
+                except ValueError:
+                    continue
+            if txn_date is None:
+                logger.warning(f"GPay: could not parse date {combined!r} — skipping")
+                continue
+        except Exception as e:
+            logger.warning(f"GPay: date error {e} — skipping")
+            continue
 
-        if direction_raw == "Selftransferto":
+        direction_lower = direction_raw.lower()
+        if "self transfer" in direction_lower:
             direction = "self_transfer"
-        elif direction_raw == "Paidto":
+        elif "paid to" in direction_lower:
             direction = "paid"
-        else:  # "Receivedfrom"
+        else:
             direction = "received"
 
+        counterparty = counterparty_raw.strip()
         idem_key = _make_idempotency_key("google_pay", utr)
 
         transactions.append(RawUPITransaction(
-            merchant_raw=_humanize_name(counterparty_raw),
-            merchant_raw_unspaced=counterparty_raw,
+            merchant_raw=counterparty,
+            merchant_raw_unspaced=counterparty.replace(" ", ""),
             amount=amount,
             transaction_date=txn_date,
             direction=direction,
             utr=utr,
-            linked_bank=_humanize_name(bank_name_raw.strip()),
+            linked_bank=bank_name_raw.strip(),
             linked_bank_last4=bank_last_digits,
             idempotency_key=idem_key,
             raw_row={
                 "date": date_str, "time": time_str, "direction": direction_raw,
-                "counterparty": counterparty_raw, "amount": amount_str, "utr": utr,
+                "counterparty": counterparty, "amount": amount_str, "utr": utr,
             },
         ))
 
@@ -250,7 +184,7 @@ def _parse_google_pay(full_text: str) -> List[RawUPITransaction]:
 
 
 # ─────────────────────────────────────────────
-# PhonePe / Paytm — STUBS, pending real sample PDFs
+# PhonePe / Paytm — stubs
 # ─────────────────────────────────────────────
 
 def _parse_phonepe(full_text: str) -> List[RawUPITransaction]:
@@ -273,22 +207,12 @@ def _parse_paytm(full_text: str) -> List[RawUPITransaction]:
 
 _SOURCE_PARSERS = {
     UPISource.GOOGLE_PAY: _parse_google_pay,
-    UPISource.PHONEPE: _parse_phonepe,
-    UPISource.PAYTM: _parse_paytm,
+    UPISource.PHONEPE:    _parse_phonepe,
+    UPISource.PAYTM:      _parse_paytm,
 }
 
 
 def parse_upi_statement(file_bytes: bytes, filename: str = "") -> Tuple[UPISource, List[RawUPITransaction]]:
-    """
-    Parse a UPI app statement PDF.
-
-    Returns:
-        (UPISource, List[RawUPITransaction])
-
-    Raises:
-        UPIParseError — unrecognized source, or a recognized-but-unimplemented
-        source (PhonePe/Paytm currently), or malformed/empty PDF.
-    """
     try:
         doc = fitz.open(stream=file_bytes, filetype="pdf")
         full_text = ""
