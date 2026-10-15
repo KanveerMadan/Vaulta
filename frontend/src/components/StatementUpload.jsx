@@ -1,111 +1,277 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useMemo } from "react";
 import api from "../lib/api";
+import { parseStatement, ImportError } from "../import";
+import { applyMapping, guessMapping } from "../import/mapping";
+import { sanitizeRows, NEVER_READ, REMOVED_LABELS } from "../import/pii";
+import { sendRows, loadTemplate, saveTemplate } from "../import/submit";
+import ColumnMapping from "./ColumnMapping";
 
-// Matches backend MAX_FILE_SIZE_BYTES in statements.py
 const MAX_FILE_SIZE_MB = 20;
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const ACCEPT = ".csv,.xls,.xlsx,.pdf,text/csv,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-function _formatSourceLabel(result) {
-  // CSV result: { bank: "hdfc", ... }
-  // UPI result: { source: "google_pay", ... }
-  if (result.bank) return result.bank.toUpperCase();
-  if (result.source) {
-    return result.source
-      .split("_")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-  }
-  return "Unknown";
+export const ON_DEVICE_NOTICE =
+  "Your statement is processed on your device and never uploaded. Only the rows shown here are sent.";
+
+// Common password formats for e-statements. Banks change these; the email
+// that delivered the statement states the current rule.
+const PASSWORD_HINTS = [
+  ["HDFC Bank account", "Customer ID"],
+  ["HDFC credit card", "First 4 letters of your name in CAPS + DDMM of birth"],
+  ["ICICI Bank", "First 4 letters of your name in lowercase + DDMM of birth"],
+  ["SBI account", "Last 5 digits of registered mobile + DOB as DDMMYY"],
+  ["SBI Card", "DOB as DDMMYYYY + last 4 digits of the card"],
+  ["Axis Bank", "First 4 letters of your name in CAPS + DDMM of birth"],
+  ["Kotak", "CRN (customer relationship number)"],
+];
+
+function Notice() {
+  return (
+    <div className="flex items-start gap-2 bg-forest-50 border border-forest-200 rounded-xl px-3 py-2.5">
+      <svg className="w-4 h-4 text-forest-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+      <p className="text-sm text-forest-800">{ON_DEVICE_NOTICE}</p>
+    </div>
+  );
 }
 
-function _getPeerPaymentCount(result) {
-  // UPI results carry a by_nature breakdown; CSV results don't.
-  if (!result.by_nature) return 0;
-  return (result.by_nature.peer_payment_sent ?? 0)
-    + (result.by_nature.peer_payment_received ?? 0);
+function ErrorBox({ message }) {
+  return (
+    <div className="bg-danger/5 border border-danger/20 rounded-xl px-4 py-3">
+      <p className="text-sm text-danger">{message}</p>
+    </div>
+  );
 }
 
-export { _formatSourceLabel as formatSourceLabel };
+const fmtDate = (d) => new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+function Preview({ parsed, onConfirm, onBack, sending, progress }) {
+  const { rows, removed } = parsed;
+  const [excluded, setExcluded] = useState(() => new Set());
+  const [showRemoved, setShowRemoved] = useState(false);
+  const toggle = (i) => setExcluded((s) => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; });
+  const included = rows.filter((_, i) => !excluded.has(i));
+  const dates = rows.map((r) => r.date).sort();
+
+  return (
+    <div className="space-y-4">
+      <Notice />
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <p className="text-sm text-ink-700">
+          <span className="font-semibold text-ink-900">{rows.length}</span> transactions from {parsed.source_label},{" "}
+          {fmtDate(dates[0])} – {fmtDate(dates[dates.length - 1])}
+        </p>
+        <button onClick={() => setShowRemoved((v) => !v)} className="text-xs font-medium text-forest-600 hover:underline">
+          {showRemoved ? "Hide" : "Show"} what was removed
+        </button>
+      </div>
+
+      {showRemoved && (
+        <div className="bg-sage-50 rounded-xl px-4 py-3 text-xs text-ink-600 space-y-1">
+          <p className="font-medium text-ink-800">Never read from your file</p>
+          <ul className="list-disc pl-4">{NEVER_READ.map((l) => <li key={l}>{l}</li>)}</ul>
+          {Object.keys(removed).length > 0 && (
+            <>
+              <p className="font-medium text-ink-800 pt-1">Masked or removed in the rows below</p>
+              <ul className="list-disc pl-4">
+                {Object.entries(removed).map(([k, n]) => <li key={k}>{REMOVED_LABELS[k]}: {n}</li>)}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="max-h-80 overflow-auto border border-sage-100 rounded-xl">
+        <table className="w-full text-xs">
+          <thead className="bg-sage-50 sticky top-0">
+            <tr className="text-left text-ink-500">
+              <th className="px-2 py-1.5 w-6"><span className="sr-only">Include</span></th>
+              <th className="px-2 py-1.5">Date</th>
+              <th className="px-2 py-1.5">Merchant</th>
+              <th className="px-2 py-1.5 text-right">Amount</th>
+              <th className="px-2 py-1.5">Type</th>
+              <th className="px-2 py-1.5">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i} className={`border-t border-sage-50 ${excluded.has(i) ? "opacity-40" : ""}`}>
+                <td className="px-2 py-1">
+                  <input type="checkbox" checked={!excluded.has(i)} onChange={() => toggle(i)}
+                    aria-label={`Include ${r.description_raw} on ${r.date}`} />
+                </td>
+                <td className="px-2 py-1 whitespace-nowrap text-ink-600">{r.date.slice(0, 10)}</td>
+                <td className="px-2 py-1 text-ink-800 max-w-[14rem] truncate" title={r.description_raw}>{r.description_raw}</td>
+                <td className="px-2 py-1 text-right font-mono whitespace-nowrap">₹{Number(r.amount).toLocaleString("en-IN")}</td>
+                <td className={`px-2 py-1 whitespace-nowrap ${r.direction === "credit" ? "text-safe" : "text-ink-600"}`}>
+                  {r.type === "transfer" ? "Transfer" : r.direction === "credit" ? "Credit" : "Debit"}
+                </td>
+                <td className="px-2 py-1 font-mono text-ink-400 whitespace-nowrap">{r.reference || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex gap-3">
+        <button onClick={onBack} disabled={sending} className="btn-ghost flex-1 text-sm py-2">Choose another file</button>
+        <button
+          onClick={() => onConfirm(included)}
+          disabled={!included.length || sending}
+          className="btn-primary flex-1 text-sm py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {sending ? `Sending ${progress?.[0] ?? 0}/${progress?.[1] ?? included.length}…` : `Import ${included.length} transactions`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Result({ result, onAnother, onClose }) {
+  const stats = [
+    ["Added", result.imported],
+    ["Already had", result.duplicates_merged],
+    ["Transfers", result.transfers_flagged],
+    ["Need a category", result.rows_needing_review],
+  ];
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+        {stats.map(([label, value]) => (
+          <div key={label} className="bg-white rounded-lg p-2.5 border border-sage-100">
+            <p className="font-mono text-lg font-semibold text-ink-900">{value}</p>
+            <p className="text-xs text-ink-400 mt-0.5 leading-tight">{label}</p>
+          </div>
+        ))}
+      </div>
+      {result.transfers_flagged > 0 && (
+        <p className="text-xs text-ink-500">Transfers (card bill payments, self transfers) are kept out of your spending and income.</p>
+      )}
+      {result.failed > 0 && <ErrorBox message={`${result.failed} rows couldn't be saved. Importing the file again retries just those.`} />}
+      <div className="flex gap-3">
+        <button onClick={onAnother} className="btn-ghost flex-1 text-sm py-2">Import another</button>
+        <button onClick={() => { onClose?.(); window.location.href = "/"; }} className="btn-primary flex-1 text-sm py-2">
+          View dashboard
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function StatementUpload({ onSuccess, onClose }) {
-  const [dragActive, setDragActive] = useState(false);
+  const [step, setStep] = useState("pick"); // pick | password | mapping | preview | done
   const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordWrong, setPasswordWrong] = useState(false);
+  const [mappingState, setMappingState] = useState(null);
+  const [rawResult, setRawResult] = useState(null); // {rows, source_type, source_label}
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(null);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef(null);
 
-  const handleFile = useCallback((f) => {
-    setError(null);
-    setResult(null);
-    if (!f) return;
-    const lower = f.name.toLowerCase();
-    if (!lower.endsWith(".csv") && !lower.endsWith(".pdf")) {
-      setError("Only .csv or .pdf files are accepted.");
+  const preview = useMemo(() => {
+    if (!rawResult) return null;
+    const { rows, removed } = sanitizeRows(rawResult.rows);
+    return { ...rawResult, rows, removed };
+  }, [rawResult]);
+
+  const reset = () => {
+    setStep("pick"); setFile(null); setPassword(""); setPasswordWrong(false); setMappingState(null);
+    setRawResult(null); setError(null); setResult(null); setProgress(null);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const showRows = (rows, source_type, source_label) => {
+    if (!rows.length) {
+      setError("No transactions found in this file.");
+      setStep("pick");
       return;
     }
-    if (f.size > MAX_FILE_SIZE_BYTES) {
+    setRawResult({ rows, source_type, source_label });
+    setStep("preview");
+  };
+
+  const run = async (f, pw) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const parsed = await parseStatement(f, { password: pw || undefined });
+      if (parsed.status === "needs_password") {
+        setPasswordWrong(parsed.incorrect);
+        setStep("password");
+        return;
+      }
+      setPassword(""); // never kept beyond opening the file
+      if (parsed.status === "ok") {
+        showRows(parsed.rows, parsed.source_type, parsed.source_label);
+        return;
+      }
+      // needs_mapping: reuse a saved mapping for this header layout if there is one
+      const label = parsed.format === "pdf" ? "Bank statement (PDF)" : "Bank statement";
+      const template = await loadTemplate(api, parsed.fingerprint).catch(() => null);
+      if (template && template.column_count === parsed.table.header.length) {
+        const rows = applyMapping(parsed.table, template.mapping, { source_type: parsed.source_type, source_label: label });
+        if (rows.length) {
+          showRows(rows, parsed.source_type, label);
+          return;
+        }
+      }
+      setMappingState({ ...parsed, label, initial: guessMapping(parsed.table.header, parsed.table.rows) });
+      setStep("mapping");
+    } catch (e) {
+      setError(e instanceof ImportError ? e.message : "Couldn't read this file. Check that it's a statement export.");
+      setStep("pick");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleFile = (f) => {
+    if (!f) return;
+    if (f.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
       setError(`File is too large (max ${MAX_FILE_SIZE_MB} MB).`);
       return;
     }
     setFile(f);
-  }, []);
-
-  const onDrop = useCallback((e) => {
-    e.preventDefault();
-    setDragActive(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f) handleFile(f);
-  }, [handleFile]);
-
-  const onDragOver = (e) => { e.preventDefault(); setDragActive(true); };
-  const onDragLeave = () => setDragActive(false);
-
-  const handleUpload = async () => {
-    if (!file) return;
-    setUploading(true);
-    setError(null);
-    const form = new FormData();
-    form.append("file", file);
-    try {
-      const { data } = await api.post("/api/statements/upload", form, {
-      headers: { "Content-Type": "multipart/form-data" },
-      timeout: 120000,
-      });
-      setResult(data);
-      onSuccess?.();
-    } catch (err) {
-      setError(
-        err?.response?.data?.detail ||
-        "Upload failed. Check your file is a valid statement."
-      );
-    } finally {
-      setUploading(false);
-    }
+    run(f);
   };
 
-  const reset = () => {
-    setFile(null);
+  const onMappingConfirm = async (mapping, rows) => {
+    const { fingerprint, table, source_type, label } = mappingState;
+    saveTemplate(api, fingerprint, { columnCount: table.header.length, sourceType: source_type, mapping })
+      .catch(() => {}); // remembering the layout is a convenience; import continues without it
+    showRows(rows, source_type, label);
+  };
+
+  const confirm = async (rows) => {
+    setBusy(true);
     setError(null);
-    setResult(null);
-    if (inputRef.current) inputRef.current.value = "";
+    try {
+      const totals = await sendRows(api, rows, { onProgress: (done, total) => setProgress([done, total]) });
+      setResult(totals);
+      setStep("done");
+      onSuccess?.();
+    } catch (err) {
+      setError(err?.response?.data?.detail?.[0]?.msg || err?.response?.data?.detail || "Import failed. Nothing is lost: try again and already-saved rows are skipped.");
+    } finally {
+      setBusy(false);
+      setProgress(null);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
-
-        {/* Header */}
+      <div className={`bg-white rounded-2xl shadow-2xl w-full ${step === "preview" || step === "mapping" ? "max-w-3xl" : "max-w-lg"} max-h-[92vh] overflow-y-auto`}>
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-sage-100">
           <div>
-            <h2 className="font-display text-lg font-semibold text-ink-900">Upload Statement</h2>
-            <p className="text-sm text-ink-500 mt-0.5">Bank CSV · Google Pay PDF · PhonePe PDF · Paytm PDF</p>
+            <h2 className="font-display text-lg font-semibold text-ink-900">Import statement</h2>
+            <p className="text-sm text-ink-500 mt-0.5">Bank CSV / Excel / PDF · Credit card PDF · Google Pay · PhonePe · Paytm</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-ink-400 hover:text-ink-700 hover:bg-sage-50 transition-colors"
-            aria-label="Close"
-          >
+          <button onClick={onClose} className="p-1.5 rounded-lg text-ink-400 hover:text-ink-700 hover:bg-sage-50" aria-label="Close">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -113,160 +279,80 @@ export default function StatementUpload({ onSuccess, onClose }) {
         </div>
 
         <div className="px-6 py-5 space-y-5">
+          {error && <ErrorBox message={typeof error === "string" ? error : "Import failed."} />}
 
-          {result ? (
-            // ── Success state ──────────────────────────────────────────────
-            <div className="space-y-4">
-              <div className="bg-safe/10 border border-safe/30 rounded-xl p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-safe/20 flex items-center justify-center shrink-0">
-                    <svg className="w-4 h-4 text-safe" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <p className="font-medium text-ink-900">
-                    Detected: {_formatSourceLabel(result)}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 text-center">
-                  {[
-                    { label: "Added",         value: result.inserted },
-                    { label: "Matched existing", value: result.matched_existing ?? 0 },
-                    { label: "Duplicates skipped", value: result.skipped_duplicate },
-                    { label: "Peer payments", value: _getPeerPaymentCount(result) },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="bg-white rounded-lg p-2.5 border border-sage-100">
-                      <p className="font-mono text-lg font-semibold text-ink-900">{value}</p>
-                      <p className="text-xs text-ink-400 mt-0.5 leading-tight">{label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Contextual note for UPI uploads with peer payments */}
-                {_getPeerPaymentCount(result) > 0 && (
-                  <p className="text-xs text-ink-500 mt-3 leading-relaxed">
-                    Peer payments are kept separate from your spending total automatically.
-                  </p>
-                )}
-
-                {/* Note if cross-source matches happened */}
-                {(result.matched_existing ?? 0) > 0 && (
-                  <p className="text-xs text-ink-500 mt-2 leading-relaxed">
-                    {result.matched_existing} transaction{result.matched_existing !== 1 ? "s were" : " was"} matched
-                    to records from another source — no duplicates in your feed.
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <button onClick={reset} className="btn-ghost flex-1 text-sm py-2">
-                  Upload another
-                </button>
-                <button 
-                  onClick={() => { onClose?.(); window.location.href = "/dashboard"; }} 
-                  className="btn-primary flex-1 text-sm py-2">
-                  View dashboard
-                </button>
-              </div>
-            </div>
-          ) : (
+          {step === "pick" && (
             <>
-              {/* Drop zone */}
+              <Notice />
               <div
-                onDrop={onDrop}
-                onDragOver={onDragOver}
-                onDragLeave={onDragLeave}
-                onClick={() => !file && inputRef.current?.click()}
-                className={`
-                  relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer
-                  ${dragActive ? "border-forest-500 bg-forest-50" : ""}
-                  ${file
-                    ? "border-forest-400 bg-forest-50/50 cursor-default"
-                    : "border-sage-300 hover:border-forest-400 hover:bg-sage-50"
-                  }
-                `}
+                onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFile(e.dataTransfer.files?.[0]); }}
+                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragLeave={() => setDragActive(false)}
+                onClick={() => !busy && inputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer
+                  ${dragActive ? "border-forest-500 bg-forest-50" : "border-sage-300 hover:border-forest-400 hover:bg-sage-50"}`}
               >
-                <input
-                  ref={inputRef}
-                  type="file"
-                  accept=".csv,.pdf,text/csv,application/pdf"
-                  className="hidden"
-                  onChange={(e) => handleFile(e.target.files?.[0])}
-                />
-
-                {file ? (
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-forest-100 flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5 text-forest-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <div className="text-left min-w-0">
-                      <p className="text-sm font-medium text-ink-900 truncate">{file.name}</p>
-                      <p className="text-xs text-ink-400">{(file.size / 1024).toFixed(1)} KB</p>
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); reset(); }}
-                      className="ml-auto p-1 rounded text-ink-400 hover:text-danger transition-colors shrink-0"
-                      aria-label="Remove file"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
+                <input ref={inputRef} type="file" accept={ACCEPT} className="hidden"
+                  onChange={(e) => handleFile(e.target.files?.[0])} />
+                {busy ? (
+                  <p className="text-sm text-ink-600">Reading {file?.name} on your device…</p>
                 ) : (
                   <>
-                    <svg className="mx-auto w-8 h-8 text-ink-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
                     <p className="text-sm text-ink-600">
-                      Drop your file here, or <span className="text-forest-600 font-medium">browse</span>
+                      Drop your statement here, or <span className="text-forest-600 font-medium">browse</span>
                     </p>
-                    <p className="text-xs text-ink-400 mt-1">
-                      Bank or app is detected automatically — CSV or PDF, up to {MAX_FILE_SIZE_MB} MB
-                    </p>
+                    <p className="text-xs text-ink-400 mt-1">CSV, Excel or PDF, up to {MAX_FILE_SIZE_MB} MB. Bank or app is detected automatically.</p>
                   </>
                 )}
               </div>
-
-              {/* Error */}
-              {error && (
-                <div className="flex items-start gap-2 bg-danger/5 border border-danger/20 rounded-xl px-4 py-3">
-                  <svg className="w-4 h-4 text-danger mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-sm text-danger">{error}</p>
-                </div>
-              )}
-
-              <p className="text-xs text-ink-400 text-center leading-relaxed">
-                Your file is processed on our servers and never shared.
-                Payments to people are kept separate from your spending total automatically.
-              </p>
-
-              <button
-                onClick={handleUpload}
-                disabled={!file || uploading}
-                className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {uploading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Processing...
-                  </span>
-                ) : (
-                  "Import transactions"
-                )}
-              </button>
             </>
           )}
+
+          {step === "password" && (
+            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); run(file, password); }}>
+              <Notice />
+              <div>
+                <p className="font-medium text-ink-900">{file?.name} is password-protected</p>
+                <p className="text-sm text-ink-500 mt-0.5">The password is used on this device to open the file. It isn't sent or saved.</p>
+              </div>
+              <input
+                type="password" autoFocus autoComplete="off" value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full border border-sage-200 rounded-lg px-3 py-2 text-sm" placeholder="Statement password"
+                aria-invalid={passwordWrong}
+              />
+              {passwordWrong && <p className="text-sm text-danger">That password didn't open the file.</p>}
+              <details className="text-xs text-ink-500">
+                <summary className="cursor-pointer text-forest-600 font-medium">Common password formats</summary>
+                <ul className="mt-2 space-y-1">
+                  {PASSWORD_HINTS.map(([bank, hint]) => <li key={bank}><span className="text-ink-700">{bank}:</span> {hint}</li>)}
+                </ul>
+                <p className="mt-2">Banks change these. The email your statement came with states the current format.</p>
+              </details>
+              <div className="flex gap-3">
+                <button type="button" onClick={reset} className="btn-ghost flex-1 text-sm py-2">Cancel</button>
+                <button type="submit" disabled={!password || busy} className="btn-primary flex-1 text-sm py-2 disabled:opacity-50">
+                  {busy ? "Opening…" : "Open"}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {step === "mapping" && mappingState && (
+            <ColumnMapping
+              table={mappingState.table}
+              initialMapping={mappingState.initial}
+              sourceType={mappingState.source_type}
+              onConfirm={onMappingConfirm}
+              onCancel={reset}
+            />
+          )}
+
+          {step === "preview" && preview && (
+            <Preview parsed={preview} onConfirm={confirm} onBack={reset} sending={busy} progress={progress} />
+          )}
+
+          {step === "done" && result && <Result result={result} onAnother={reset} onClose={onClose} />}
         </div>
       </div>
     </div>

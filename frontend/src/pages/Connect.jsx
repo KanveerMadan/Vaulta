@@ -20,7 +20,7 @@ function useDataSources(user) {
     {
       id: "statement",
       label: "Bank or UPI Statement",
-      description: "Upload a statement from your bank's net banking portal, or from Google Pay, PhonePe, or Paytm. We detect the source automatically — no need to tell us which.",
+      description: "Import a statement from your bank (CSV, Excel or PDF), your credit card, or Google Pay, PhonePe or Paytm. It is read on your device; you choose which rows are sent.",
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -31,8 +31,8 @@ function useDataSources(user) {
       action: "import",
       badge: "Instant",
       badgeColor: "safe",
-      supportedFormats: "CSV or PDF",
-      supportedSources: ["HDFC", "ICICI", "SBI", "Axis", "Kotak", "Google Pay"],
+      supportedFormats: "CSV, Excel or PDF",
+      supportedSources: ["HDFC", "ICICI", "SBI", "Axis", "Kotak", "Google Pay", "PhonePe", "Paytm", "credit cards"],
     },
     {
       id: "manual",
@@ -107,7 +107,7 @@ const PRIVACY_ROWS = [
   { can: "Read transaction amounts and merchant names", cannot: "Access your bank login or UPI PIN" },
   { can: "Categorize your spending automatically", cannot: "Share your data with advertisers" },
   { can: "Show you patterns in your spending", cannot: "Sell your data or profit from your behaviour" },
-  { can: "Process the file you upload, then discard it", cannot: "Read anything you don't explicitly upload" },
+  { can: "Receive only the rows you confirm after previewing them", cannot: "See your statement file — it is read on your device" },
 ];
 
 function PrivacyTable() {
