@@ -21,6 +21,7 @@ from app.core.auth import get_current_user
 from app.core.database import get_db
 from app.models.transaction import Budget
 from app.models.user import User
+from app.services.budgets import create_or_reactivate
 from app.schemas.budget import BudgetCreate, BudgetUpdate, BudgetResponse, BudgetListResponse
 
 router = APIRouter(prefix="/api/budgets", tags=["budgets"])
@@ -49,7 +50,7 @@ def list_budgets(
     """List all active budgets for the authenticated user."""
     budgets = (
         db.query(Budget)
-        .filter(Budget.user_id == current_user.id, Budget.is_active == "true")
+        .filter(Budget.user_id == current_user.id, Budget.is_active.is_(True))
         .order_by(Budget.category.nullsfirst())
         .all()
     )
@@ -77,33 +78,13 @@ def create_budget(
     - `category: "Food & Dining"` sets a per-category limit.
     - Only one active budget per category per user (unique constraint enforced at DB level).
     """
-    # Check for existing active budget for this category
-    existing = (
-        db.query(Budget)
-        .filter(
-            Budget.user_id == current_user.id,
-            Budget.category == payload.category,
-            Budget.is_active == "true",
-        )
-        .first()
-    )
-    if existing:
+    budget = create_or_reactivate(db, current_user, payload.category, payload.monthly_limit)
+    if budget is None:
         category_label = payload.category or "overall"
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"An active budget for '{category_label}' already exists. Use PATCH to update it.",
         )
-
-    budget = Budget(
-        id=uuid.uuid4(),
-        user_id=current_user.id,
-        category=payload.category,
-        monthly_limit=payload.monthly_limit,
-        is_active="true",
-    )
-    db.add(budget)
-    db.commit()
-    db.refresh(budget)
     return BudgetResponse.model_validate(budget)
 
 
@@ -134,5 +115,5 @@ def delete_budget(
     Financial Health Score, which needs to know when budgets were active.
     """
     budget = _get_budget_or_404(db, budget_id, current_user)
-    budget.is_active = "false"
+    budget.is_active = False
     db.commit()

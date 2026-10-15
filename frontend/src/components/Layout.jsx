@@ -6,6 +6,7 @@ import ChatPanel from './ChatPanel'
 
 const NAV = [
   { to: '/', label: 'Dashboard', end: true },
+  { to: '/budgets', label: 'Budgets' },
   { to: '/recurring', label: 'Recurring' },
   { to: '/people', label: 'People' },
   { to: '/rules', label: 'Rules' },

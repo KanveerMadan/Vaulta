@@ -4,7 +4,7 @@ from decimal import Decimal
 from datetime import datetime
 
 from sqlalchemy import (
-    Boolean, Column, String, Numeric, DateTime, ForeignKey,
+    Boolean, Column, String, Numeric, DateTime, ForeignKey, func,
     Enum as SAEnum, Index, UniqueConstraint, JSON, text
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -121,7 +121,7 @@ class Transaction(Base):
     # Original source payload preserved for re-derivation (email body, SMS text, CSV row)
     raw_source_data = Column(JSON, nullable=True)
 
-    # "true" once the user has edited the category/notes (string flag, like Budget.is_active)
+    # "true" once the user has edited the category/notes (string flag kept for API compatibility)
     user_corrected = Column(String, nullable=True)
 
     # Free-text note from the user
@@ -173,7 +173,7 @@ class Budget(Base):
     monthly_limit = Column(Numeric(precision=12, scale=2), nullable=False)
 
     # Soft-delete: deactivate instead of deleting so history is preserved
-    is_active = Column(String, nullable=False, default="true")
+    is_active = Column(Boolean, nullable=False, default=True, server_default=text("true"))
 
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=text("now()"), onupdate=datetime.utcnow, nullable=False)
@@ -182,8 +182,10 @@ class Budget(Base):
     user = relationship("User", back_populates="budgets")
 
     __table_args__ = (
-        # One active budget per category per user (NULL category = total budget)
-        UniqueConstraint("user_id", "category", name="uq_budget_user_category"),
+        # One ACTIVE budget per category per user; inactive (deleted) rows don't
+        # block re-creating it. COALESCE so the overall cap (NULL) is unique too.
+        Index("uq_budgets_user_category_active", "user_id", func.coalesce(text("category"), text("''")),
+              unique=True, postgresql_where=text("is_active")),
         Index("ix_budgets_user_active", "user_id", "is_active"),
     )
 

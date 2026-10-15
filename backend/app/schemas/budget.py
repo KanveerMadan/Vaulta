@@ -40,7 +40,7 @@ class BudgetResponse(BaseModel):
     user_id: uuid.UUID
     category: Optional[str] = None  # None = overall monthly budget
     monthly_limit: Decimal
-    is_active: str
+    is_active: bool
     created_at: datetime
     updated_at: datetime
 

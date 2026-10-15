@@ -26,7 +26,7 @@ def get_queue(current_user: User = Depends(get_current_user), db: Session = Depe
 @router.post("/{card_id}/answer", response_model=ReviewQueue)
 def answer(
     payload: ReviewAnswer,
-    card_id: str = Path(pattern=r"^[a-z]+:[A-Za-z0-9 &-]{1,100}$"),
+    card_id: str = Path(pattern=r"^[a-z]+:[A-Za-z0-9 &-]{1,100}$"),  # budget ids carry the category name
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

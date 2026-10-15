@@ -15,6 +15,7 @@ import SubscriptionBanner from "../components/SubscriptionBanner";
 import QuickAddBar from "../components/QuickAddBar";
 import SplitModal from "../components/SplitModal";
 import ReviewQueue from "../components/ReviewQueue";
+import BudgetBars from "../components/BudgetBars";
 import { rupees } from "../lib/format";
 import { CATEGORIES, KINDS, kindsFor } from "../lib/categories";
 import { updateTransaction, deleteTransaction } from "../lib/transactions";
@@ -524,6 +525,23 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Budgets (kind-correct: net spend only) */}
+      {isMonth && summary && (
+        <section className="card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Budgets</h2>
+            <a href="/budgets" className="text-xs text-forest-600 font-medium hover:underline">
+              {summary.categories.some((c) => c.budget_limit) ? "Edit" : "Set monthly limits"} →
+            </a>
+          </div>
+          {summary.categories.some((c) => c.budget_limit) ? (
+            <BudgetBars rows={summary.categories.filter((c) => c.budget_limit).map((c) => ({
+              category: c.category, spent: Number(c.total), limit: Number(c.budget_limit),
+            }))} />
+          ) : <p className="text-sm text-ink-400">No budgets yet.</p>}
+        </section>
+      )}
 
       {/* Recent transactions */}
       <section>

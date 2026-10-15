@@ -27,6 +27,7 @@ from app.models.transaction_source import TransactionDirection
 from app.models.user import User
 from app.schemas.transaction import TransactionUpdate
 from app.services import transaction_service
+from app.services.budgets import SUGGESTION_MONTHS, create_or_reactivate, suggest_budgets
 from app.services.detection import find_transfer_pairs, load_context, run_detection
 from app.services.keys import merchant_key
 from app.services.people import repayment_candidates, set_tag
@@ -144,6 +145,16 @@ def build_cards(db: Session, user: User) -> list[Card]:
             target=(key, label),
         ))
 
+    # 6. Suggested budgets, once there are enough full months of history
+    for category, limit, totals in suggest_budgets(db, user):
+        cards.append(Card(
+            id=f"budget:{category}", type="budget",
+            question=f"Set a {_rupees(limit)} monthly budget for {category}?",
+            detail=f"Your last {SUGGESTION_MONTHS} months: " + ", ".join(_rupees(t) for t in totals) + ".",
+            options=[{"value": "set", "label": f"Set {_rupees(limit)}"}, {"value": "skip", "label": "Not now"}],
+            target=(category, limit),
+        ))
+
     dismissed = {d.card_id for d in db.query(ReviewDismissal).filter(ReviewDismissal.user_id == user.id)}
     return [c for c in cards if c.id not in dismissed]
 
@@ -165,3 +176,6 @@ def answer_card(db: Session, user: User, card: Card, answer: str) -> None:
     elif card.type == "merchant":
         key, label = card.target
         upsert_rule(db, user, key, label, "category", answer, "review")
+    elif card.type == "budget":
+        category, limit = card.target
+        create_or_reactivate(db, user, category, limit)

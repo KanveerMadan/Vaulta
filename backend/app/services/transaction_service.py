@@ -401,7 +401,7 @@ def get_transactions(
 def _get_active_budgets(db: Session, user_id: uuid.UUID) -> dict:
     budgets = (
         db.query(Budget)
-        .filter(Budget.user_id == user_id, Budget.is_active == "true")
+        .filter(Budget.user_id == user_id, Budget.is_active.is_(True))
         .all()
     )
     return {b.category: b.monthly_limit for b in budgets}
