@@ -4,6 +4,12 @@ import { auth } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
 import ChatPanel from './ChatPanel'
 
+const NAV = [
+  { to: '/', label: 'Dashboard', end: true },
+  { to: '/recurring', label: 'Recurring' },
+  { to: '/connect', label: 'Connect' },
+]
+
 export default function Layout() {
   const { logout, user } = useAuthStore()
   const navigate = useNavigate()
@@ -27,11 +33,11 @@ export default function Layout() {
             Vaulta
           </span>
 
-          <nav className="flex items-center gap-1">
-            {[{ to: '/', label: 'Dashboard', end: true }, { to: '/connect', label: 'Connect' }].map(({ to, label, end }) => (
+          <nav className="flex items-center gap-1 overflow-x-auto">
+            {NAV.map(({ to, label, end }) => (
               <NavLink key={to} to={to} end={end}
                 className={({ isActive }) =>
-                  `px-3 py-1.5 rounded-lg text-sm transition-all duration-150 font-medium ${
+                  `px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-150 font-medium ${
                     isActive
                       ? 'text-safe'
                       : 'text-ink-500 hover:text-ink-700 hover:bg-sage-100'

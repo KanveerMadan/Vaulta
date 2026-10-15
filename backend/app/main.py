@@ -96,12 +96,13 @@ async def security_headers(request: Request, call_next):
     return response
 
 # ── Routers ────────────────────────────────────────────────────────────────────
-from app.api.routes import auth, transactions, budgets, imports
+from app.api.routes import auth, transactions, budgets, imports, recurring
 
 app.include_router(auth.router)
 app.include_router(transactions.router)
 app.include_router(budgets.router)
 app.include_router(imports.router)
+app.include_router(recurring.router)
 
 # Payments router loaded defensively: if the Razorpay SDK or its transitive
 # dependencies fail to import (e.g. a packaging issue on a fresh deploy),

@@ -7,6 +7,7 @@ import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Connect from './pages/Connect'
+import Recurring from './pages/Recurring'
 import Layout from './components/Layout'
 
 function PrivateRoute() {
@@ -51,6 +52,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/connect" element={<Connect />} />
+          <Route path="/recurring" element={<Recurring />} />
         </Route>
       </Route>
       <Route path="*" element={user ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />} />

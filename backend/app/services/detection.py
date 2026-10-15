@@ -6,7 +6,8 @@ run_detection() recomputes from scratch every time, so it is idempotent and
 undoing an input (a deleted rule, a dismissed tag) undoes its effect. A field
 the user corrected (see models/correction.py) is never changed.
 
-Order: defaults → failed-UPI reversals → own-account transfers → refunds.
+Order: defaults → failed-UPI reversals → own-account transfers → refunds →
+recurring series.
 
 ponytail: loads all of a user's transactions into memory per run. Fine for
 thousands of rows; batch by date window if users reach hundreds of thousands.
@@ -17,7 +18,7 @@ from __future__ import annotations
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Iterable, Optional
 
@@ -28,6 +29,7 @@ from app.models.transaction import Transaction, TransactionKind, TransactionNatu
 from app.models.transaction_source import StatementSourceType, TransactionDirection
 from app.models.user import User
 from app.services.dedup_matcher import _merchant_overlap
+from app.services.recurring import sync_series
 
 # ── Tunable thresholds (listed in the Phase 2 report) ─────────────────────────
 TRANSFER_WINDOW = timedelta(days=3)
@@ -264,11 +266,13 @@ def load_context(db: Session, user: User) -> Ctx:
     return Ctx(txns=txns, locked=locked)
 
 
-def run_detection(db: Session, user: User) -> Ctx:
+def run_detection(db: Session, user: User, today: Optional[date] = None) -> Ctx:
     ctx = load_context(db, user)
     _reset(ctx)
     _reversals(ctx)
     _transfers(ctx)
     _refunds(ctx)
+    db.flush()
+    sync_series(db, user, ctx.txns, today or date.today())
     db.commit()
     return ctx

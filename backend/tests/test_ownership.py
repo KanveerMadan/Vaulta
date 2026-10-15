@@ -1,7 +1,7 @@
 """
-A user cannot read, edit or delete another user's transactions through any
-route. test_every_transaction_route_is_covered fails if a route is added
-under /api/transactions or /api/import without a case here.
+A user cannot read, edit or delete another user's data through any route.
+test_every_route_is_covered fails if a user-data route is added without a
+case here.
 """
 
 import uuid
@@ -25,13 +25,17 @@ COVERED = {
     ("POST", "/api/import/batch"),
     ("GET", "/api/import/templates/{fingerprint}"),
     ("PUT", "/api/import/templates/{fingerprint}"),
+    ("GET", "/api/recurring"),
+    ("PATCH", "/api/recurring/{series_id}"),
+    ("POST", "/api/recurring/refresh"),
 }
+GUARDED_PREFIXES = ("/api/transactions", "/api/import", "/api/recurring")
 
 
-def test_every_transaction_route_is_covered():
+def test_every_route_is_covered():
     routes = {
         (method, r.path)
-        for r in app.routes if isinstance(r, APIRoute) and r.path.startswith(("/api/transactions", "/api/import"))
+        for r in app.routes if isinstance(r, APIRoute) and r.path.startswith(GUARDED_PREFIXES)
         for method in r.methods
     }
     assert routes == COVERED
@@ -98,3 +102,17 @@ def test_bob_reanalyze_leaves_alice_alone(client):
     before = client.get("/api/transactions", headers=ALICE).json()["items"]
     assert client.post("/api/transactions/reanalyze", headers=BOB).status_code == 204
     assert client.get("/api/transactions", headers=ALICE).json()["items"] == before
+
+
+def test_bob_cannot_see_or_change_alice_recurring(client):
+    from datetime import date
+    from app.services.recurring import add_months
+    rows = [row(date=add_months(date.today(), -k).isoformat(), description_raw="NETFLIX COM", amount="649.00", reference=None)
+            for k in (2, 1, 0)]
+    client.post("/api/import/batch", json={"rows": rows}, headers=ALICE)
+    series = client.get("/api/recurring", headers=ALICE).json()["series"]
+    assert len(series) == 1
+    assert client.get("/api/recurring", headers=BOB).json() == {"series": [], "monthly_committed": "0.00", "upcoming": []}
+    assert client.patch(f"/api/recurring/{series[0]['id']}", json={"user_status": "dismissed"}, headers=BOB).status_code == 404
+    client.post("/api/recurring/refresh", headers=BOB)
+    assert client.get("/api/recurring", headers=ALICE).json()["series"] == series

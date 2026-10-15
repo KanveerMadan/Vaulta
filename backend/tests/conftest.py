@@ -48,7 +48,7 @@ from sqlalchemy import text  # noqa: E402
 import app.core.auth as auth  # noqa: E402
 from app.core.database import Base, engine, wait_for_db  # noqa: E402
 from app.main import app as api  # noqa: E402
-from app.models import correction, import_template, transaction_source  # noqa: E402,F401 — register tables
+from app.models import correction, import_template, recurring, transaction_source  # noqa: E402,F401 — register tables
 
 
 @pytest.fixture(scope="session", autouse=True)
