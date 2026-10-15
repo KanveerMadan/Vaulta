@@ -65,6 +65,10 @@ EXEMPT = {
     ("GET", "/auth/me"), ("PATCH", "/auth/me"), ("DELETE", "/auth/me"),
     ("POST", "/api/payments/create-subscription"), ("GET", "/api/payments/status"),
     ("POST", "/api/payments/webhook"),    # no user; Razorpay HMAC signature instead
+    # no user session: X-Internal-Secret (tests/test_delivery.py::test_internal_endpoint_needs_the_secret)
+    ("POST", "/internal/run-reports"),
+    # no user session: signed per-user token (tests/test_delivery.py::test_unsubscribe)
+    ("GET", "/unsubscribe"), ("POST", "/unsubscribe"),
 }
 
 

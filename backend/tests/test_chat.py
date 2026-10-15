@@ -239,8 +239,8 @@ def test_history_older_than_30_days_is_purged(client, fake):
 
 def test_ai_chat_toggle(client, fake):
     fake(say("hi"), say("hi"))
-    assert client.get("/api/settings", headers=USER).json() == {"ai_chat_enabled": True}
-    assert client.patch("/api/settings", json={"ai_chat_enabled": False}, headers=USER).json() == {"ai_chat_enabled": False}
+    assert client.get("/api/settings", headers=USER).json()["ai_chat_enabled"] is True
+    assert client.patch("/api/settings", json={"ai_chat_enabled": False}, headers=USER).json()["ai_chat_enabled"] is False
     res = ask(client, "hello")
     assert res.status_code == 403 and res.json()["detail"] == "AI chat is turned off in settings."
     assert client.post("/api/chat/confirm", json={"token": "x" * 43, "decision": "confirm"}, headers=USER).status_code == 403

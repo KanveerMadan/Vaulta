@@ -1,0 +1,29 @@
+# Render Blueprint: the hourly report run.
+#
+# The API (web service) and frontend are configured in the Render / Vercel
+# dashboards. This cron job calls the API's internal endpoint every hour;
+# the endpoint works out per user (in their timezone) which weekly / monthly
+# / annual reports are due, builds missing ones and emails unsent ones.
+# Re-running is safe: nothing is built or sent twice.
+#
+# Set in the Render dashboard for this job:
+#   API_URL          the API's public base URL, e.g. https://vaulta-api.onrender.com
+#   INTERNAL_SECRET  the same value as the API service's INTERNAL_SECRET
+services:
+  - type: cron
+    name: vaulta-report-run
+    runtime: python
+    schedule: "0 * * * *"
+    buildCommand: "echo no build needed"
+    startCommand: >-
+      python -c "import os, urllib.request;
+      req = urllib.request.Request(os.environ['API_URL'].rstrip('/') + '/internal/run-reports', method='POST',
+      headers={'X-Internal-Secret': os.environ['INTERNAL_SECRET']});
+      res = urllib.request.urlopen(req, timeout=600); print(res.status, res.read().decode()[:2000])"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: API_URL
+        sync: false
+      - key: INTERNAL_SECRET
+        sync: false

@@ -7,12 +7,14 @@ from app.core.auth import get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.chat import Settings, SettingsUpdate
+from app.services import email
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
 def _view(user: User) -> Settings:
-    return Settings(ai_chat_enabled=user.ai_chat_enabled)
+    return Settings(**{f: getattr(user, f) for f in Settings.model_fields if f != "email_configured"},
+                    email_configured=email.configured())
 
 
 @router.get("", response_model=Settings)

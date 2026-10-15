@@ -12,6 +12,7 @@ const NAV = [
   { to: '/people', label: 'People' },
   { to: '/rules', label: 'Rules' },
   { to: '/connect', label: 'Connect' },
+  { to: '/settings', label: 'Settings' },
 ]
 
 export default function Layout() {

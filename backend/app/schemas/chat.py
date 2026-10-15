@@ -3,7 +3,9 @@ from __future__ import annotations
 import uuid
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ChatRequest(BaseModel):
@@ -53,9 +55,34 @@ class HistoryItem(BaseModel):
 
 class Settings(BaseModel):
     ai_chat_enabled: bool
+    timezone: str
+    reports_weekly: bool
+    reports_monthly: bool
+    reports_annual: bool
+    email_weekly: bool
+    email_monthly: bool
+    email_annual: bool
+    email_configured: bool       # whether this server can send email at all
 
 
 class SettingsUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     ai_chat_enabled: Optional[bool] = None
+    timezone: Optional[str] = Field(default=None, max_length=64)
+    reports_weekly: Optional[bool] = None
+    reports_monthly: Optional[bool] = None
+    reports_annual: Optional[bool] = None
+    email_weekly: Optional[bool] = None
+    email_monthly: Optional[bool] = None
+    email_annual: Optional[bool] = None
+
+    @field_validator("timezone")
+    @classmethod
+    def real_timezone(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            try:
+                ZoneInfo(v)
+            except (ZoneInfoNotFoundError, ValueError):
+                raise ValueError("Unknown timezone; use an IANA name like Asia/Kolkata")
+        return v
