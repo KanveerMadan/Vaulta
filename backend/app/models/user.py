@@ -27,12 +27,6 @@ class User(Base):
     sms_connected = Column(Boolean, default=False, nullable=False)
     aa_connected = Column(Boolean, default=False, nullable=False)
 
-    # --- DEPRECATED — Gmail OAuth tokens, no longer written to. Kept only to
-    # avoid a destructive column-drop migration. Safe to ignore/remove later. ---
-    gmail_access_token = Column(String, nullable=True)
-    gmail_refresh_token = Column(String, nullable=True)
-    gmail_last_sync_at = Column(DateTime(timezone=True), nullable=True)
-
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled
     subscription_status = Column(String, nullable=True, default="trial")

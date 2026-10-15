@@ -359,10 +359,14 @@ def get_monthly_summary(
     user: User,
     year: int,
     month: int,
+    date_floor: Optional[datetime] = None,
 ) -> MonthlySummary:
+    """date_floor: earliest visible date (free tier). Data before it is excluded."""
     _, last_day = monthrange(year, month)
     period_start = datetime(year, month, 1, tzinfo=timezone.utc)
     period_end = datetime(year, month, last_day, 23, 59, 59, tzinfo=timezone.utc)
+    if date_floor and period_start < date_floor:
+        period_start = date_floor
 
     prev_month = month - 1 if month > 1 else 12
     prev_year = year if month > 1 else year - 1
@@ -384,7 +388,9 @@ def get_monthly_summary(
     total_received = _get_total_received(db, user.id, period_start, period_end)
     net_cash_flow = total_received - total_spend
 
-    prev_rows = _build_spend_rows(db, user.id, prev_start, prev_end)
+    # Previous month is outside the free-tier window — no MoM comparison then.
+    show_mom = not (date_floor and prev_start < date_floor)
+    prev_rows = _build_spend_rows(db, user.id, prev_start, prev_end) if show_mom else []
     prev_by_category = {row.category: row.total for row in prev_rows}
     prev_total = sum(prev_by_category.values()) or Decimal("0")
 
@@ -401,9 +407,9 @@ def get_monthly_summary(
         budget_consumed_pct = None
         if budget_limit and budget_limit > 0:
             budget_consumed_pct = (cat_total / budget_limit * 100).quantize(Decimal("0.1"))
-        mom_delta = cat_total - prev_cat_total
+        mom_delta = (cat_total - prev_cat_total) if show_mom else None
         mom_delta_pct = None
-        if prev_cat_total > 0:
+        if show_mom and prev_cat_total > 0:
             mom_delta_pct = ((mom_delta / prev_cat_total) * 100).quantize(Decimal("0.1"))
         categories.append(CategorySummary(
             category=cat,
@@ -412,15 +418,15 @@ def get_monthly_summary(
             percentage_of_spend=pct_of_spend.quantize(Decimal("0.1")),
             budget_limit=budget_limit,
             budget_consumed_pct=budget_consumed_pct,
-            mom_delta=mom_delta.quantize(Decimal("0.01")),
+            mom_delta=mom_delta.quantize(Decimal("0.01")) if mom_delta is not None else None,
             mom_delta_pct=mom_delta_pct,
         ))
 
     top_merchants = _build_top_merchants(db, user.id, period_start, period_end)
 
-    mom_total_delta = (total_spend - prev_total).quantize(Decimal("0.01"))
+    mom_total_delta = (total_spend - prev_total).quantize(Decimal("0.01")) if show_mom else None
     mom_total_delta_pct = None
-    if prev_total > 0:
+    if show_mom and prev_total > 0:
         mom_total_delta_pct = ((mom_total_delta / prev_total) * 100).quantize(Decimal("0.1"))
 
     return MonthlySummary(
@@ -445,10 +451,12 @@ def get_period_summary(
     user: User,
     period: str,
     year: Optional[int] = None,
+    date_floor: Optional[datetime] = None,
 ) -> MonthlySummary:
     """
     Year or lifetime summary. No budget tracking, no days_remaining.
     avg_monthly_spend replaces those cards on the frontend.
+    date_floor: earliest visible date (free tier). Data before it is excluded.
     """
     today = datetime.now(timezone.utc)
 
@@ -465,12 +473,18 @@ def get_period_summary(
             .filter(Transaction.user_id == user.id)
             .scalar()
         )
+        if earliest and date_floor and earliest < date_floor:
+            earliest = date_floor
         if earliest:
             earliest = earliest.replace(tzinfo=timezone.utc) if earliest.tzinfo is None else earliest
             delta_months = (today.year - earliest.year) * 12 + (today.month - earliest.month)
             months_elapsed = max(delta_months, 1)
         else:
             months_elapsed = 1
+
+    if date_floor and period_start < date_floor:
+        period_start = date_floor
+        months_elapsed = 1
 
     spend_rows = _build_spend_rows(db, user.id, period_start, period_end)
     total_spend = sum(row.total for row in spend_rows if row.total) or Decimal("0")

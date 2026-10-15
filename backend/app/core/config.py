@@ -62,18 +62,10 @@ class Settings(BaseSettings):
     RAZORPAY_WEBHOOK_SECRET: str = ""
     RAZORPAY_PLAN_ID: str = ""  # ₹99/month plan created in Razorpay dashboard
 
-    # ── Redis / Celery (Phase 2) ──────────────────────────────────────────────
-    REDIS_URL: str = ""
-
-    # ── Gmail OAuth (Phase 2) ────────────────────────────────────────────────
-    GOOGLE_CLIENT_ID: str = ""
-    GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = ""
-
     def require(self, *field_names: str) -> None:
         """
         Raise a clear, actionable error if any of the named config fields are empty.
-        Used by Phase 2 services (Gmail OAuth, Razorpay, Celery) so that missing
+        Used by optional integrations (Razorpay) so that missing
         credentials produce a helpful 503 instead of a confusing downstream crash.
         """
         missing = [name for name in field_names if not getattr(self, name, "")]

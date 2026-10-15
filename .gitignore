@@ -6,8 +6,8 @@ frontend/.env.local
 # Backend
 backend/venv/
 backend/.env
-backend/__pycache__/
-backend/**/*.pyc
+__pycache__/
+*.pyc
 
 # OS
 .DS_Store

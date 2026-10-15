@@ -3,11 +3,12 @@ Vaulta API — FastAPI application entry point.
 
 Startup sequence:
   1. Validate config (fail fast on missing env vars)
-  2. Verify database connection
-  3. Initialize Firebase Admin SDK
-  4. Validate encryption key
-  5. Mount middleware (CORS, security headers)
-  6. Register routers
+  2. Initialize Firebase Admin SDK
+  3. Validate encryption key
+  4. Mount middleware (CORS, security headers)
+  5. Register routers
+  6. On startup, connect to the database in a background thread with
+     backoff; DB-backed routes return 503 until it succeeds (core/database.py)
 
 Alembic manages schema — Base.metadata.create_all() is intentionally absent.
 Run migrations with: alembic upgrade head
@@ -27,17 +28,7 @@ except Exception as e:
     logger.critical(f"Config failed to load: {e}")
     sys.exit(1)
 
-# ── 2. Database connection check ───────────────────────────────────────────────
-try:
-    from app.core.database import engine
-    with engine.connect() as conn:
-        conn.execute(__import__("sqlalchemy").text("SELECT 1"))
-    logger.info("Database connection OK")
-except Exception as e:
-    logger.critical(f"Database connection failed: {e}")
-    sys.exit(1)
-
-# ── 3. Firebase Admin SDK ──────────────────────────────────────────────────────
+# ── 2. Firebase Admin SDK ──────────────────────────────────────────────────────
 try:
     from app.core.auth import verify_firebase_token  # noqa: F401 — triggers SDK init
     logger.info("Firebase Admin SDK initialized")
@@ -45,7 +36,7 @@ except Exception as e:
     logger.critical(f"Firebase Admin SDK init failed: {e}")
     sys.exit(1)
 
-# ── 4. Encryption key check ────────────────────────────────────────────────────
+# ── 3. Encryption key check ────────────────────────────────────────────────────
 try:
     from app.core.encryption import _get_fernet
     _get_fernet()
@@ -55,9 +46,22 @@ except Exception as e:
     sys.exit(1)
 
 # ── App ────────────────────────────────────────────────────────────────────────
+import threading
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
+from app.core.database import db_ready, wait_for_db
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    threading.Thread(target=wait_for_db, name="db-connect", daemon=True).start()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Vaulta API",
     description="AI-powered personal finance platform for India",
     version="0.1.0",
@@ -118,4 +122,4 @@ except Exception as e:
 # ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/health", tags=["ops"])
 def health():
-    return {"status": "ok", "env": settings.APP_ENV}
+    return {"status": "ok", "env": settings.APP_ENV, "database": "ok" if db_ready.is_set() else "connecting"}

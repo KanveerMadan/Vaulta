@@ -89,38 +89,3 @@ class MonthlySummary(BaseModel):
 
     mom_total_delta: Optional[Decimal] = None
     mom_total_delta_pct: Optional[Decimal] = None
-
-
-class BudgetCreate(BaseModel):
-    category: Optional[str] = None
-    monthly_limit: Decimal
-
-    @field_validator("monthly_limit")
-    @classmethod
-    def limit_must_be_positive(cls, v: Decimal) -> Decimal:
-        if v <= 0:
-            raise ValueError("Budget limit must be positive")
-        return v
-
-
-class BudgetUpdate(BaseModel):
-    monthly_limit: Decimal
-
-    @field_validator("monthly_limit")
-    @classmethod
-    def limit_must_be_positive(cls, v: Decimal) -> Decimal:
-        if v <= 0:
-            raise ValueError("Budget limit must be positive")
-        return v
-
-
-class BudgetResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    user_id: uuid.UUID
-    category: Optional[str] = None
-    monthly_limit: Decimal
-    is_active: str
-    created_at: datetime
-    updated_at: datetime

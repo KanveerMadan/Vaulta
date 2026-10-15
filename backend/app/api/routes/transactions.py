@@ -1,4 +1,5 @@
-from datetime import datetime
+from calendar import monthrange
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -56,9 +57,25 @@ def get_summary(
     date_floor: Optional[datetime] = Depends(get_data_date_floor),
     db: Session = Depends(get_db),
 ):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     target_year = year or now.year
     target_month = month or now.month
+
+    # Free-tier window is enforced before any period-specific handling so that
+    # year/lifetime can't be used to read history outside the 30-day window.
+    if period == "month":
+        _, last_day = monthrange(target_year, target_month)
+        period_end = datetime(target_year, target_month, last_day, 23, 59, 59, tzinfo=timezone.utc)
+    elif period == "year":
+        period_end = datetime(target_year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+    else:
+        period_end = None  # lifetime always overlaps the window; it is clamped below
+    if date_floor and period_end and period_end < date_floor:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="This period is outside your free tier's 30-day window. "
+                   "Subscribe to view your full history.",
+        )
 
     if period in ("year", "lifetime"):
         return transaction_service.get_period_summary(
@@ -66,22 +83,13 @@ def get_summary(
             user=current_user,
             period=period,
             year=target_year if period == "year" else None,
+            date_floor=date_floor,
         )
-
-    if date_floor:
-        from calendar import monthrange
-        _, last_day = monthrange(target_year, target_month)
-        month_end = datetime(target_year, target_month, last_day, 23, 59, 59, tzinfo=date_floor.tzinfo)
-        if month_end < date_floor:
-            raise HTTPException(
-                status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                detail="This period is outside your free tier's 30-day window. "
-                       "Subscribe to view your full history.",
-            )
 
     return transaction_service.get_monthly_summary(
         db=db,
         user=current_user,
         year=target_year,
         month=target_month,
+        date_floor=date_floor,
     )
