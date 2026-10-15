@@ -21,7 +21,7 @@ from app.models.transaction_source import TransactionDirection
 from app.models.user import User
 from app.schemas.people import PeopleList, PersonResponse, PersonUpdate
 from app.services.detection import run_detection
-from app.services.people import TAG_DEFAULTS, balances
+from app.services.people import balances, set_tag
 
 router = APIRouter(prefix="/api/people", tags=["people"])
 
@@ -39,15 +39,15 @@ def _views(db: Session, user: User, only: uuid.UUID | None = None) -> list[Perso
         if not mine:
             continue
         b = bal.get(p.id)
-        paid = sum((t.amount for t in mine if t.direction == TransactionDirection.debit), Decimal("0"))
-        received = sum((t.amount for t in mine if t.direction == TransactionDirection.credit), Decimal("0"))
+        paid = sum((t.amount for t in mine if t.direction == TransactionDirection.debit), Decimal("0.00"))
+        received = sum((t.amount for t in mine if t.direction == TransactionDirection.credit), Decimal("0.00"))
         out.append(PersonResponse(
             id=p.id, name=p.display_name, masked_vpa=p.masked_vpa, tag=p.tag,
             default_category=p.default_category, default_kind=p.default_kind,
             paid_total=paid, received_total=received, transaction_count=len(mine),
             last_date=max(t.transaction_date for t in mine).date(),
-            owed_to_you=b.owed_to_you if b else Decimal("0"), you_owe=b.you_owe if b else Decimal("0"),
-            balance=b.net if b else Decimal("0"),
+            owed_to_you=b.owed_to_you if b else Decimal("0.00"), you_owe=b.you_owe if b else Decimal("0.00"),
+            balance=b.net if b else Decimal("0.00"),
             outstanding_days=(today - b.oldest_open).days if b and b.oldest_open else None,
         ))
     return sorted(out, key=lambda v: (-(v.paid_total + v.received_total)))
@@ -72,13 +72,7 @@ def update_person(
     if "display_name" in fields:
         person.display_name = payload.display_name
     if "tag" in fields:
-        person.tag = payload.tag
-        # A tag brings its defaults unless the request sets them explicitly
-        default_category, default_kind = TAG_DEFAULTS.get(payload.tag, (None, None)) if payload.tag else (None, None)
-        if "default_category" not in fields:
-            person.default_category = default_category
-        if "default_kind" not in fields:
-            person.default_kind = default_kind
+        set_tag(person, payload.tag)
     if "default_category" in fields:
         person.default_category = payload.default_category
     if "default_kind" in fields:

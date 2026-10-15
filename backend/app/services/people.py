@@ -101,8 +101,8 @@ def balances(txns: list[Transaction]) -> dict[uuid.UUID, Balance]:
         elif t.kind == TransactionKind.repayment:
             _settle(b._open_lent if t.direction == TransactionDirection.credit else b._open_borrowed, t.amount)
     for b in result.values():
-        b.owed_to_you = sum((a for _, a in b._open_lent), Decimal("0"))
-        b.you_owe = sum((a for _, a in b._open_borrowed), Decimal("0"))
+        b.owed_to_you = sum((a for _, a in b._open_lent), Decimal("0.00"))
+        b.you_owe = sum((a for _, a in b._open_borrowed), Decimal("0.00"))
         dates = [d for d, _ in b._open_lent + b._open_borrowed]
         b.oldest_open = min(dates) if dates else None
     return result
@@ -131,3 +131,11 @@ def repayment_candidates(txns: list[Transaction]) -> list[Transaction]:
                 out.append(t)
     open_people = {pid for pid, b in balances(txns).items() if b.owed_to_you > 0 or b.you_owe > 0}
     return [t for t in out if t.person_id in open_people]
+
+
+def set_tag(person: Person, tag: Optional[str], default_category=..., default_kind=...) -> None:
+    """Tag a person; the tag brings its defaults unless they're given explicitly."""
+    person.tag = tag
+    tag_category, tag_kind = TAG_DEFAULTS.get(tag, (None, None)) if tag else (None, None)
+    person.default_category = tag_category if default_category is ... else default_category
+    person.default_kind = tag_kind if default_kind is ... else default_kind

@@ -36,8 +36,10 @@ COVERED = {
     ("POST", "/api/rules"),
     ("PATCH", "/api/rules/{rule_id}"),
     ("DELETE", "/api/rules/{rule_id}"),
+    ("GET", "/api/review"),            # tests/test_review.py::test_review_is_per_user
+    ("POST", "/api/review/{card_id}/answer"),
 }
-GUARDED_PREFIXES = ("/api/transactions", "/api/import", "/api/recurring", "/api/people", "/api/rules")
+GUARDED_PREFIXES = ("/api/transactions", "/api/import", "/api/recurring", "/api/people", "/api/rules", "/api/review")
 
 
 def test_every_route_is_covered():

@@ -22,6 +22,7 @@ from app.models.user import User
 from app.schemas.rules import RuleCreate, RuleList, RuleResponse, RuleUpdate, check_rule_value
 from app.services.detection import run_detection
 from app.services.keys import merchant_key
+from app.services.rules import upsert_rule
 
 router = APIRouter(prefix="/api/rules", tags=["rules"])
 
@@ -52,17 +53,6 @@ def list_rules(current_user: User = Depends(get_current_user), db: Session = Dep
     counts = _counts(db, current_user)
     rules = db.query(Rule).filter(Rule.user_id == current_user.id).order_by(Rule.merchant_label, Rule.field).all()
     return RuleList(rules=[_view(r, counts) for r in rules])
-
-
-def upsert_rule(db: Session, user: User, merchant_key_: str, merchant: str, field: str, value: str, origin: str) -> Rule:
-    rule = db.query(Rule).filter(Rule.user_id == user.id, Rule.merchant_key == merchant_key_, Rule.field == field).first()
-    if rule is None:
-        rule = Rule(user_id=user.id, merchant_key=merchant_key_, field=field)
-        db.add(rule)
-    rule.merchant_label, rule.value, rule.origin = merchant[:100], value, origin
-    db.commit()
-    run_detection(db, user)
-    return rule
 
 
 @router.post("", response_model=RuleResponse, status_code=status.HTTP_201_CREATED)

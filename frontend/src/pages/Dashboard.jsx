@@ -14,6 +14,7 @@ import {
 import SubscriptionBanner from "../components/SubscriptionBanner";
 import QuickAddBar from "../components/QuickAddBar";
 import SplitModal from "../components/SplitModal";
+import ReviewQueue from "../components/ReviewQueue";
 import { rupees } from "../lib/format";
 import { CATEGORIES, KINDS, kindsFor } from "../lib/categories";
 import { updateTransaction, deleteTransaction } from "../lib/transactions";
@@ -338,6 +339,8 @@ export default function Dashboard() {
       {learnedRule && <RuleToast rule={learnedRule} onUndo={undoRule} onClose={() => setLearnedRule(null)} />}
 
       <QuickAddBar onAdded={refresh} />
+
+      <ReviewQueue onAnswered={refresh} />
 
       {summary && summary.transaction_count > 0 && (
         <div className="flex items-center gap-3 bg-gold/10 border border-gold/30 rounded-xl px-4 py-3">

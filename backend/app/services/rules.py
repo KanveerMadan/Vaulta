@@ -67,3 +67,17 @@ def learn_from(db: Session, txn: Transaction, field: str) -> Optional[Rule]:
     rule.value = value
     db.flush()
     return rule
+
+
+def upsert_rule(db: Session, user, merchant_key_: str, merchant: str, field: str, value: str, origin: str) -> Rule:
+    """Create or replace the user's rule for (merchant, field) and apply it everywhere now."""
+    from app.services.detection import run_detection  # detection imports this module
+
+    rule = db.query(Rule).filter(Rule.user_id == user.id, Rule.merchant_key == merchant_key_, Rule.field == field).first()
+    if rule is None:
+        rule = Rule(user_id=user.id, merchant_key=merchant_key_, field=field)
+        db.add(rule)
+    rule.merchant_label, rule.value, rule.origin = merchant[:100], value, origin
+    db.commit()
+    run_detection(db, user)
+    return rule
