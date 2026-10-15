@@ -21,9 +21,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.models.transaction import Transaction, Budget, TransactionSource, TransactionNature
-from app.models.transaction_source import StatementSourceType, TransactionDirection
+from app.models.transaction_source import StatementSourceType, TransactionDirection, TransactionSourceRecord
 from app.models.user import User
 from app.schemas.transaction import (
+    ManualTransactionCreate,
+    TransactionUpdate,
     TransactionCreate,
     TransactionListResponse,
     TransactionResponse,
@@ -169,6 +171,77 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
 
     logger.info(f"Import batch: user={user.id}, rows={len(rows)}, result={result.model_dump()}")
     return result
+
+
+# ─────────────────────────────────────────────
+# Manual entry and edits
+# ─────────────────────────────────────────────
+
+def create_manual_transaction(db: Session, user: User, payload: ManualTransactionCreate) -> Transaction:
+    """
+    Manual entries go through the normalizer and the dedup matcher like
+    imported rows, so a cash entry later seen in a statement isn't doubled.
+    Returns the canonical transaction (the existing one if it matched).
+    """
+    normalized = normalize(payload.merchant)
+    confident = normalized.confidence >= 0.5
+    nature = TransactionNature.expense if payload.direction == "debit" else TransactionNature.income
+    txn, _record, _matched = ingest_or_match_transaction(
+        db,
+        user,
+        source=StatementSourceType.manual,
+        direction=TransactionDirection(payload.direction),
+        amount=Decimal(payload.amount),
+        transaction_date_hint=None,
+        idempotency_key=hashlib.sha256(f"manual|{payload.client_id.lower()}".encode()).hexdigest(),
+        merchant_raw=payload.merchant,
+        merchant_clean=normalized.merchant_clean if confident else payload.merchant,
+        category=payload.category or (normalized.category if confident else None),
+        transaction_nature=nature,
+        legacy_source_enum=TransactionSource.manual,
+        raw_date=date.fromisoformat(payload.date),
+        counterparty_raw=payload.merchant,
+        raw_row={"entry": "manual", "payment_method": payload.payment_method},
+    )
+    if payload.notes and txn.notes is None:
+        txn.notes = payload.notes
+        db.commit()
+    db.refresh(txn)
+    return txn
+
+
+def get_owned_transaction(db: Session, user: User, transaction_id: uuid.UUID) -> Optional[Transaction]:
+    """The transaction if it belongs to `user`, else None (callers return 404 either way)."""
+    return (
+        db.query(Transaction)
+        .filter(Transaction.id == transaction_id, Transaction.user_id == user.id)
+        .first()
+    )
+
+
+def update_transaction(db: Session, txn: Transaction, payload: TransactionUpdate) -> Transaction:
+    if "category" in payload.model_fields_set:
+        txn.category = payload.category
+    if "notes" in payload.model_fields_set:
+        txn.notes = payload.notes
+    txn.user_corrected = "true"
+    db.commit()
+    db.refresh(txn)
+    return txn
+
+
+def is_manual_only(txn: Transaction) -> bool:
+    """Created by hand and never merged with statement evidence."""
+    return txn.source == TransactionSource.manual and all(
+        r.source == StatementSourceType.manual for r in txn.source_records
+    )
+
+
+def delete_manual_transaction(db: Session, txn: Transaction) -> None:
+    # Its evidence rows go too, so nothing is left pointing at a deleted entry
+    db.query(TransactionSourceRecord).filter(TransactionSourceRecord.transaction_id == txn.id).delete()
+    db.delete(txn)
+    db.commit()
 
 
 # ─────────────────────────────────────────────

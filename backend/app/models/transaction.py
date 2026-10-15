@@ -18,6 +18,7 @@ class TransactionSource(str, enum.Enum):
     sms = "sms"
     csv = "csv"
     aa = "aa"  # Account Aggregator
+    manual = "manual"
 
 
 class TransactionNature(str, enum.Enum):
@@ -71,8 +72,11 @@ class Transaction(Base):
     # Original source payload preserved for re-derivation (email body, SMS text, CSV row)
     raw_source_data = Column(JSON, nullable=True)
 
-    # Whether the user has manually corrected this transaction's merchant/category
-    user_corrected = Column(String, nullable=True)  # stores original merchant_clean before correction
+    # "true" once the user has edited the category/notes (string flag, like Budget.is_active)
+    user_corrected = Column(String, nullable=True)
+
+    # Free-text note from the user
+    notes = Column(String(500), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=text("now()"), onupdate=datetime.utcnow, nullable=False)

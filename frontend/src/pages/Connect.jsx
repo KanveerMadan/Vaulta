@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/authStore";
 import StatementUpload from "../components/StatementUpload";
+import ManualEntryModal from "../components/ManualEntryModal";
 
 // ─────────────────────────────────────────────
 // Data source definitions
@@ -44,10 +45,10 @@ function useDataSources(user) {
             d="M12 4v16m8-8H4" />
         </svg>
       ),
-      available: false,  // Not yet built
+      available: true,
       action: "add",
-      badge: "Coming soon",
-      badgeColor: "neutral",
+      badge: "Quick",
+      badgeColor: "safe",
     },
   ];
 }
@@ -145,14 +146,13 @@ function PrivacyTable() {
 export default function Connect() {
   const { user } = useAuthStore();
   const [showUpload, setShowUpload] = useState(false);
+  const [showManual, setShowManual] = useState(false);
 
   const sources = useDataSources(user);
 
   const handleSourceAction = (sourceId) => {
-    if (sourceId === "statement") {
-      setShowUpload(true);
-    }
-    // "manual" and "aa" are not yet available — no action wired
+    if (sourceId === "statement") setShowUpload(true);
+    if (sourceId === "manual") setShowManual(true);
   };
 
   return (
@@ -198,6 +198,9 @@ export default function Connect() {
       {/* Statement upload modal */}
       {showUpload && (
         <StatementUpload onClose={() => setShowUpload(false)} />
+      )}
+      {showManual && (
+        <ManualEntryModal onClose={() => setShowManual(false)} />
       )}
     </div>
   );

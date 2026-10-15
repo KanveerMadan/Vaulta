@@ -1,13 +1,23 @@
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List
 
-from pydantic import BaseModel, field_validator, ConfigDict
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 from app.models.transaction import TransactionSource, TransactionNature
+from app.services.merchant_normalizer import _PATTERNS
+
+# Every category the normalizer can assign, plus the ones set by nature or
+# by hand. frontend/src/lib/categories.js lists the same names.
+CATEGORIES = frozenset({category for _, _, category, _ in _PATTERNS}) | {
+    "Sent to People", "Received from People", "Transfers", "Cash", "Other",
+}
 
 
 class TransactionBase(BaseModel):
@@ -47,8 +57,73 @@ class TransactionResponse(TransactionBase):
     user_id: uuid.UUID
     idempotency_key: str
     user_corrected: Optional[str] = None
+    notes: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+
+def _known_category(v: Optional[str]) -> Optional[str]:
+    if v is not None and v not in CATEGORIES:
+        raise ValueError(f"Unknown category. Use one of: {', '.join(sorted(CATEGORIES))}")
+    return v
+
+
+class ManualTransactionCreate(BaseModel):
+    """Manual entry. client_id makes retries of the same submit idempotent."""
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    client_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    amount: str = Field(pattern=r"^\d{1,10}(\.\d{1,2})?$")
+    direction: Literal["debit", "credit"] = "debit"
+    merchant: str = Field(min_length=1, max_length=100)
+    category: Optional[str] = None
+    payment_method: Literal["cash", "online"] = "cash"
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("category")
+    @classmethod
+    def known_category(cls, v: Optional[str]) -> Optional[str]:
+        return _known_category(v)
+
+    @field_validator("date")
+    @classmethod
+    def real_date(cls, v: str) -> str:
+        datetime.fromisoformat(v)
+        return v
+
+    @field_validator("amount")
+    @classmethod
+    def positive(cls, v: str) -> str:
+        if Decimal(v) <= 0:
+            raise ValueError("amount must be positive")
+        return v
+
+    @field_validator("merchant", "notes")
+    @classmethod
+    def no_account_numbers(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and re.search(r"\d{9,}", v):
+            raise ValueError("contains a 9+ digit number (possible account number)")
+        return v.strip() if v is not None else v
+
+
+class TransactionUpdate(BaseModel):
+    """PATCH body. Send only the fields to change; category null clears it."""
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    category: Optional[str] = None
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("category")
+    @classmethod
+    def known_category(cls, v: Optional[str]) -> Optional[str]:
+        return _known_category(v)
+
+    @model_validator(mode="after")
+    def something_to_change(self) -> "TransactionUpdate":
+        if not self.model_fields_set:
+            raise ValueError("Nothing to update")
+        return self
 
 
 class TransactionListResponse(BaseModel):

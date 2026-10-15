@@ -1,3 +1,4 @@
+import uuid
 from calendar import monthrange
 from datetime import datetime, timezone
 from typing import Optional
@@ -10,7 +11,13 @@ from app.core.database import get_db
 from app.core.subscription import require_active_subscription, get_data_date_floor
 from app.models.transaction import TransactionSource
 from app.models.user import User
-from app.schemas.transaction import TransactionListResponse, MonthlySummary
+from app.schemas.transaction import (
+    ManualTransactionCreate,
+    MonthlySummary,
+    TransactionListResponse,
+    TransactionResponse,
+    TransactionUpdate,
+)
 from app.services import transaction_service
 
 router = APIRouter(prefix="/api/transactions", tags=["transactions"])
@@ -93,3 +100,51 @@ def get_summary(
         month=target_month,
         date_floor=date_floor,
     )
+
+
+@router.post("", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
+def create_transaction(
+    payload: ManualTransactionCreate,
+    current_user: User = Depends(get_current_user),
+    _: None = Depends(require_active_subscription),
+    db: Session = Depends(get_db),
+):
+    """Manual entry (source=manual). Retrying with the same client_id returns the same transaction."""
+    return transaction_service.create_manual_transaction(db, current_user, payload)
+
+
+def _owned_or_404(db: Session, user: User, transaction_id: uuid.UUID):
+    txn = transaction_service.get_owned_transaction(db, user, transaction_id)
+    if txn is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found.")
+    return txn
+
+
+@router.patch("/{transaction_id}", response_model=TransactionResponse)
+def update_transaction(
+    transaction_id: uuid.UUID,
+    payload: TransactionUpdate,
+    current_user: User = Depends(get_current_user),
+    _: None = Depends(require_active_subscription),
+    db: Session = Depends(get_db),
+):
+    """Change category and/or notes. Marks the transaction user_corrected."""
+    txn = _owned_or_404(db, current_user, transaction_id)
+    return transaction_service.update_transaction(db, txn, payload)
+
+
+@router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_transaction(
+    transaction_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    _: None = Depends(require_active_subscription),
+    db: Session = Depends(get_db),
+):
+    """Manual entries only. Imported transactions are corrected, not deleted."""
+    txn = _owned_or_404(db, current_user, transaction_id)
+    if not transaction_service.is_manual_only(txn):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only transactions you added manually can be deleted.",
+        )
+    transaction_service.delete_manual_transaction(db, txn)

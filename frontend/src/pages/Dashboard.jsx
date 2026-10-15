@@ -12,6 +12,9 @@ import {
   SkeletonInsightCard,
 } from "../components/Skeletons";
 import SubscriptionBanner from "../components/SubscriptionBanner";
+import QuickAddBar from "../components/QuickAddBar";
+import { CATEGORIES } from "../lib/categories";
+import { updateTransaction, deleteTransaction } from "../lib/transactions";
 
 const CATEGORY_COLORS = [
   "#2d6a4f", "#40916c", "#52b788", "#74c69d", "#95d5b2",
@@ -58,10 +61,32 @@ function InsightCard({ insight }) {
   );
 }
 
-function TransactionRow({ txn }) {
+function TransactionRow({ txn, onChanged }) {
   const isCredit = txn.transaction_nature === "peer_payment_received"
     || txn.transaction_nature === "income";
   const isSelfTransfer = txn.transaction_nature === "self_transfer";
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const act = async (fn) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      setEditing(false);
+      onChanged?.();
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Couldn't save that change.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setCategory = (category) => act(() => updateTransaction(txn.id, { category: category || null }));
+  const remove = () => {
+    if (window.confirm(`Delete ${txn.merchant_clean || txn.merchant_raw}, ₹${txn.amount}?`)) act(() => deleteTransaction(txn.id));
+  };
 
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-sage-50 last:border-0">
@@ -72,12 +97,32 @@ function TransactionRow({ txn }) {
         <p className="text-sm font-medium text-ink-900 truncate">
           {txn.merchant_clean || txn.merchant_raw}
         </p>
-        <p className="text-xs text-ink-400">
-          {txn.category || "Uncategorized"} ·{" "}
-          {new Date(txn.transaction_date).toLocaleDateString("en-IN", {
-            day: "numeric", month: "short",
-          })}
-        </p>
+        <div className="text-xs text-ink-400 flex items-center gap-1">
+          {editing ? (
+            <select
+              autoFocus
+              disabled={busy}
+              defaultValue={txn.category || ""}
+              onChange={(e) => setCategory(e.target.value)}
+              onBlur={() => !busy && setEditing(false)}
+              className="border border-sage-200 rounded px-1 py-0.5 text-xs bg-white text-ink-700"
+              aria-label="Category"
+            >
+              <option value="">Uncategorized</option>
+              {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+            </select>
+          ) : (
+            <button onClick={() => setEditing(true)} className="hover:text-forest-600 hover:underline" title="Change category">
+              {txn.category || "Uncategorized"}
+            </button>
+          )}
+          <span>·</span>
+          <span>
+            {new Date(txn.transaction_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+          </span>
+          {txn.source === "manual" && <span className="text-ink-300">· added by you</span>}
+        </div>
+        {error && <p className="text-xs text-danger mt-0.5">{error}</p>}
       </div>
       <p className={`font-mono text-sm font-medium shrink-0 ${
         isCredit ? "text-safe" : isSelfTransfer ? "text-ink-400" : "text-ink-800"
@@ -85,6 +130,13 @@ function TransactionRow({ txn }) {
         {isSelfTransfer ? "↔" : isCredit ? "+" : "-"}
         ₹{Math.abs(txn.amount).toLocaleString("en-IN")}
       </p>
+      {txn.source === "manual" && (
+        <button onClick={remove} disabled={busy} className="p-1 text-ink-300 hover:text-danger shrink-0" aria-label="Delete transaction">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -168,6 +220,11 @@ export default function Dashboard() {
     fetchTransactions();
   }, [fetchTransactions]);
 
+  const refresh = () => {
+    fetchSummary();
+    fetchTransactions();
+  };
+
   // ── Derived values ─────────────────────────────────────────────────────────
   const totalSpend        = summary ? parseFloat(summary.total_spend)       : 0;
   const totalReceived     = summary ? parseFloat(summary.total_received)    : 0;
@@ -210,6 +267,8 @@ export default function Dashboard() {
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
       <SubscriptionBanner />
+
+      <QuickAddBar onAdded={refresh} />
 
       {summary && summary.transaction_count > 0 && (
         <div className="flex items-center gap-3 bg-gold/10 border border-gold/30 rounded-xl px-4 py-3">
@@ -406,7 +465,7 @@ export default function Dashboard() {
         ) : transactions.length > 0 ? (
           <div className="card p-5">
             {transactions.map((txn) => (
-              <TransactionRow key={txn.id} txn={txn} />
+              <TransactionRow key={txn.id} txn={txn} onChanged={refresh} />
             ))}
             {transactions.length >= 20 && (
               <button className="w-full mt-3 text-sm text-forest-600 font-medium hover:underline py-2">
