@@ -7,19 +7,29 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // OCR assets (~7 MB) load on demand; don't precache them for every visitor
-      workbox: { globIgnores: ['ocr/**'] },
+      includeAssets: ['favicon.svg'],
+      // The service worker precaches the built static files only. No runtime caching at all:
+      // API responses and financial data are never stored by it. OCR assets (~7 MB) load on demand.
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globIgnores: ['ocr/**'],
+        runtimeCaching: [],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//, /^\/auth\//, /^\/internal\//, /^\/unsubscribe/],
+      },
       manifest: {
         name: 'Vaulta',
         short_name: 'Vaulta',
-        description: 'Personal Finance AI for India',
-        theme_color: '#0D0D14',
-        background_color: '#0D0D14',
+        description: 'Tracks every rupee you spend, automatically.',
+        theme_color: '#0A1A0E',
+        background_color: '#F2F7F3',
         display: 'standalone',
         start_url: '/',
+        scope: '/',
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),

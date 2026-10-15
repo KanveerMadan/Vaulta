@@ -25,14 +25,14 @@ function Table({ table }) {
   return (
     <div className="mt-2 overflow-x-auto">
       <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: '#8FAF98' }}>{table.title}</p>
-      <table className="w-full text-[11px]">
+      <table className="w-full text-[11px] stack-table">
         <thead>
           <tr>{table.columns.map((c, i) => <th key={i} className={clsx('font-medium pb-1', i ? 'text-right' : 'text-left')} style={{ color: '#7A9E80' }}>{c}</th>)}</tr>
         </thead>
         <tbody>
           {table.rows.map((row, r) => (
             <tr key={r} style={{ borderTop: '1px solid #F2F7F3' }}>
-              {row.map((cell, i) => <td key={i} className={clsx('py-0.5', i ? 'text-right font-mono' : '')}>{cell}</td>)}
+              {row.map((cell, i) => <td key={i} data-label={i ? table.columns[i] : undefined} className={clsx('py-0.5', i ? 'text-right font-mono' : '')}>{cell}</td>)}
             </tr>
           ))}
         </tbody>

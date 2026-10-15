@@ -49,7 +49,7 @@ export default {
       },
       fontFamily: {
         sans:    ['"Instrument Sans"', 'sans-serif'],
-        display: ['"Fraunces"', 'serif'],
+        display: ['"Fraunces Variable"', 'serif'],
         mono:    ['"JetBrains Mono"', 'monospace'],
       },
       animation: {

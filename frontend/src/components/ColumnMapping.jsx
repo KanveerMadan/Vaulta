@@ -42,7 +42,7 @@ export default function ColumnMapping({ table, initialMapping, sourceType, onCon
       </div>
 
       <div className="overflow-x-auto border border-sage-100 rounded-xl">
-        <table className="text-xs w-full">
+        <table className="text-xs w-full stack-table">
           <thead className="bg-sage-50">
             <tr>
               {table.header.map((h, i) => (
@@ -56,7 +56,7 @@ export default function ColumnMapping({ table, initialMapping, sourceType, onCon
             {table.rows.slice(0, 5).map((r, ri) => (
               <tr key={ri} className="border-t border-sage-50">
                 {table.header.map((_, ci) => (
-                  <td key={ci} className="px-2 py-1 text-ink-700 whitespace-nowrap max-w-[12rem] truncate">{r[ci]}</td>
+                  <td key={ci} data-label={table.header[ci] || `Column ${ci + 1}`} className="px-2 py-1 text-ink-700 whitespace-nowrap max-w-[12rem] truncate">{r[ci]}</td>
                 ))}
               </tr>
             ))}

@@ -101,7 +101,7 @@ function Preview({ parsed, onConfirm, onBack, sending, progress, onEdit }) {
       )}
 
       <div className="max-h-80 overflow-auto border border-sage-100 rounded-xl">
-        <table className="w-full text-xs">
+        <table className="w-full text-xs stack-table">
           <thead className="bg-sage-50 sticky top-0">
             <tr className="text-left text-ink-500">
               <th className="px-2 py-1.5 w-6"><span className="sr-only">Include</span></th>
@@ -115,27 +115,27 @@ function Preview({ parsed, onConfirm, onBack, sending, progress, onEdit }) {
           <tbody>
             {rows.map((r, i) => (
               <tr key={i} className={`border-t border-sage-50 ${excluded.has(i) ? "opacity-40" : ""} ${lowConfidence.has(i) ? "bg-gold/10" : ""}`}>
-                <td className="px-2 py-1">
+                <td className="px-2 py-1" data-label="Include">
                   <input type="checkbox" checked={!excluded.has(i)} onChange={() => toggle(i)}
                     aria-label={`Include ${r.description_raw} on ${r.date}`} />
                 </td>
                 {lowConfidence.has(i) ? (
                   <>
-                    <td className="px-2 py-1"><EditCell value={r.date} field="date" label="Date" onEdit={(f, v) => onEdit(i, f, v)} /></td>
-                    <td className="px-2 py-1"><EditCell value={r.description_raw} field="description_raw" label="Merchant" onEdit={(f, v) => onEdit(i, f, v)} /></td>
-                    <td className="px-2 py-1"><EditCell value={r.amount} field="amount" label="Amount" onEdit={(f, v) => onEdit(i, f, v)} /></td>
+                    <td className="px-2 py-1" data-label="Date"><EditCell value={r.date} field="date" label="Date" onEdit={(f, v) => onEdit(i, f, v)} /></td>
+                    <td className="px-2 py-1" data-label="Merchant"><EditCell value={r.description_raw} field="description_raw" label="Merchant" onEdit={(f, v) => onEdit(i, f, v)} /></td>
+                    <td className="px-2 py-1" data-label="Amount"><EditCell value={r.amount} field="amount" label="Amount" onEdit={(f, v) => onEdit(i, f, v)} /></td>
                   </>
                 ) : (
                   <>
-                    <td className="px-2 py-1 whitespace-nowrap text-ink-600">{r.date.slice(0, 10)}</td>
-                    <td className="px-2 py-1 text-ink-800 max-w-[14rem] truncate" title={r.description_raw}>{r.description_raw}</td>
-                    <td className="px-2 py-1 text-right font-mono whitespace-nowrap">₹{Number(r.amount).toLocaleString("en-IN")}</td>
+                    <td className="px-2 py-1 whitespace-nowrap text-ink-600" data-label="Date">{r.date.slice(0, 10)}</td>
+                    <td className="px-2 py-1 text-ink-800 max-w-[14rem] truncate" title={r.description_raw} data-label="Merchant">{r.description_raw}</td>
+                    <td className="px-2 py-1 text-right font-mono whitespace-nowrap" data-label="Amount">₹{Number(r.amount).toLocaleString("en-IN")}</td>
                   </>
                 )}
-                <td className={`px-2 py-1 whitespace-nowrap ${r.direction === "credit" ? "text-safe" : "text-ink-600"}`}>
+                <td data-label="Type" className={`px-2 py-1 whitespace-nowrap ${r.direction === "credit" ? "text-safe" : "text-ink-600"}`}>
                   {r.type === "transfer" ? "Transfer" : r.direction === "credit" ? "Credit" : "Debit"}
                 </td>
-                <td className="px-2 py-1 font-mono text-ink-400 whitespace-nowrap">{r.reference || "—"}</td>
+                <td className="px-2 py-1 font-mono text-ink-400 whitespace-nowrap" data-label="Reference">{r.reference || "—"}</td>
               </tr>
             ))}
           </tbody>

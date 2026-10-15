@@ -230,3 +230,22 @@
   .delay-300 { animation-delay: 300ms; }
   .delay-375 { animation-delay: 375ms; }
 }
+/* Phones: comfortable tap targets (44px) and tables as stacked rows */
+@media (max-width: 639px) {
+  button, select, summary, [role="button"],
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea {
+    min-height: 44px;
+  }
+  button { min-width: 44px; }
+  label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: 44px; }
+  input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; }
+
+  .stack-table thead { display: none; }
+  .stack-table, .stack-table tbody, .stack-table tr { display: block; width: 100%; }
+  .stack-table tr { border-top: 1px solid #E8F0EA; padding: 6px 0; }
+  .stack-table td {
+    display: flex; justify-content: space-between; gap: 12px; width: 100%;
+    max-width: none !important; white-space: normal !important; text-align: right; overflow-wrap: anywhere;
+  }
+  .stack-table td[data-label]::before { content: attr(data-label); font-weight: 500; color: #4A6B50; text-align: left; flex-shrink: 0; }
+}
