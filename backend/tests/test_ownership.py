@@ -20,6 +20,8 @@ COVERED = {
     ("GET", "/api/transactions/summary"),
     ("POST", "/api/transactions"),
     ("POST", "/api/transactions/reanalyze"),
+    ("POST", "/api/transactions/{transaction_id}/split"),     # tests/test_splits.py::test_split_is_per_user
+    ("DELETE", "/api/transactions/{transaction_id}/split"),
     ("PATCH", "/api/transactions/{transaction_id}"),
     ("DELETE", "/api/transactions/{transaction_id}"),
     ("POST", "/api/import/batch"),

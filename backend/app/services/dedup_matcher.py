@@ -150,6 +150,7 @@ def _try_tier3_time_and_merchant(
         .filter(
             Transaction.user_id == user_id,
             Transaction.amount == amount,
+            Transaction.split_parent_id.is_(None),
             Transaction.transaction_date >= window_start,
             Transaction.transaction_date <= window_end,
         )
@@ -191,6 +192,7 @@ def _try_tier4_date_and_merchant(
         .filter(
             Transaction.user_id == user_id,
             Transaction.amount == amount,
+            Transaction.split_parent_id.is_(None),
             func.date(Transaction.transaction_date) == raw_date,
         )
         .all()

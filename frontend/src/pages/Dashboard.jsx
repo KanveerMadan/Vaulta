@@ -13,6 +13,8 @@ import {
 } from "../components/Skeletons";
 import SubscriptionBanner from "../components/SubscriptionBanner";
 import QuickAddBar from "../components/QuickAddBar";
+import SplitModal from "../components/SplitModal";
+import { rupees } from "../lib/format";
 import { CATEGORIES, KINDS, kindsFor } from "../lib/categories";
 import { updateTransaction, deleteTransaction } from "../lib/transactions";
 
@@ -81,6 +83,7 @@ function TransactionRow({ txn, onChanged, onRuleLearned }) {
   const counted = txn.kind === "spend" || txn.kind === "income" || txn.kind === "refund";
   const [editing, setEditing] = useState(false);
   const [editingKind, setEditingKind] = useState(false);
+  const [splitting, setSplitting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -105,12 +108,14 @@ function TransactionRow({ txn, onChanged, onRuleLearned }) {
   };
   const setCategory = (category) => act(() => update({ category: category || null }));
   const setKind = (kind) => act(() => update({ kind }));
+  const unsplit = () => act(() => api.delete(`/api/transactions/${txn.id}/split`));
   const remove = () => {
     if (window.confirm(`Delete ${txn.merchant_clean || txn.merchant_raw}, ₹${txn.amount}?`)) act(() => deleteTransaction(txn.id));
   };
 
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-sage-50 last:border-0">
+    <div className="py-2.5 border-b border-sage-50 last:border-0">
+    <div className="flex items-center gap-3">
       <div className="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center text-ink-500 text-sm shrink-0">
         {(txn.merchant_clean || txn.merchant_raw || "?")[0].toUpperCase()}
       </div>
@@ -170,6 +175,9 @@ function TransactionRow({ txn, onChanged, onRuleLearned }) {
         {txn.kind === "transfer" ? "↔" : isCredit ? "+" : "-"}
         ₹{Math.abs(txn.amount).toLocaleString("en-IN")}
       </p>
+      {(txn.kind === "spend" || txn.kind === "income") && !txn.is_split && (
+        <button onClick={() => setSplitting(true)} disabled={busy} className="text-xs text-ink-300 hover:text-forest-600 shrink-0">Split</button>
+      )}
       {txn.source === "manual" && (
         <button onClick={remove} disabled={busy} className="p-1 text-ink-300 hover:text-danger shrink-0" aria-label="Delete transaction">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -177,6 +185,19 @@ function TransactionRow({ txn, onChanged, onRuleLearned }) {
           </svg>
         </button>
       )}
+    </div>
+    {txn.is_split && (
+      <div className="ml-12 mt-1.5 space-y-0.5 text-xs text-ink-500">
+        {txn.splits.map((part) => (
+          <div key={part.id} className="flex justify-between">
+            <span>↳ {part.category || "Uncategorized"}</span>
+            <span className="font-mono">{rupees(part.amount)}</span>
+          </div>
+        ))}
+        <button onClick={unsplit} disabled={busy} className="text-ink-400 hover:text-danger">Unsplit</button>
+      </div>
+    )}
+    {splitting && <SplitModal txn={txn} onClose={() => setSplitting(false)} onSaved={onChanged} />}
     </div>
   );
 }

@@ -259,7 +259,7 @@ def load_context(db: Session, user: User) -> Ctx:
     txns = (
         db.query(Transaction)
         .options(selectinload(Transaction.source_records))
-        .filter(Transaction.user_id == user.id)
+        .filter(Transaction.user_id == user.id, Transaction.split_parent_id.is_(None))
         .order_by(Transaction.transaction_date, Transaction.created_at)
         .all()
     )
@@ -278,6 +278,9 @@ def run_detection(db: Session, user: User, today: Optional[date] = None) -> Ctx:
     people = link_people(db, user, ctx.txns)   # before rules: rules skip person transactions
     apply_rules(ctx, db.query(Rule).filter(Rule.user_id == user.id).all())
     apply_person_defaults(ctx, people)
+    for t in ctx.txns:
+        for part in t.splits:
+            part.kind = t.kind  # split parts are the parent's money; they mean what it means
     db.flush()
     sync_series(db, user, ctx.txns, today or date.today())
     db.commit()

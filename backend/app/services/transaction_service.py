@@ -288,6 +288,46 @@ def update_transaction(db: Session, txn: Transaction, payload: TransactionUpdate
                  "value": rule.value, "applied_count": changed}
 
 
+class SplitError(ValueError):
+    pass
+
+
+def split_transaction(db: Session, txn: Transaction, parts) -> Transaction:
+    """Replace txn in totals by 2+ parts that sum to it exactly."""
+    if txn.split_parent_id is not None:
+        raise SplitError("A split part can't be split again.")
+    if txn.is_split:
+        raise SplitError("Already split. Unsplit it first.")
+    if txn.kind not in (TransactionKind.spend, TransactionKind.income):
+        raise SplitError("Only spending or income can be split.")
+    total = sum((Decimal(p.amount) for p in parts), Decimal("0"))
+    if total != txn.amount:
+        raise SplitError(f"Parts add up to ₹{total}, but the transaction is ₹{txn.amount}.")
+    for i, part in enumerate(parts):
+        db.add(Transaction(
+            user_id=txn.user_id, source=txn.source, merchant_raw=txn.merchant_raw, merchant_clean=txn.merchant_clean,
+            category=part.category, auto_category=part.category, transaction_nature=txn.transaction_nature,
+            direction=txn.direction, kind=txn.kind, amount=Decimal(part.amount), currency=txn.currency,
+            transaction_date=txn.transaction_date, split_parent_id=txn.id,
+            idempotency_key=hashlib.sha256(f"split|{txn.id}|{i}".encode()).hexdigest(),
+        ))
+    txn.is_split = True
+    db.commit()
+    db.refresh(txn)
+    return txn
+
+
+def unsplit_transaction(db: Session, txn: Transaction) -> Transaction:
+    if not txn.is_split:
+        raise SplitError("This transaction isn't split.")
+    for part in list(txn.splits):
+        db.delete(part)
+    txn.is_split = False
+    db.commit()
+    db.refresh(txn)
+    return txn
+
+
 def is_manual_only(txn: Transaction) -> bool:
     """Created by hand and never merged with statement evidence."""
     return txn.source == TransactionSource.manual and all(
@@ -320,7 +360,8 @@ def get_transactions(
     date_to: Optional[datetime] = None,
     person_id: Optional[uuid.UUID] = None,
 ) -> TransactionListResponse:
-    query = db.query(Transaction).filter(Transaction.user_id == user.id)
+    # Split parts are listed under their parent (TransactionResponse.splits)
+    query = db.query(Transaction).filter(Transaction.user_id == user.id, Transaction.split_parent_id.is_(None))
 
     if category:
         query = query.filter(Transaction.category == category)
@@ -370,6 +411,7 @@ def _counted(user_id, period_start, period_end):
     """Filters for rows that can affect totals in a period."""
     return (
         Transaction.user_id == user_id,
+        Transaction.is_split.is_(False),   # its split parts count instead
         Transaction.transaction_date >= period_start,
         Transaction.transaction_date <= period_end,
     )

@@ -13,6 +13,7 @@ from app.models.transaction import TransactionSource
 from app.models.user import User
 from app.schemas.transaction import (
     ManualTransactionCreate,
+    SplitRequest,
     MonthlySummary,
     TransactionListResponse,
     TransactionPatchResponse,
@@ -166,3 +167,34 @@ def delete_transaction(
             detail="Only transactions you added manually can be deleted.",
         )
     transaction_service.delete_manual_transaction(db, txn)
+
+
+@router.post("/{transaction_id}/split", response_model=TransactionResponse)
+def split_transaction(
+    transaction_id: uuid.UUID,
+    payload: SplitRequest,
+    current_user: User = Depends(get_current_user),
+    _: None = Depends(require_active_subscription),
+    db: Session = Depends(get_db),
+):
+    """Split into 2+ parts (amounts must add up exactly). The parts count in totals instead of the original."""
+    txn = _owned_or_404(db, current_user, transaction_id)
+    try:
+        return transaction_service.split_transaction(db, txn, payload.parts)
+    except transaction_service.SplitError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+
+
+@router.delete("/{transaction_id}/split", response_model=TransactionResponse)
+def unsplit_transaction(
+    transaction_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    _: None = Depends(require_active_subscription),
+    db: Session = Depends(get_db),
+):
+    """Remove the parts; the original counts again."""
+    txn = _owned_or_404(db, current_user, transaction_id)
+    try:
+        return transaction_service.unsplit_transaction(db, txn)
+    except transaction_service.SplitError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))

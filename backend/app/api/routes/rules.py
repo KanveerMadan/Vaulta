@@ -28,7 +28,8 @@ router = APIRouter(prefix="/api/rules", tags=["rules"])
 
 def _counts(db: Session, user: User) -> dict[str, int]:
     counts: dict[str, int] = {}
-    for t in db.query(Transaction).filter(Transaction.user_id == user.id, Transaction.person_id.is_(None)):
+    for t in db.query(Transaction).filter(Transaction.user_id == user.id, Transaction.person_id.is_(None),
+                                        Transaction.split_parent_id.is_(None)):
         key = merchant_key(t)
         counts[key] = counts.get(key, 0) + 1
     return counts

@@ -50,6 +50,14 @@ class TransactionCreate(TransactionBase):
     raw_source_data: Optional[dict] = None
 
 
+class SplitPart(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    amount: Decimal
+    category: Optional[str] = None
+
+
 class TransactionResponse(TransactionBase):
     model_config = ConfigDict(from_attributes=True)
 
@@ -63,6 +71,9 @@ class TransactionResponse(TransactionBase):
     transfer_group_id: Optional[uuid.UUID] = None
     refund_of_id: Optional[uuid.UUID] = None
     person_id: Optional[uuid.UUID] = None
+    is_split: bool = False
+    split_parent_id: Optional[uuid.UUID] = None
+    splits: List[SplitPart] = []
     created_at: datetime
     updated_at: datetime
 
@@ -188,3 +199,28 @@ class MonthlySummary(BaseModel):
 
     mom_total_delta: Optional[Decimal] = None
     mom_total_delta_pct: Optional[Decimal] = None
+
+
+class SplitPartIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    amount: str = Field(pattern=r"^\d{1,10}(\.\d{1,2})?$")
+    category: Optional[str] = None
+
+    @field_validator("category")
+    @classmethod
+    def known_category(cls, v: Optional[str]) -> Optional[str]:
+        return _known_category(v)
+
+    @field_validator("amount")
+    @classmethod
+    def positive(cls, v: str) -> str:
+        if Decimal(v) <= 0:
+            raise ValueError("each part must be more than zero")
+        return v
+
+
+class SplitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    parts: List[SplitPartIn] = Field(min_length=2, max_length=20)

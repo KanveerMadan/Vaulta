@@ -4,7 +4,7 @@ from decimal import Decimal
 from datetime import datetime
 
 from sqlalchemy import (
-    Column, String, Numeric, DateTime, ForeignKey,
+    Boolean, Column, String, Numeric, DateTime, ForeignKey,
     Enum as SAEnum, Index, UniqueConstraint, JSON, text
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -102,6 +102,10 @@ class Transaction(Base):
     transfer_group_id = Column(UUID(as_uuid=True), nullable=True, index=True)
     # The individual this P2P transaction is with (services/keys.py)
     person_id = Column(UUID(as_uuid=True), ForeignKey("people.id", ondelete="SET NULL"), nullable=True, index=True)
+    # Split: the parent stays (is_split) but is excluded from totals; its
+    # children (split_parent_id) carry the parts and count instead
+    is_split = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    split_parent_id = Column(UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=True, index=True)
     # Refund/reversal credit → the debit it gives money back for
     refund_of_id = Column(UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True, index=True)
 
@@ -134,6 +138,10 @@ class Transaction(Base):
     # on the other side is ON DELETE SET NULL, so source evidence outlives the
     # canonical record it was merged into.
     source_records = relationship("TransactionSourceRecord", back_populates="transaction")
+    splits = relationship(
+        "Transaction", foreign_keys=[split_parent_id], order_by="Transaction.amount.desc()",
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
 
     __table_args__ = (
         UniqueConstraint("user_id", "idempotency_key", name="uq_transaction_user_idempotency"),
