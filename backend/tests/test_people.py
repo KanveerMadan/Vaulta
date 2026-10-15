@@ -150,3 +150,49 @@ def test_merge_validation_and_isolation(client):
     assert client.post(f"/api/people/{a}/merge", json={"source_id": b}, headers=BOB).status_code == 404
     assert client.post(f"/api/people/{a}/merge", json={"source_id": b, "x": 1}, headers=ALICE).status_code == 422
     assert set(load(client)[0]) == {"Priya Nair", "P Nair"}
+
+
+def test_several_merges_in_one_pass_including_chains(client):
+    # One batch, one detection run. GPay's "Rahul Sharma" (B) pairs with two bank identities:
+    # R***@okaxis (A) via UTR …11 and R***@ybl (C) via UTR …12 → A=B and B=C → one person.
+    # Separately Priya: GPay "Priya Nair" pairs with bank P***@ybl → a second, independent merge.
+    people, txns = load(client,
+        p2p(days_ago(9), "UPI-RAHUL SHARMA-R***@okaxis-XXXX", "100.00", reference="612400000011"),
+        p2p(days_ago(8), "UPI-RAHUL SHARMA-R***@ybl-XXXX", "200.00", reference="612400000012"),
+        p2p(days_ago(7), "UPI-PRIYA NAIR-P***@ybl-XXXX", "300.00", reference="612400000013"),
+        p2p(days_ago(9), "Rahul Sharma", "100.00", reference="612400000011", source_type="upi_google_pay", source_label="Google Pay"),
+        p2p(days_ago(8), "Rahul Sharma", "200.00", reference="612400000012", source_type="upi_google_pay", source_label="Google Pay"),
+        p2p(days_ago(7), "Priya Nair", "300.00", reference="612400000013", source_type="upi_google_pay", source_label="Google Pay"),
+    )
+    assert sorted(people) == ["Priya Nair", "Rahul Sharma"]
+    assert (people["Rahul Sharma"]["transaction_count"], people["Rahul Sharma"]["paid_total"]) == (2, "300.00")
+    assert people["Priya Nair"]["transaction_count"] == 1
+    assert {t["person_id"] for t in txns if "RAHUL" in t["merchant_raw"]} == {people["Rahul Sharma"]["id"]}
+    # every merged-away person resolves to the survivor, with no cycles
+    from app.models.person import Person
+    from app.services.people import resolve
+    from app.core.database import SessionLocal
+    with SessionLocal() as db:
+        everyone = {p.id: p for p in db.query(Person)}
+        roots = {resolve(p, everyone).id for p in everyone.values()}
+        assert len(roots) == 2
+    # and it stays stable across re-runs
+    client.post("/api/transactions/reanalyze", headers=ALICE)
+    assert sorted(load(client)[0]) == ["Priya Nair", "Rahul Sharma"]
+
+
+def test_chain_across_existing_people(client):
+    # Day 1: three separate people exist (no pairing evidence yet)
+    load(client, p2p(days_ago(9), "UPI-RAHUL SHARMA-R***@okaxis-XXXX", "100.00", reference="612400000021"),
+         p2p(days_ago(8), "UPI-RAHUL SHARMA-R***@ybl-XXXX", "200.00", reference="612400000022"))
+    load(client, p2p(days_ago(1), "Rahul Sharma", "50.00", reference="612400000099",
+                     source_type="upi_google_pay", source_label="Google Pay"))
+    listed = client.get("/api/people", headers=ALICE).json()["people"]
+    assert [(p["name"], p["masked_vpa"]) for p in sorted(listed, key=lambda p: p["masked_vpa"] or "")] == [
+        ("Rahul Sharma", None), ("Rahul Sharma", "R***@okaxis"), ("Rahul Sharma", "R***@ybl")]
+    # Day 2: GPay copies of both bank payments arrive → A=B and C=B → all three become one
+    people, _ = load(client,
+        p2p(days_ago(9), "Rahul Sharma", "100.00", reference="612400000021", source_type="upi_google_pay", source_label="Google Pay"),
+        p2p(days_ago(8), "Rahul Sharma", "200.00", reference="612400000022", source_type="upi_google_pay", source_label="Google Pay"))
+    listed = client.get("/api/people", headers=ALICE).json()["people"]
+    assert [(p["name"], p["transaction_count"]) for p in listed] == [("Rahul Sharma", 3)]

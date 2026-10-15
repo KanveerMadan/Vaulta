@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 
 # Absolute path to backend/.env, computed from this file's own location —
 # independent of the working directory the process was launched from.
@@ -11,6 +11,14 @@ from pydantic import field_validator
 # silently produces an empty config (pydantic sees {} and reports every
 # required field as "missing", which is confusing to debug).
 _ENV_FILE_PATH = Path(__file__).resolve().parent.parent.parent / ".env"
+
+
+# Values that must never be used as real secrets (defaults, docs, common fillers)
+PLACEHOLDER_SECRETS = {
+    "", "change-this-to-something-long-and-random", "changeme", "change-me", "change_me", "secret",
+    "your-secret-key", "your_secret_key", "secret-key", "password", "test", "dev", "development", "placeholder",
+}
+MIN_SECRET_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -70,6 +78,19 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""
     RAZORPAY_PLAN_ID: str = ""  # ₹99/month plan created in Razorpay dashboard
+
+    @model_validator(mode="after")
+    def production_secrets(self) -> "Settings":
+        """In production, refuse to start with a missing, placeholder or short SECRET_KEY / INTERNAL_SECRET."""
+        if self.ENVIRONMENT == "production":
+            for name in ("SECRET_KEY", "INTERNAL_SECRET"):
+                value = getattr(self, name)
+                if value.strip().lower() in PLACEHOLDER_SECRETS or len(value) < MIN_SECRET_LENGTH:
+                    raise ValueError(
+                        f"{name} must be set to a random value of at least {MIN_SECRET_LENGTH} characters in production "
+                        f"(generate one with: python -c \"import secrets; print(secrets.token_urlsafe(48))\")."
+                    )
+        return self
 
     def require(self, *field_names: str) -> None:
         """
