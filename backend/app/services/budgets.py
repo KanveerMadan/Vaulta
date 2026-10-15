@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import uuid
 from calendar import monthrange
-from datetime import date, datetime, timezone
+from datetime import date
 from decimal import Decimal
 from statistics import median
 from typing import Optional
@@ -17,7 +17,7 @@ from app.core import clock
 from app.models.transaction import Budget, Transaction
 from app.models.user import User
 from app.services.recurring import add_months
-from app.services.transaction_service import _build_spend_rows
+from app.services.analytics import spend_summary
 
 # ── Tunable thresholds (listed in the Phase 2 report) ─────────────────────────
 SUGGESTION_MONTHS = 3          # full months of history needed, and the median window
@@ -65,15 +65,10 @@ def suggest_budgets(db: Session, user: User, today: Optional[date] = None) -> li
     per_month: dict[str, list[Decimal]] = {}
     for i in range(SUGGESTION_MONTHS):
         start = add_months(window_start, i)
-        end_day = monthrange(start.year, start.month)[1]
-        rows = _build_spend_rows(
-            db, user.id,
-            datetime(start.year, start.month, 1, tzinfo=timezone.utc),
-            datetime(start.year, start.month, end_day, 23, 59, 59, tzinfo=timezone.utc),
-        )
-        for r in rows:
-            if r.category:
-                per_month.setdefault(r.category, [Decimal("0")] * SUGGESTION_MONTHS)[i] = r.total or Decimal("0")
+        end = start.replace(day=monthrange(start.year, start.month)[1])
+        for g in spend_summary(db, user.id, start, end, "category")["groups"]:
+            if g["key"]:
+                per_month.setdefault(g["key"], [Decimal("0")] * SUGGESTION_MONTHS)[i] = g["total"]
     out = []
     for category, totals in sorted(per_month.items()):
         mid = Decimal(median(totals))

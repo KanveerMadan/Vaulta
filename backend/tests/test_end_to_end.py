@@ -97,7 +97,8 @@ def find(client, desc, day):
     return next(t for t in txns(client) if t["merchant_raw"] == desc and t["transaction_date"].startswith(day))
 
 
-def test_three_months(client):
+def load_three_months(client):
+    """Import the four statements and take the user's actions (lend, confirm repayment, split)."""
     imported = 0
     for statement in (HDFC, SBI, HDFC_CARD, GOOGLE_PAY):
         res = client.post("/api/import/batch", json={"rows": statement}, headers=USER)
@@ -107,7 +108,6 @@ def test_three_months(client):
     # Google Pay's 3 Zepto payments are the HDFC ones (same UTR) → merged, not added
     assert imported == len(HDFC) + len(SBI) + len(HDFC_CARD) + len(GOOGLE_PAY) - 3
 
-    # ── The user's actions ───────────────────────────────────────────────────
     loan = find(client, "UPI/P2A/XXXX/ANKIT JAIN/loan", "2024-04-12")
     assert client.patch(f"/api/transactions/{loan['id']}", json={"kind": "lent"}, headers=USER).status_code == 200
     repay = next(c for c in client.get("/api/review", headers=USER).json()["items"] if c["type"] == "repayment")
@@ -118,6 +118,10 @@ def test_three_months(client):
                       json={"parts": [{"amount": "2000", "category": "Shopping"}, {"amount": "1000", "category": "Health"}]},
                       headers=USER)
     assert res.status_code == 200, res.text
+
+
+def test_three_months(client):
+    load_three_months(client)
 
     # ── Kinds the system worked out on its own ────────────────────────────────
     kinds = {(t["merchant_raw"], t["transaction_date"][:10]): t["kind"] for t in txns(client)}

@@ -39,7 +39,6 @@ AMOUNT_TOLERANCE = Decimal("0.15")
 PRICE_CHANGE_THRESHOLD = Decimal("0.05")
 CANCELLED_AFTER = Decimal("1.5")       # × cadence with no payment
 RENT_MIN_AMOUNT = Decimal("5000")      # monthly P2P at least this → rent guess
-MONTHLY_FACTOR = {"weekly": Decimal(52) / 12, "monthly": Decimal(1), "yearly": Decimal(1) / 12}
 
 _SUBSCRIPTION_CATEGORIES = {"Entertainment", "Software & Cloud", "Education"}
 _BILL_CATEGORIES = {"Utilities", "Insurance", "Taxes & Government"}
@@ -215,7 +214,3 @@ def sync_series(db: Session, user: User, txns: list[Transaction], today: date) -
                 row.status = _status(row.last_date, row.next_expected, row.cadence, today)
             else:
                 db.delete(row)
-
-
-def monthly_equivalent(series: RecurringSeries) -> Decimal:
-    return (Decimal(series.typical_amount) * MONTHLY_FACTOR[series.cadence]).quantize(Decimal("0.01"))
