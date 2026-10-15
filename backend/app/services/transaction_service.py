@@ -297,6 +297,7 @@ def get_transactions(
     source: Optional[TransactionSource] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
+    person_id: Optional[uuid.UUID] = None,
 ) -> TransactionListResponse:
     query = db.query(Transaction).filter(Transaction.user_id == user.id)
 
@@ -310,6 +311,8 @@ def get_transactions(
         query = query.filter(Transaction.transaction_date >= date_from)
     if date_to:
         query = query.filter(Transaction.transaction_date <= date_to)
+    if person_id:
+        query = query.filter(Transaction.person_id == person_id)
 
     total = query.count()
     items = (

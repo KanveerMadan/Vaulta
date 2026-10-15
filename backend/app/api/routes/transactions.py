@@ -33,6 +33,7 @@ def list_transactions(
     source: Optional[TransactionSource] = Query(default=None),
     date_from: Optional[datetime] = Query(default=None),
     date_to: Optional[datetime] = Query(default=None),
+    person_id: Optional[uuid.UUID] = Query(default=None),
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_active_subscription),
     date_floor: Optional[datetime] = Depends(get_data_date_floor),
@@ -52,6 +53,7 @@ def list_transactions(
         source=source,
         date_from=effective_date_from,
         date_to=date_to,
+        person_id=person_id,
     )
 
 

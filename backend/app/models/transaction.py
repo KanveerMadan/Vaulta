@@ -100,6 +100,8 @@ class Transaction(Base):
     kind = Column(SAEnum(TransactionKind), nullable=False)
     # Both legs of a detected own-account transfer share this id
     transfer_group_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    # The individual this P2P transaction is with (services/keys.py)
+    person_id = Column(UUID(as_uuid=True), ForeignKey("people.id", ondelete="SET NULL"), nullable=True, index=True)
     # Refund/reversal credit → the debit it gives money back for
     refund_of_id = Column(UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True, index=True)
 

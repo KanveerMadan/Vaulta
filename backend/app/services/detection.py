@@ -7,7 +7,7 @@ undoing an input (a deleted rule, a dismissed tag) undoes its effect. A field
 the user corrected (see models/correction.py) is never changed.
 
 Order: defaults → failed-UPI reversals → own-account transfers → refunds →
-recurring series.
+people (link + tag defaults) → recurring series.
 
 ponytail: loads all of a user's transactions into memory per run. Fine for
 thousands of rows; batch by date window if users reach hundreds of thousands.
@@ -29,6 +29,7 @@ from app.models.transaction import Transaction, TransactionKind, TransactionNatu
 from app.models.transaction_source import StatementSourceType, TransactionDirection
 from app.models.user import User
 from app.services.dedup_matcher import _merchant_overlap
+from app.services.people import apply_person_defaults, link_people
 from app.services.recurring import sync_series
 
 # ── Tunable thresholds (listed in the Phase 2 report) ─────────────────────────
@@ -272,6 +273,8 @@ def run_detection(db: Session, user: User, today: Optional[date] = None) -> Ctx:
     _reversals(ctx)
     _transfers(ctx)
     _refunds(ctx)
+    people = link_people(db, user, ctx.txns)
+    apply_person_defaults(ctx, people)
     db.flush()
     sync_series(db, user, ctx.txns, today or date.today())
     db.commit()
