@@ -16,7 +16,6 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, time, timedelta
 from typing import Optional
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 
@@ -26,21 +25,18 @@ from app.models.transaction import Transaction
 from app.models.user import User
 from app.services import analytics, email, report_email, reports
 from app.services.chat import purge_old
+from app.services.telegram_bot import send_weekly_summary
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TIMEZONE = "Asia/Kolkata"
 WEEKLY_SEND = time(19, 0)     # Sunday
 MONTHLY_SEND = time(9, 0)     # on the 1st
 ANNUAL_SEND = time(9, 0)      # on 1 January
 PERIOD_TYPES = ("weekly", "monthly", "annual")
 
 
-def user_zone(user: User) -> ZoneInfo:
-    try:
-        return ZoneInfo(user.timezone or DEFAULT_TIMEZONE)
-    except (ZoneInfoNotFoundError, ValueError):
-        return ZoneInfo(DEFAULT_TIMEZONE)
+def user_zone(user: User):
+    return clock.zone(user.timezone)
 
 
 def due_day(period_type: str, local_now: datetime) -> date:
@@ -78,7 +74,7 @@ def _send(db: Session, user: User, report: Report, now: datetime) -> bool:
 
 def run(db: Session, now: Optional[datetime] = None) -> dict:
     now = now or clock.now()
-    result = {"users": 0, "generated": 0, "emailed": 0, "skipped_empty": 0, "errors": 0}
+    result = {"users": 0, "generated": 0, "emailed": 0, "telegram": 0, "skipped_empty": 0, "errors": 0}
     for user in db.query(User).order_by(User.created_at):
         result["users"] += 1
         local_now = now.astimezone(user_zone(user))
@@ -97,6 +93,8 @@ def run(db: Session, now: Optional[datetime] = None) -> dict:
                     result["generated"] += 1
                 if _send(db, user, existing, now):
                     result["emailed"] += 1
+                if period_type == "weekly" and send_weekly_summary(db, user, existing):
+                    result["telegram"] += 1
             except Exception as e:   # one user's failure mustn't stop everyone else's reports
                 db.rollback()
                 result["errors"] += 1

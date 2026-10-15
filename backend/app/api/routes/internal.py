@@ -2,6 +2,8 @@
 Internal endpoints for the scheduler. Not for browsers.
 
   POST /internal/run-reports    header X-Internal-Secret: $INTERNAL_SECRET
+  POST /internal/telegram       Telegram webhook; verified by X-Telegram-Bot-Api-Secret-Token
+                                (TELEGRAM_WEBHOOK_SECRET), not X-Internal-Secret
   POST /internal/inbound-email  from the Cloudflare Email Worker (infra/email-worker/): one email,
                                 ≤ 256 KB, processed in memory; only metadata / the normalized row is kept
 Refuses everything when INTERNAL_SECRET isn't configured.
@@ -16,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.services import inbound, scheduler
+from app.services import inbound, scheduler, telegram_bot
 
 router = APIRouter(prefix="/internal", tags=["internal"], include_in_schema=False)
 
@@ -57,3 +59,20 @@ async def inbound_email(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Expected {to, from, subject, text, html, auth_results}.")
     outcome = inbound.process(db, mail.to, mail.from_, mail.subject, mail.text, mail.html, mail.auth_results)
     return {"outcome": outcome}
+
+
+@router.post("/telegram")
+async def telegram_webhook(request: Request, db: Session = Depends(get_db),
+                           x_telegram_bot_api_secret_token: str = Header(default="")):
+    secret = settings.TELEGRAM_WEBHOOK_SECRET
+    if not secret:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Telegram isn't configured.")
+    if not hmac.compare_digest(x_telegram_bot_api_secret_token.encode(), secret.encode()):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Bad secret.")
+    try:
+        update = await request.json()
+    except ValueError:
+        return {"ok": True}
+    if isinstance(update, dict):
+        telegram_bot.handle_update(db, update)
+    return {"ok": True}   # always 200: Telegram retries anything else

@@ -62,6 +62,11 @@ COVERED = {
     ("GET", "/api/inbound"),
     ("POST", "/api/inbound/regenerate"),
     ("POST", "/api/inbound/gmail-confirmation/dismiss"),
+    # tests/test_telegram.py::test_other_users_entries_are_not_reachable / test_link_codes_…
+    ("GET", "/api/telegram"),
+    ("POST", "/api/telegram/link-code"),
+    ("PATCH", "/api/telegram"),
+    ("DELETE", "/api/telegram"),
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.
@@ -72,6 +77,7 @@ EXEMPT = {
     # no user session: X-Internal-Secret (tests/test_delivery.py::test_internal_endpoint_needs_the_secret)
     ("POST", "/internal/run-reports"),
     ("POST", "/internal/inbound-email"),   # tests/test_inbound.py::test_endpoint_guards
+    ("POST", "/internal/telegram"),        # Telegram's secret_token header: tests/test_telegram.py::test_webhook_secret
     # no user session: signed per-user token (tests/test_delivery.py::test_unsubscribe)
     ("GET", "/unsubscribe"), ("POST", "/unsubscribe"),
 }

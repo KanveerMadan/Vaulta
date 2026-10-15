@@ -39,6 +39,7 @@ from app.models.chat import ChatAction, ChatMessage  # noqa: F401
 from app.models.anomaly import Anomaly  # noqa: F401
 from app.models.report import Report  # noqa: F401
 from app.models.inbound import GmailConfirmation, InboundEvent  # noqa: F401
+from app.models.telegram import TelegramEntry, TelegramLinkCode  # noqa: F401
 # Phase 2+: import new models here as they're created
 
 # ── Config ────────────────────────────────────────────────────────────────────

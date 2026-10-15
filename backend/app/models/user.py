@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, text
+from sqlalchemy import BigInteger, Column, String, Boolean, DateTime, ForeignKey, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -43,6 +43,10 @@ class User(Base):
     # address can be shown again. Regenerating replaces both; the old address stops working.
     inbound_token_hash = Column(String(64), nullable=True, unique=True)
     inbound_token_encrypted = Column(String, nullable=True)
+
+    # --- Telegram bot ---
+    telegram_chat_id = Column(BigInteger, nullable=True, unique=True)
+    telegram_weekly = Column(Boolean, nullable=False, default=False, server_default=text("false"))
 
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled

@@ -20,6 +20,7 @@ class Report(Base):
     narrative = Column(Text, nullable=False)
     narrative_source = Column(String(10), nullable=False)  # llm | template
     emailed_at = Column(DateTime(timezone=True), nullable=True)
+    telegram_sent_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
 
     __table_args__ = (UniqueConstraint("user_id", "period_type", "period_start", name="uq_reports_user_period"),)
