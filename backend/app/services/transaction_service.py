@@ -37,6 +37,8 @@ from app.schemas.imports import ImportRow, ImportBatchResult
 from app.services.merchant_normalizer import normalize
 from app.services.dedup_matcher import ingest_or_match_transaction
 from app.services.detection import run_detection
+from app.services.keys import merchant_key
+from app.services.rules import learn_from
 
 logger = logging.getLogger(__name__)
 
@@ -249,7 +251,12 @@ def record_correction(db: Session, txn: Transaction, field: str, new_value: Opti
     txn.user_corrected = "true"
 
 
-def update_transaction(db: Session, txn: Transaction, payload: TransactionUpdate) -> Transaction:
+def update_transaction(db: Session, txn: Transaction, payload: TransactionUpdate) -> tuple[Transaction, Optional[dict]]:
+    """
+    Apply the user's edits, learn a rule if the edit makes one, re-run
+    detection. Returns (transaction, rule_applied) where rule_applied
+    describes a newly learned rule and how many other transactions it changed.
+    """
     if "kind" in payload.model_fields_set:
         if txn.direction.value not in KIND_DIRECTIONS[TransactionKind(payload.kind)]:
             raise KindDirectionMismatch(
@@ -261,10 +268,24 @@ def update_transaction(db: Session, txn: Transaction, payload: TransactionUpdate
         record_correction(db, txn, "category", payload.category)
     if "notes" in payload.model_fields_set:
         txn.notes = payload.notes
+    db.flush()  # the session doesn't autoflush; learning reads these corrections
+
+    rule = None
+    for field in ("category", "kind"):
+        if field in payload.model_fields_set:
+            rule = learn_from(db, txn, field) or rule
     db.commit()
+    before = {}
+    if rule:
+        before = {t.id: getattr(t, rule.field) for t in db.query(Transaction).filter(Transaction.user_id == txn.user_id)
+                  if merchant_key(t) == rule.merchant_key and t.id != txn.id}
     run_detection(db, txn.user)
     db.refresh(txn)
-    return txn
+    if not rule:
+        return txn, None
+    changed = sum(1 for t in db.query(Transaction).filter(Transaction.id.in_(list(before))) if getattr(t, rule.field) != before[t.id])
+    return txn, {"rule_id": rule.id, "merchant": rule.merchant_label, "field": rule.field,
+                 "value": rule.value, "applied_count": changed}
 
 
 def is_manual_only(txn: Transaction) -> bool:

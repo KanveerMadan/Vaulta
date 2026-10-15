@@ -30,8 +30,12 @@ COVERED = {
     ("POST", "/api/recurring/refresh"),
     ("GET", "/api/people"),            # tests/test_people.py::test_person_validation_and_isolation
     ("PATCH", "/api/people/{person_id}"),
+    ("GET", "/api/rules"),             # tests/test_rules.py::test_rules_are_per_user
+    ("POST", "/api/rules"),
+    ("PATCH", "/api/rules/{rule_id}"),
+    ("DELETE", "/api/rules/{rule_id}"),
 }
-GUARDED_PREFIXES = ("/api/transactions", "/api/import", "/api/recurring", "/api/people")
+GUARDED_PREFIXES = ("/api/transactions", "/api/import", "/api/recurring", "/api/people", "/api/rules")
 
 
 def test_every_route_is_covered():

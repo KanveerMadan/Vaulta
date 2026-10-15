@@ -15,6 +15,7 @@ from app.schemas.transaction import (
     ManualTransactionCreate,
     MonthlySummary,
     TransactionListResponse,
+    TransactionPatchResponse,
     TransactionResponse,
     TransactionUpdate,
 )
@@ -133,7 +134,7 @@ def _owned_or_404(db: Session, user: User, transaction_id: uuid.UUID):
     return txn
 
 
-@router.patch("/{transaction_id}", response_model=TransactionResponse)
+@router.patch("/{transaction_id}", response_model=TransactionPatchResponse)
 def update_transaction(
     transaction_id: uuid.UUID,
     payload: TransactionUpdate,
@@ -144,9 +145,10 @@ def update_transaction(
     """Change category, kind and/or notes. Marks the transaction user_corrected."""
     txn = _owned_or_404(db, current_user, transaction_id)
     try:
-        return transaction_service.update_transaction(db, txn, payload)
+        txn, rule_applied = transaction_service.update_transaction(db, txn, payload)
     except transaction_service.KindDirectionMismatch as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    return TransactionPatchResponse(**TransactionResponse.model_validate(txn).model_dump(), rule_applied=rule_applied)
 
 
 @router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)

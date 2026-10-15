@@ -67,6 +67,19 @@ class TransactionResponse(TransactionBase):
     updated_at: datetime
 
 
+class RuleApplied(BaseModel):
+    rule_id: uuid.UUID
+    merchant: str
+    field: str
+    value: str
+    applied_count: int
+
+
+class TransactionPatchResponse(TransactionResponse):
+    """PATCH result: the transaction, plus the rule it taught us (for the "Applied to N … Undo" toast)."""
+    rule_applied: Optional[RuleApplied] = None
+
+
 def _known_category(v: Optional[str]) -> Optional[str]:
     if v is not None and v not in CATEGORIES:
         raise ValueError(f"Unknown category. Use one of: {', '.join(sorted(CATEGORIES))}")
