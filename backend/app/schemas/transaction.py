@@ -60,6 +60,7 @@ class TransactionResponse(TransactionBase):
     notes: Optional[str] = None
     direction: Literal["debit", "credit"]
     kind: TransactionKind
+    transfer_group_id: Optional[uuid.UUID] = None
     created_at: datetime
     updated_at: datetime
 

@@ -19,6 +19,7 @@ COVERED = {
     ("GET", "/api/transactions"),
     ("GET", "/api/transactions/summary"),
     ("POST", "/api/transactions"),
+    ("POST", "/api/transactions/reanalyze"),
     ("PATCH", "/api/transactions/{transaction_id}"),
     ("DELETE", "/api/transactions/{transaction_id}"),
     ("POST", "/api/import/batch"),
@@ -89,3 +90,11 @@ def test_bob_cannot_read_alice_templates(client):
 def test_random_ids_are_404(client):
     _alice_data(client)
     assert client.patch(f"/api/transactions/{uuid.uuid4()}", json={"notes": "x"}, headers=ALICE).status_code == 404
+
+
+def test_bob_reanalyze_leaves_alice_alone(client):
+    manual_txn, imported = _alice_data(client)
+    client.patch(f"/api/transactions/{imported['id']}", json={"kind": "lent"}, headers=ALICE)
+    before = client.get("/api/transactions", headers=ALICE).json()["items"]
+    assert client.post("/api/transactions/reanalyze", headers=BOB).status_code == 204
+    assert client.get("/api/transactions", headers=ALICE).json()["items"] == before

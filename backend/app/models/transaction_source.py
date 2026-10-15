@@ -81,6 +81,10 @@ class TransactionSourceRecord(Base):
     )
 
     source = Column(SAEnum(StatementSourceType), nullable=False)
+    # Which account within the source type ("HDFC Bank", "SBI Card"). Account
+    # numbers are never sent, so (source, source_label) is the account key
+    # used to tell a user's accounts apart for transfer detection.
+    source_label = Column(String(60), nullable=True)
     direction = Column(SAEnum(TransactionDirection), nullable=False)
 
     # Matching signals, strongest to weakest — see Section 4 tier hierarchy.

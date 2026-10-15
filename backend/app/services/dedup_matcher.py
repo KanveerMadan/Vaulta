@@ -286,6 +286,7 @@ def ingest_or_match_transaction(
     counterparty_raw: Optional[str] = None,
     currency: str = "INR",
     raw_row: Optional[dict] = None,
+    source_label: Optional[str] = None,
 ) -> Tuple[Transaction, TransactionSourceRecord, bool]:
     """
     Find-or-create entry point for the dedup pipeline. One call per parsed
@@ -332,6 +333,7 @@ def ingest_or_match_transaction(
             user_id=user.id,
             transaction_id=matched_txn.id,
             source=source,
+            source_label=source_label,
             direction=direction,
             utr=utr,
             vpa=vpa,
@@ -391,6 +393,7 @@ def ingest_or_match_transaction(
         user_id=user.id,
         transaction_id=new_txn.id,
         source=source,
+        source_label=source_label,
         direction=direction,
         utr=utr,
         vpa=vpa,

@@ -94,6 +94,8 @@ class Transaction(Base):
     # Money out (debit) or in (credit), as the source stated it
     direction = Column(SAEnum(TransactionDirection), nullable=False)
     kind = Column(SAEnum(TransactionKind), nullable=False)
+    # Both legs of a detected own-account transfer share this id
+    transfer_group_id = Column(UUID(as_uuid=True), nullable=True, index=True)
 
     # DECIMAL, never FLOAT — money is exact
     amount = Column(Numeric(precision=12, scale=2), nullable=False)

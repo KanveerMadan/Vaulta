@@ -19,6 +19,7 @@ from app.schemas.transaction import (
     TransactionUpdate,
 )
 from app.services import transaction_service
+from app.services.detection import run_detection
 
 router = APIRouter(prefix="/api/transactions", tags=["transactions"])
 
@@ -100,6 +101,16 @@ def get_summary(
         month=target_month,
         date_floor=date_floor,
     )
+
+
+@router.post("/reanalyze", status_code=status.HTTP_204_NO_CONTENT)
+def reanalyze(
+    current_user: User = Depends(get_current_user),
+    _: None = Depends(require_active_subscription),
+    db: Session = Depends(get_db),
+):
+    """Re-run detection (transfers, refunds, people, rules, recurring) over all of the user's transactions."""
+    run_detection(db, current_user)
 
 
 @router.post("", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)

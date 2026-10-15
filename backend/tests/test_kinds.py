@@ -47,7 +47,8 @@ def test_only_spend_and_income_count(client):
         row(description_raw="SALARY", amount="50000.00", direction="credit", reference=None),
     )
     before = client.get(SUMMARY, headers=ALICE).json()
-    assert (before["total_spend"], before["total_received"]) == ("23500.00", "71500.00")  # everything counted by default
+    # The HDFC→SBI ₹20,000 pair is already detected as a transfer; the rest count by default
+    assert (before["total_spend"], before["total_received"]) == ("3500.00", "51500.00")
 
     refund = set_kind(client, txns["SWIGGY REFUND"], "refund")
     client.patch(f"/api/transactions/{refund['id']}", json={"category": "Food & Dining"}, headers=ALICE)

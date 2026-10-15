@@ -36,6 +36,7 @@ from app.schemas.transaction import (
 from app.schemas.imports import ImportRow, ImportBatchResult
 from app.services.merchant_normalizer import normalize
 from app.services.dedup_matcher import ingest_or_match_transaction
+from app.services.detection import run_detection
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +121,7 @@ def _row_nature(row: ImportRow, merchant_clean: Optional[str]) -> TransactionNat
 def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchResult:
     result = ImportBatchResult()
     seen: dict[tuple, int] = {}
+    batch_txn_ids: set = set()
 
     for row in rows:
         identity = (row.source_type, row.date, row.direction, row.amount, row.description_raw, row.reference)
@@ -142,7 +144,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
             raw_date = date.fromisoformat(row.date)
 
         try:
-            _txn, source_record, was_matched = ingest_or_match_transaction(
+            txn, source_record, was_matched = ingest_or_match_transaction(
                 db,
                 user,
                 source=StatementSourceType(row.source_type),
@@ -163,6 +165,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
                 counterparty_raw=row.description_raw,
                 currency="INR",
                 raw_row=row.model_dump(),
+                source_label=row.source_label,
             )
         except Exception as e:
             db.rollback()
@@ -170,8 +173,8 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
             logger.error(f"import_rows: user={user.id} row failed ({e.__class__.__name__}: {e})")
             continue
 
-        if nature == TransactionNature.self_transfer:
-            result.transfers_flagged += 1
+        if txn is not None:
+            batch_txn_ids.add(txn.id)
         if was_matched:
             result.duplicates_merged += 1
         else:
@@ -179,6 +182,8 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
             if category is None:
                 result.rows_needing_review += 1
 
+    ctx = run_detection(db, user)
+    result.transfers_flagged = sum(1 for t in ctx.txns if t.id in batch_txn_ids and t.kind == TransactionKind.transfer)
     logger.info(f"Import batch: user={user.id}, rows={len(rows)}, result={result.model_dump()}")
     return result
 
@@ -216,6 +221,7 @@ def create_manual_transaction(db: Session, user: User, payload: ManualTransactio
     if payload.notes and txn.notes is None:
         txn.notes = payload.notes
         db.commit()
+    run_detection(db, user)
     db.refresh(txn)
     return txn
 
@@ -256,6 +262,7 @@ def update_transaction(db: Session, txn: Transaction, payload: TransactionUpdate
     if "notes" in payload.model_fields_set:
         txn.notes = payload.notes
     db.commit()
+    run_detection(db, txn.user)
     db.refresh(txn)
     return txn
 
@@ -269,9 +276,11 @@ def is_manual_only(txn: Transaction) -> bool:
 
 def delete_manual_transaction(db: Session, txn: Transaction) -> None:
     # Its evidence rows go too, so nothing is left pointing at a deleted entry
+    user = txn.user
     db.query(TransactionSourceRecord).filter(TransactionSourceRecord.transaction_id == txn.id).delete()
     db.delete(txn)
     db.commit()
+    run_detection(db, user)
 
 
 # ─────────────────────────────────────────────
