@@ -128,9 +128,12 @@ def update_transaction(
     _: None = Depends(require_active_subscription),
     db: Session = Depends(get_db),
 ):
-    """Change category and/or notes. Marks the transaction user_corrected."""
+    """Change category, kind and/or notes. Marks the transaction user_corrected."""
     txn = _owned_or_404(db, current_user, transaction_id)
-    return transaction_service.update_transaction(db, txn, payload)
+    try:
+        return transaction_service.update_transaction(db, txn, payload)
+    except transaction_service.KindDirectionMismatch as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
 
 @router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -13,7 +13,7 @@ import {
 } from "../components/Skeletons";
 import SubscriptionBanner from "../components/SubscriptionBanner";
 import QuickAddBar from "../components/QuickAddBar";
-import { CATEGORIES } from "../lib/categories";
+import { CATEGORIES, KINDS, kindsFor } from "../lib/categories";
 import { updateTransaction, deleteTransaction } from "../lib/transactions";
 
 const CATEGORY_COLORS = [
@@ -62,10 +62,10 @@ function InsightCard({ insight }) {
 }
 
 function TransactionRow({ txn, onChanged }) {
-  const isCredit = txn.transaction_nature === "peer_payment_received"
-    || txn.transaction_nature === "income";
-  const isSelfTransfer = txn.transaction_nature === "self_transfer";
+  const isCredit = txn.direction === "credit";
+  const counted = txn.kind === "spend" || txn.kind === "income" || txn.kind === "refund";
   const [editing, setEditing] = useState(false);
+  const [editingKind, setEditingKind] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -75,6 +75,7 @@ function TransactionRow({ txn, onChanged }) {
     try {
       await fn();
       setEditing(false);
+      setEditingKind(false);
       onChanged?.();
     } catch (err) {
       setError(err?.response?.data?.detail || "Couldn't save that change.");
@@ -84,6 +85,7 @@ function TransactionRow({ txn, onChanged }) {
   };
 
   const setCategory = (category) => act(() => updateTransaction(txn.id, { category: category || null }));
+  const setKind = (kind) => act(() => updateTransaction(txn.id, { kind }));
   const remove = () => {
     if (window.confirm(`Delete ${txn.merchant_clean || txn.merchant_raw}, ₹${txn.amount}?`)) act(() => deleteTransaction(txn.id));
   };
@@ -117,6 +119,25 @@ function TransactionRow({ txn, onChanged }) {
             </button>
           )}
           <span>·</span>
+          {editingKind ? (
+            <select
+              autoFocus
+              disabled={busy}
+              defaultValue={txn.kind}
+              onChange={(e) => setKind(e.target.value)}
+              onBlur={() => !busy && setEditingKind(false)}
+              className="border border-sage-200 rounded px-1 py-0.5 text-xs bg-white text-ink-700"
+              aria-label="Kind"
+            >
+              {kindsFor(txn.direction).map(([value, k]) => <option key={value} value={value}>{k.label}</option>)}
+            </select>
+          ) : (
+            <button onClick={() => setEditingKind(true)} title="Change what this transaction is"
+              className={`hover:text-forest-600 hover:underline ${counted ? "" : "text-gold"}`}>
+              {KINDS[txn.kind]?.label ?? txn.kind}
+            </button>
+          )}
+          <span>·</span>
           <span>
             {new Date(txn.transaction_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
           </span>
@@ -125,9 +146,9 @@ function TransactionRow({ txn, onChanged }) {
         {error && <p className="text-xs text-danger mt-0.5">{error}</p>}
       </div>
       <p className={`font-mono text-sm font-medium shrink-0 ${
-        isCredit ? "text-safe" : isSelfTransfer ? "text-ink-400" : "text-ink-800"
+        !counted ? "text-ink-400" : isCredit ? "text-safe" : "text-ink-800"
       }`}>
-        {isSelfTransfer ? "↔" : isCredit ? "+" : "-"}
+        {txn.kind === "transfer" ? "↔" : isCredit ? "+" : "-"}
         ₹{Math.abs(txn.amount).toLocaleString("en-IN")}
       </p>
       {txn.source === "manual" && (

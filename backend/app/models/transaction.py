@@ -11,6 +11,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+from app.models.transaction_source import TransactionDirection
 
 
 class TransactionSource(str, enum.Enum):
@@ -32,6 +33,36 @@ class TransactionNature(str, enum.Enum):
     peer_payment_sent = "peer_payment_sent"
     peer_payment_received = "peer_payment_received"
     self_transfer = "self_transfer"
+
+
+class TransactionKind(str, enum.Enum):
+    """
+    What a transaction means for the user's numbers. Only `spend` (net of
+    `refund`) counts as spending and only `income` as income; everything else
+    is excluded from totals. Set by default from direction at import, then
+    recomputed by services/detection.py unless the user corrected it.
+    """
+    spend = "spend"
+    income = "income"
+    transfer = "transfer"      # between the user's own accounts / card bill
+    refund = "refund"          # money back from a merchant (credit)
+    reversal = "reversal"      # failed UPI debit and its reversal credit
+    lent = "lent"              # money given to a person, to be paid back
+    borrowed = "borrowed"      # money received from a person, to pay back
+    repayment = "repayment"    # settles lent/borrowed
+
+
+# Which directions each kind can have (enforced on PATCH)
+KIND_DIRECTIONS = {
+    TransactionKind.spend: {"debit"},
+    TransactionKind.income: {"credit"},
+    TransactionKind.refund: {"credit"},
+    TransactionKind.lent: {"debit"},
+    TransactionKind.borrowed: {"credit"},
+    TransactionKind.transfer: {"debit", "credit"},
+    TransactionKind.reversal: {"debit", "credit"},
+    TransactionKind.repayment: {"debit", "credit"},
+}
 
 
 class Transaction(Base):
@@ -59,6 +90,10 @@ class Transaction(Base):
         nullable=False,
         server_default=TransactionNature.expense.value,
     )
+
+    # Money out (debit) or in (credit), as the source stated it
+    direction = Column(SAEnum(TransactionDirection), nullable=False)
+    kind = Column(SAEnum(TransactionKind), nullable=False)
 
     # DECIMAL, never FLOAT — money is exact
     amount = Column(Numeric(precision=12, scale=2), nullable=False)
@@ -96,6 +131,7 @@ class Transaction(Base):
         Index("ix_transactions_user_category", "user_id", "category"),
         Index("ix_transactions_user_merchant", "user_id", "merchant_clean"),
         Index("ix_transactions_user_nature", "user_id", "transaction_nature"),
+        Index("ix_transactions_user_kind", "user_id", "kind"),
     )
 
     def __repr__(self) -> str:

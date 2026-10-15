@@ -25,7 +25,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from app.models.transaction import Transaction, TransactionSource, TransactionNature
+from app.models.transaction import Transaction, TransactionKind, TransactionSource, TransactionNature
 from app.models.transaction_source import (
     TransactionSourceRecord,
     StatementSourceType,
@@ -45,27 +45,8 @@ TIER3_TIME_WINDOW = timedelta(minutes=10)
 
 _MIN_TOKEN_LEN = 3
 
-# transaction_nature values that represent money leaving the user's hand vs
-# arriving in it. Used to infer an existing Transaction's direction, since
-# Transaction itself has no explicit direction column. self_transfer is
-# treated as debit by convention (it represents the sending leg, per how UPI
-# statements phrase "Self transfer to X") — an assumption, not a verified
-# rule; revisit if self-transfers start appearing from both sides.
-_DEBIT_NATURES = {
-    TransactionNature.expense,
-    TransactionNature.peer_payment_sent,
-    TransactionNature.self_transfer,
-}
-_CREDIT_NATURES = {
-    TransactionNature.income,
-    TransactionNature.peer_payment_received,
-}
-
-
 def _infer_transaction_direction(txn: Transaction) -> TransactionDirection:
-    if txn.transaction_nature in _CREDIT_NATURES:
-        return TransactionDirection.credit
-    return TransactionDirection.debit
+    return txn.direction
 
 
 def _normalize_for_overlap(text: Optional[str]) -> set:
@@ -296,6 +277,7 @@ def ingest_or_match_transaction(
     merchant_clean: Optional[str] = None,
     category: Optional[str] = None,
     transaction_nature: TransactionNature = TransactionNature.expense,
+    kind: Optional[TransactionKind] = None,
     legacy_source_enum: TransactionSource = TransactionSource.csv,
     utr: Optional[str] = None,
     vpa: Optional[str] = None,
@@ -393,6 +375,8 @@ def ingest_or_match_transaction(
         merchant_clean=merchant_clean,
         category=category,
         transaction_nature=transaction_nature,
+        direction=direction,
+        kind=kind or (TransactionKind.spend if direction == TransactionDirection.debit else TransactionKind.income),
         amount=amount,
         currency=currency,
         transaction_date=resolved_date,

@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
-from app.models.transaction import TransactionSource, TransactionNature
+from app.models.transaction import TransactionKind, TransactionSource, TransactionNature
 from app.services.merchant_normalizer import _PATTERNS
 
 # Every category the normalizer can assign, plus the ones set by nature or
@@ -58,6 +58,8 @@ class TransactionResponse(TransactionBase):
     idempotency_key: str
     user_corrected: Optional[str] = None
     notes: Optional[str] = None
+    direction: Literal["debit", "credit"]
+    kind: TransactionKind
     created_at: datetime
     updated_at: datetime
 
@@ -107,11 +109,15 @@ class ManualTransactionCreate(BaseModel):
         return v.strip() if v is not None else v
 
 
+Kind = Literal["spend", "income", "transfer", "refund", "reversal", "lent", "borrowed", "repayment"]
+
+
 class TransactionUpdate(BaseModel):
     """PATCH body. Send only the fields to change; category null clears it."""
     model_config = ConfigDict(extra="forbid", strict=True)
 
     category: Optional[str] = None
+    kind: Optional[Kind] = None
     notes: Optional[str] = Field(default=None, max_length=500)
 
     @field_validator("category")
@@ -123,6 +129,8 @@ class TransactionUpdate(BaseModel):
     def something_to_change(self) -> "TransactionUpdate":
         if not self.model_fields_set:
             raise ValueError("Nothing to update")
+        if "kind" in self.model_fields_set and self.kind is None:
+            raise ValueError("kind can't be cleared")
         return self
 
 

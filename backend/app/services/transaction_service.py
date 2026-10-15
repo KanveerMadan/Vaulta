@@ -16,11 +16,12 @@ from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
 from typing import List, Optional, Tuple
 
-from sqlalchemy import func, select, and_, extract
+from sqlalchemy import case, func, select, and_, extract
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from app.models.transaction import Transaction, Budget, TransactionSource, TransactionNature
+from app.models.correction import Correction
+from app.models.transaction import Transaction, Budget, TransactionKind, TransactionSource, TransactionNature, KIND_DIRECTIONS
 from app.models.transaction_source import StatementSourceType, TransactionDirection, TransactionSourceRecord
 from app.models.user import User
 from app.schemas.transaction import (
@@ -46,8 +47,16 @@ logger = logging.getLogger(__name__)
 _CATEGORY_SENT_TO_PEOPLE = "Sent to People"
 _CATEGORY_RECEIVED_FROM_PEOPLE = "Received from People"
 
-_SPEND_NATURES = (TransactionNature.expense, TransactionNature.peer_payment_sent)
-_INCOME_NATURES = (TransactionNature.income, TransactionNature.peer_payment_received)
+# Spending is kind=spend net of kind=refund; income is kind=income. Transfers,
+# reversals, lent/borrowed/repayment never count. Every summary figure below
+# goes through these three expressions.
+_NET_SPEND = case(
+    (Transaction.kind == TransactionKind.spend, Transaction.amount),
+    (Transaction.kind == TransactionKind.refund, -Transaction.amount),
+    else_=0,
+)
+_SPEND_COUNT = case((Transaction.kind == TransactionKind.spend, 1))
+_SPEND_KINDS = (TransactionKind.spend, TransactionKind.refund)
 
 
 def _nature_from_upi_direction(direction: str, merchant_clean: Optional[str]) -> TransactionNature:
@@ -145,6 +154,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
                 merchant_clean=merchant_clean,
                 category=category,
                 transaction_nature=nature,
+                kind=TransactionKind.transfer if row.type == "transfer" else None,
                 legacy_source_enum=TransactionSource.csv,
                 utr=row.reference if row.reference and re.fullmatch(r"\d{12}", row.reference) else None,
                 vpa=None,
@@ -219,12 +229,32 @@ def get_owned_transaction(db: Session, user: User, transaction_id: uuid.UUID) ->
     )
 
 
+class KindDirectionMismatch(ValueError):
+    pass
+
+
+def record_correction(db: Session, txn: Transaction, field: str, new_value: Optional[str]) -> None:
+    """Change a field as the user, keeping the before/after. Caller commits."""
+    old_value = getattr(txn, field)
+    old_value = old_value.value if hasattr(old_value, "value") else old_value
+    db.add(Correction(user_id=txn.user_id, transaction_id=txn.id, field=field,
+                      old_value=old_value, new_value=new_value))
+    setattr(txn, field, TransactionKind(new_value) if field == "kind" else new_value)
+    txn.user_corrected = "true"
+
+
 def update_transaction(db: Session, txn: Transaction, payload: TransactionUpdate) -> Transaction:
+    if "kind" in payload.model_fields_set:
+        if txn.direction.value not in KIND_DIRECTIONS[TransactionKind(payload.kind)]:
+            raise KindDirectionMismatch(
+                f"A {txn.direction.value} can't be '{payload.kind}'. "
+                f"Allowed: {', '.join(k.value for k, d in KIND_DIRECTIONS.items() if txn.direction.value in d)}."
+            )
+        record_correction(db, txn, "kind", payload.kind)
     if "category" in payload.model_fields_set:
-        txn.category = payload.category
+        record_correction(db, txn, "category", payload.category)
     if "notes" in payload.model_fields_set:
         txn.notes = payload.notes
-    txn.user_corrected = "true"
     db.commit()
     db.refresh(txn)
     return txn
@@ -303,19 +333,23 @@ def _get_active_budgets(db: Session, user_id: uuid.UUID) -> dict:
     return {b.category: b.monthly_limit for b in budgets}
 
 
+def _counted(user_id, period_start, period_end):
+    """Filters for rows that can affect totals in a period."""
+    return (
+        Transaction.user_id == user_id,
+        Transaction.transaction_date >= period_start,
+        Transaction.transaction_date <= period_end,
+    )
+
+
 def _build_spend_rows(db, user_id, period_start, period_end):
     return (
         db.query(
             Transaction.category,
-            func.sum(Transaction.amount).label("total"),
-            func.count(Transaction.id).label("count"),
+            func.sum(_NET_SPEND).label("total"),
+            func.count(_SPEND_COUNT).label("count"),
         )
-        .filter(
-            Transaction.user_id == user_id,
-            Transaction.transaction_date >= period_start,
-            Transaction.transaction_date <= period_end,
-            Transaction.transaction_nature.in_(_SPEND_NATURES),
-        )
+        .filter(*_counted(user_id, period_start, period_end), Transaction.kind.in_(_SPEND_KINDS))
         .group_by(Transaction.category)
         .all()
     )
@@ -325,17 +359,12 @@ def _build_top_merchants(db, user_id, period_start, period_end):
     rows = (
         db.query(
             Transaction.merchant_clean,
-            func.sum(Transaction.amount).label("total"),
-            func.count(Transaction.id).label("count"),
+            func.sum(_NET_SPEND).label("total"),
+            func.count(_SPEND_COUNT).label("count"),
         )
-        .filter(
-            Transaction.user_id == user_id,
-            Transaction.transaction_date >= period_start,
-            Transaction.transaction_date <= period_end,
-            Transaction.transaction_nature.in_(_SPEND_NATURES),
-        )
+        .filter(*_counted(user_id, period_start, period_end), Transaction.kind.in_(_SPEND_KINDS))
         .group_by(Transaction.merchant_clean)
-        .order_by(func.sum(Transaction.amount).desc())
+        .order_by(func.sum(_NET_SPEND).desc())
         .limit(10)
         .all()
     )
@@ -348,12 +377,7 @@ def _build_top_merchants(db, user_id, period_start, period_end):
 def _get_total_received(db, user_id, period_start, period_end) -> Decimal:
     result = (
         db.query(func.sum(Transaction.amount).label("total"))
-        .filter(
-            Transaction.user_id == user_id,
-            Transaction.transaction_date >= period_start,
-            Transaction.transaction_date <= period_end,
-            Transaction.transaction_nature.in_(_INCOME_NATURES),
-        )
+        .filter(*_counted(user_id, period_start, period_end), Transaction.kind == TransactionKind.income)
         .first()
     )
     return result.total if result and result.total else Decimal("0")

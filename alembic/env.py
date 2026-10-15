@@ -30,6 +30,7 @@ from app.models.user import User, Household  # noqa: F401
 from app.models.transaction import Transaction, Budget  # noqa: F401
 from app.models.transaction_source import TransactionSourceRecord  # noqa: F401
 from app.models.import_template import ImportTemplate  # noqa: F401
+from app.models.correction import Correction  # noqa: F401
 # Phase 2+: import new models here as they're created
 
 # ── Config ────────────────────────────────────────────────────────────────────
