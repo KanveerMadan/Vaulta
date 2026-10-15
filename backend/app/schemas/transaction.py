@@ -61,6 +61,7 @@ class TransactionResponse(TransactionBase):
     direction: Literal["debit", "credit"]
     kind: TransactionKind
     transfer_group_id: Optional[uuid.UUID] = None
+    refund_of_id: Optional[uuid.UUID] = None
     created_at: datetime
     updated_at: datetime
 

@@ -47,8 +47,9 @@ def test_only_spend_and_income_count(client):
         row(description_raw="SALARY", amount="50000.00", direction="credit", reference=None),
     )
     before = client.get(SUMMARY, headers=ALICE).json()
-    # The HDFC→SBI ₹20,000 pair is already detected as a transfer; the rest count by default
-    assert (before["total_spend"], before["total_received"]) == ("3500.00", "51500.00")
+    # Detection already handles three: HDFC→SBI ₹20,000 transfer, the ₹500
+    # failed UPI (REV wording) and the ₹300 Swiggy refund. Lent/borrowed need the user.
+    assert (before["total_spend"], before["total_received"]) == ("2700.00", "50700.00")
 
     refund = set_kind(client, txns["SWIGGY REFUND"], "refund")
     client.patch(f"/api/transactions/{refund['id']}", json={"category": "Food & Dining"}, headers=ALICE)

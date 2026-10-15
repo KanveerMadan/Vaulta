@@ -6,7 +6,7 @@ run_detection() recomputes from scratch every time, so it is idempotent and
 undoing an input (a deleted rule, a dismissed tag) undoes its effect. A field
 the user corrected (see models/correction.py) is never changed.
 
-Order: defaults → own-account transfers.
+Order: defaults → failed-UPI reversals → own-account transfers → refunds.
 
 ponytail: loads all of a user's transactions into memory per run. Fine for
 thousands of rows; batch by date window if users reach hundreds of thousands.
@@ -27,6 +27,7 @@ from app.models.correction import Correction
 from app.models.transaction import Transaction, TransactionKind, TransactionNature
 from app.models.transaction_source import StatementSourceType, TransactionDirection
 from app.models.user import User
+from app.services.dedup_matcher import _merchant_overlap
 
 # ── Tunable thresholds (listed in the Phase 2 report) ─────────────────────────
 TRANSFER_WINDOW = timedelta(days=3)
@@ -39,6 +40,12 @@ TRANSFER_PATTERN = re.compile(
     r"CARD\s*BILL|AUTOPAY|\bCRED\b|PAYMENT\s+RECEIVED",
     re.IGNORECASE,
 )
+
+REVERSAL_WINDOW = timedelta(days=7)
+REFUND_WINDOW = timedelta(days=60)
+
+REVERSAL_PATTERN = re.compile(r"REVERS|\bREV\b|\bFAILED\b|\bDECLINED\b|\bRET\b", re.IGNORECASE)
+REFUND_PATTERN = re.compile(r"REFUND|\bRFND\b|REVERSAL", re.IGNORECASE)
 
 _TRANSFER_GROUP_NS = uuid.UUID("6f1d3b1e-2b8f-4f7e-9a40-6a7d0c2f5e11")
 
@@ -59,6 +66,14 @@ class Ctx:
     def set_kind(self, txn: Transaction, kind: TransactionKind) -> None:
         if not self.is_locked(txn, "kind"):
             txn.kind = kind
+
+    def set_category(self, txn: Transaction, category: Optional[str]) -> None:
+        if not self.is_locked(txn, "category"):
+            txn.category = category
+
+    def auto_kind(self, txn: Transaction, *kinds: TransactionKind) -> bool:
+        """True if detection may still decide this transaction's kind and it's currently one of `kinds`."""
+        return not self.is_locked(txn, "kind") and txn.kind in kinds
 
 
 def default_kind(txn: Transaction) -> TransactionKind:
@@ -82,10 +97,100 @@ def _day(txn: Transaction):
 
 # ── Steps ─────────────────────────────────────────────────────────────────────
 
+def references(txn: Transaction) -> set[str]:
+    """UTRs and statement references seen for this transaction."""
+    refs = {r.utr for r in txn.source_records if r.utr}
+    refs |= {r.raw_row.get("reference") for r in txn.source_records if isinstance(r.raw_row, dict) and r.raw_row.get("reference")}
+    return refs
+
+
 def _reset(ctx: Ctx) -> None:
     for t in ctx.txns:
         ctx.set_kind(t, default_kind(t))
+        ctx.set_category(t, t.auto_category)
         t.transfer_group_id = None
+        t.refund_of_id = None
+
+
+def _reversals(ctx: Ctx) -> None:
+    """
+    Failed UPI: a debit, then a credit of the same amount within 7 days that
+    shares its UTR/reference, or whose narration says reversal/failed.
+    Both become kind=reversal; the credit links to the debit.
+    """
+    taken: set[uuid.UUID] = set()
+    for c in ctx.txns:
+        if c.direction != TransactionDirection.credit or not ctx.auto_kind(c, TransactionKind.income):
+            continue
+        c_refs = references(c)
+        says_reversal = bool(REVERSAL_PATTERN.search(c.merchant_raw or ""))
+        if not c_refs and not says_reversal:
+            continue
+        candidates = [
+            d for d in ctx.txns
+            if d.direction == TransactionDirection.debit and d.id not in taken
+            and ctx.auto_kind(d, TransactionKind.spend)
+            and d.amount == c.amount and timedelta(0) <= _day(c) - _day(d) <= REVERSAL_WINDOW
+        ]
+        same_ref = [d for d in candidates if c_refs & references(d)]
+        chosen = same_ref or (candidates if says_reversal else [])
+        if not chosen:
+            continue
+        d = max(chosen, key=lambda t: t.transaction_date)  # nearest earlier debit
+        for t in (d, c):
+            ctx.set_kind(t, TransactionKind.reversal)
+        c.refund_of_id = d.id
+        taken.add(d.id)
+
+
+def _same_merchant(a: Transaction, b: Transaction) -> bool:
+    if a.merchant_clean and b.merchant_clean:
+        return a.merchant_clean.lower() == b.merchant_clean.lower()
+    return False
+
+
+def _refunds(ctx: Ctx) -> None:
+    """
+    A credit is a refund when its narration says so, or when it comes from the
+    same normalized merchant as an earlier spend within 60 days and is no more
+    than what's left of that spend after earlier refunds (partial refunds
+    allowed). Linked refunds take the original's category and merchant, so
+    spending for that merchant and category is netted.
+    """
+    remaining: dict[uuid.UUID, Decimal] = {}
+    for c in ctx.txns:
+        if c.direction != TransactionDirection.credit or not ctx.auto_kind(c, TransactionKind.income):
+            continue
+        says_refund = bool(REFUND_PATTERN.search(c.merchant_raw or ""))
+        originals = [
+            d for d in ctx.txns
+            if d.direction == TransactionDirection.debit and d.kind == TransactionKind.spend
+            and timedelta(0) <= _day(c) - _day(d) <= REFUND_WINDOW
+            and remaining.get(d.id, d.amount) >= c.amount
+            and (_same_merchant(c, d) or (says_refund and _token_overlap(c, d)))
+        ]
+        if not originals and not says_refund:
+            continue
+        ctx.set_kind(c, TransactionKind.refund)
+        if originals:
+            d = max(originals, key=lambda t: t.transaction_date)  # most recent purchase
+            remaining[d.id] = remaining.get(d.id, d.amount) - c.amount
+            c.refund_of_id = d.id
+            ctx.set_category(c, d.category)
+            if not c.merchant_clean:
+                c.merchant_clean = d.merchant_clean
+
+
+_REFUND_NOISE = {"refund", "rfnd", "reversal", "upi", "neft", "imps"}
+
+
+def _merchant_words(t: Transaction) -> str:
+    words = re.split(r"[^a-z0-9]+", (t.merchant_clean or t.merchant_raw or "").lower())
+    return " ".join(w for w in words if w not in _REFUND_NOISE)
+
+
+def _token_overlap(a: Transaction, b: Transaction) -> bool:
+    return _merchant_overlap(_merchant_words(a), _merchant_words(b))
 
 
 def _transfer_eligible(ctx: Ctx, t: Transaction) -> bool:
@@ -162,6 +267,8 @@ def load_context(db: Session, user: User) -> Ctx:
 def run_detection(db: Session, user: User) -> Ctx:
     ctx = load_context(db, user)
     _reset(ctx)
+    _reversals(ctx)
     _transfers(ctx)
+    _refunds(ctx)
     db.commit()
     return ctx

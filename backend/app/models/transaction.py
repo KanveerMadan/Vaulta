@@ -77,8 +77,12 @@ class Transaction(Base):
     merchant_raw = Column(String, nullable=False)
     # Normalized merchant name ("Swiggy") — from merchant normalizer
     merchant_clean = Column(String, nullable=True)
-    # Category ("Food & Dining") — from normalizer or user override
+    # Effective category ("Food & Dining"): auto_category unless the user
+    # corrected it or detection overrode it (e.g. a refund takes its original's)
     category = Column(String, nullable=True)
+    # What the system assigned at import (normalizer / nature); detection
+    # resets `category` to this before re-applying its own overrides
+    auto_category = Column(String, nullable=True)
 
     # What kind of money movement this is (expense / income / peer payment / self-transfer).
     # Defaults to "expense" at the DB level for backfill safety — all rows ingested before
@@ -96,6 +100,8 @@ class Transaction(Base):
     kind = Column(SAEnum(TransactionKind), nullable=False)
     # Both legs of a detected own-account transfer share this id
     transfer_group_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+    # Refund/reversal credit → the debit it gives money back for
+    refund_of_id = Column(UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # DECIMAL, never FLOAT — money is exact
     amount = Column(Numeric(precision=12, scale=2), nullable=False)

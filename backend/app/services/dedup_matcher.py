@@ -260,6 +260,8 @@ def _enrich_canonical_transaction(
     """
     if not txn.merchant_clean and merchant_clean:
         txn.merchant_clean = merchant_clean
+    if not txn.auto_category and category:
+        txn.auto_category = category
     if not txn.category and category:
         txn.category = category
 
@@ -376,6 +378,7 @@ def ingest_or_match_transaction(
         merchant_raw=merchant_raw,
         merchant_clean=merchant_clean,
         category=category,
+        auto_category=category,
         transaction_nature=transaction_nature,
         direction=direction,
         kind=kind or (TransactionKind.spend if direction == TransactionDirection.debit else TransactionKind.income),
