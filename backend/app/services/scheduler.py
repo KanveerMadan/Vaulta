@@ -24,7 +24,7 @@ from app.core import clock
 from app.models.report import Report
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.services import alerts, analytics, email, report_email, reports
+from app.services import alerts, analytics, demo, email, report_email, reports
 from app.services.chat import purge_old
 from app.services.telegram_bot import send_cash_reminder, send_weekly_summary
 
@@ -116,5 +116,11 @@ def run(db: Session, now: Optional[datetime] = None) -> dict:
                 db.rollback()
                 result["errors"] += 1
                 logger.error(f"report run: user={user.id} type={period_type} failed: {e.__class__.__name__}: {e}")
+    try:
+        result["demo"] = "ready" if demo.ensure_fresh(db) else "not created"   # daily rebuild, once it exists
+    except Exception as e:
+        db.rollback()
+        result["errors"] += 1
+        logger.error(f"demo reseed failed: {e.__class__.__name__}: {e}")
     result["chat_messages_purged"] = purge_old(db)
     return result

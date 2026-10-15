@@ -21,6 +21,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core import clock
+from app.core.demo import is_demo
 from app.models.chat import ChatAction, ChatMessage
 from app.models.user import User
 from app.services import llm
@@ -35,6 +36,12 @@ HISTORY_DAYS = 30
 PER_MINUTE = 10
 PER_DAY = 200
 ACTION_TTL = timedelta(minutes=10)
+# The shared demo: per visitor (demo session) and for all visitors together
+DEMO_PER_MINUTE = 3
+DEMO_PER_SESSION = 20          # per 2-hour demo session
+DEMO_PER_DAY = 300             # whole demo account
+DEMO_ACTION_NOTE = "The demo is read-only, so this can't be applied. Sign up to do this with your own money."
+_demo_sent: dict[str, list[float]] = {}
 
 SYSTEM_PROMPT = """You are Vaulta's assistant for one user's personal finances in India.
 Today is {today}.
@@ -61,7 +68,24 @@ def _hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def _check_demo_limits(db: Session, user: User) -> None:
+    # ponytail: in-process per-visitor counts; with several API workers each allows the limit
+    now = time.monotonic()
+    sent = [t for t in _demo_sent.get(user.demo_session, []) if now - t < 7200]
+    if len(sent) >= DEMO_PER_SESSION:
+        raise ChatLimit("That's the end of the demo's questions for this visit. Sign up to keep asking about your own money.")
+    if sum(1 for t in sent if now - t < 60) >= DEMO_PER_MINUTE:
+        raise ChatLimit("That's a lot of questions at once. Try again in a minute.")
+    day = db.query(ChatMessage.id).filter(ChatMessage.user_id == user.id, ChatMessage.role == "user",
+                                          ChatMessage.created_at >= datetime.now(timezone.utc) - timedelta(days=1)).count()
+    if day >= DEMO_PER_DAY:
+        raise ChatLimit("The demo has answered a lot of questions today. Try again tomorrow, or sign up.")
+    _demo_sent[user.demo_session] = sent + [now]
+
+
 def _check_limits(db: Session, user: User) -> None:
+    if getattr(user, "demo_session", None):
+        return _check_demo_limits(db, user)
     now = datetime.now(timezone.utc)
     sent = db.query(ChatMessage.created_at).filter(ChatMessage.user_id == user.id, ChatMessage.role == "user",
                                                    ChatMessage.created_at >= now - timedelta(days=1)).all()
@@ -104,7 +128,8 @@ def _new_action(db: Session, user: User, session_id: uuid.UUID, tool: str, args:
     db.add(ChatAction(user_id=user.id, session_id=session_id, token_hash=_hash(token), tool=tool, args=args,
                       summary=summary, expires_at=datetime.now(timezone.utc) + ACTION_TTL))
     db.commit()
-    return {"token": token, "tool": tool, "summary": summary, "expires_in_seconds": int(ACTION_TTL.total_seconds())}
+    return {"token": token, "tool": tool, "summary": summary, "expires_in_seconds": int(ACTION_TTL.total_seconds()),
+            "read_only": is_demo(user), "note": DEMO_ACTION_NOTE if is_demo(user) else None}
 
 
 def handle_message(db: Session, user: User, message: str, session_id: Optional[uuid.UUID] = None) -> dict:

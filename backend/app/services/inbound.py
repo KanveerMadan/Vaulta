@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core import clock
 from app.core.config import settings
+from app.core.demo import is_demo
 from app.core.encryption import decrypt_token, encrypt_token
 from app.models.inbound import GmailConfirmation, InboundEvent
 from app.models.user import User
@@ -46,7 +47,7 @@ def regenerate_address(db: Session, user: User) -> str:
 
 def address_for(db: Session, user: User) -> Optional[str]:
     host = inbound_host()
-    if host is None:
+    if host is None or is_demo(user):      # nobody can mail data into the shared demo
         return None
     token = decrypt_token(user.inbound_token_encrypted) if user.inbound_token_encrypted else regenerate_address(db, user)
     return f"{token}@{host}"

@@ -58,7 +58,9 @@ function ActionCard({ action, onDone }) {
   return (
     <div className="mt-2 rounded-lg p-2.5" style={{ background: '#F2F7F3', border: '1px solid #D4E4D7' }}>
       <p className="text-[11px] font-medium" style={{ color: '#1A2E1E' }}>{action.summary}</p>
-      {state === 'done' ? (
+      {action.read_only ? (
+        <p className="text-[11px] mt-1" style={{ color: '#4A6B50' }} role="note">{action.note}</p>
+      ) : state === 'done' ? (
         <p className="text-[11px] mt-1" style={{ color: '#4A6B50' }}>{result}</p>
       ) : (
         <div className="flex gap-2 mt-2">

@@ -26,6 +26,8 @@ class ChatActionCard(BaseModel):
     tool: str
     summary: str
     expires_in_seconds: int
+    read_only: bool = False          # demo: shown, but confirming is refused
+    note: Optional[str] = None
 
 
 class ChatResponse(BaseModel):

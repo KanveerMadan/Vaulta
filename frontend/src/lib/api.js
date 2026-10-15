@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useAuthStore } from '../store/authStore'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
@@ -6,23 +7,34 @@ const api = axios.create({
 })
 
 api.interceptors.request.use(async (config) => {
-  try {
-    const { getAuth } = await import('firebase/auth')
-    const user = getAuth().currentUser
-    if (user) {
-      const token = await user.getIdToken()
-      config.headers.Authorization = `Bearer ${token}`
-    }
-  } catch (_) {}
+  const { getAuth } = await import('firebase/auth')
+  const user = getAuth().currentUser
+  const demo = useAuthStore.getState().demoToken
+  if (user) config.headers.Authorization = `Bearer ${await user.getIdToken()}`
+  else if (demo) config.headers.Authorization = `Bearer ${demo}`
   return config
 })
 
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) window.location.href = '/login'
+    const status = err.response?.status
+    const demo = useAuthStore.getState().demoToken
+    if (status === 401) {
+      if (demo) useAuthStore.getState().endDemo()
+      window.location.href = demo ? '/welcome' : '/login'
+    } else if (status === 403 && demo) {
+      // the demo is read-only: Layout shows the server's message
+      window.dispatchEvent(new CustomEvent('vaulta:read-only', { detail: err.response.data?.detail }))
+    }
     return Promise.reject(err)
   }
 )
+
+/** Sign in to the shared read-only demo. */
+export async function startDemo() {
+  const { data } = await api.post('/auth/demo')
+  useAuthStore.getState().startDemo(data.token)
+}
 
 export default api

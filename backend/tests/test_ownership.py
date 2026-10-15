@@ -92,6 +92,7 @@ COVERED = {
 # or on no user at all. Listed so the guard still notices new routes.
 EXEMPT = {
     ("GET", "/auth/me"), ("PATCH", "/auth/me"), ("DELETE", "/auth/me"),
+    ("POST", "/auth/demo"),        # no user: issues a demo session token (tests/test_demo.py)
     ("POST", "/api/payments/create-subscription"), ("GET", "/api/payments/status"),
     ("POST", "/api/payments/webhook"),    # no user; Razorpay HMAC signature instead
     # no user session: X-Internal-Secret (tests/test_delivery.py::test_internal_endpoint_needs_the_secret)

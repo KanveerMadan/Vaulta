@@ -19,10 +19,10 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { setUser } = useAuthStore()
+  const { setUser, endDemo } = useAuthStore()
   const navigate = useNavigate()
 
-  const onSuccess = (user) => { setUser(user); navigate('/') }
+  const onSuccess = (user) => { endDemo(); setUser(user); navigate('/') }
 
   const handleGoogle = async () => {
     setError(''); setLoading(true)

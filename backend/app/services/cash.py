@@ -59,13 +59,14 @@ def last_declaration(db: Session, user_id: uuid.UUID) -> Optional[CashDeclaratio
             .order_by(CashDeclaration.declared_at.desc()).first())
 
 
-def _after(t: Transaction, decl: CashDeclaration) -> bool:
+def _after(t: Transaction, decl: CashDeclaration, tz) -> bool:
     """
     Did this movement happen after the declaration? By transaction date (a
     statement imported today can carry last month's ATM withdrawal, which the
     declaration already covers); on the declaration's own day, by when it was logged.
     """
-    day, decl_day = t.transaction_date.date(), decl.declared_at.astimezone(timezone.utc).date()
+    # transaction dates are the user's calendar days, so the declaration's day is too (not UTC's)
+    day, decl_day = t.transaction_date.date(), decl.declared_at.astimezone(tz).date()
     return day > decl_day or (day == decl_day and t.created_at > decl.declared_at)
 
 
@@ -82,7 +83,8 @@ def wallet(db: Session, user_id: uuid.UUID) -> dict:
                                           Transaction.split_parent_id.is_(None))
              .order_by(Transaction.transaction_date.desc()).all())
     if decl:
-        moves = [t for t in moves if _after(t, decl)]
+        tz = clock.zone(db.query(User.timezone).filter(User.id == user_id).scalar())
+        moves = [t for t in moves if _after(t, decl, tz)]
 
     def total(flow: str) -> Decimal:
         return analytics.money(sum((t.amount for t in moves if t.cash_flow == flow), analytics.ZERO))

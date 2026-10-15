@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { startDemo } from '../lib/api'
 
 const FEATURES = [
   {
@@ -63,6 +64,12 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
           <span className="font-display text-xl font-light text-cream-200 tracking-tight">Vaulta</span>
           <div className="flex items-center gap-3">
+            <button
+              onClick={async () => { await startDemo(); navigate('/') }}
+              className="text-forest-200 hover:text-cream-100 text-sm transition-colors"
+            >
+              Try the demo
+            </button>
             <button
               onClick={() => navigate('/login')}
               className="text-forest-200 hover:text-cream-100 text-sm transition-colors"

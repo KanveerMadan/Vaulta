@@ -20,8 +20,8 @@ import Onboarding from './pages/Onboarding'
 import Layout from './components/Layout'
 
 function PrivateRoute() {
-  const { user } = useAuthStore()
-  return user ? <Outlet /> : <Navigate to="/login" replace />
+  const { user, demoToken } = useAuthStore()
+  return user || demoToken ? <Outlet /> : <Navigate to="/login" replace />
 }
 
 function Loader() {
@@ -41,7 +41,8 @@ function Loader() {
 }
 
 export default function App() {
-  const { user, loading, setUser, setLoading } = useAuthStore()
+  const { user, loading, setUser, setLoading, demoToken } = useAuthStore()
+  const signedIn = user || demoToken
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -49,7 +50,7 @@ export default function App() {
       setLoading(false)
     })
     return unsub
-  }, [])
+  }, [setUser, setLoading])
 
   if (loading) return <Loader />
 
@@ -74,7 +75,7 @@ export default function App() {
           <Route path="/goals" element={<Goals />} />
         </Route>
       </Route>
-      <Route path="*" element={user ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />} />
+      <Route path="*" element={signedIn ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />} />
     </Routes>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useApi } from '../lib/format'
 import { signOut } from 'firebase/auth'
@@ -21,14 +21,28 @@ const NAV = [
 ]
 
 export default function Layout() {
-  const { logout, user } = useAuthStore()
+  const { logout, user, demoToken, endDemo } = useAuthStore()
   const navigate = useNavigate()
+  const [readOnly, setReadOnly] = useState(null)
+
+  useEffect(() => {
+    const show = (e) => setReadOnly(e.detail || "The demo is read-only.")
+    window.addEventListener('vaulta:read-only', show)
+    return () => window.removeEventListener('vaulta:read-only', show)
+  }, [])
+  useEffect(() => {
+    if (!readOnly) return undefined
+    const t = setTimeout(() => setReadOnly(null), 5000)
+    return () => clearTimeout(t)
+  }, [readOnly])
 
   const handleLogout = async () => {
-    await signOut(auth)
+    if (demoToken) endDemo()
+    else await signOut(auth)
     logout()
     navigate('/welcome')
   }
+  const signUp = () => { endDemo(); navigate('/login') }
 
   // First login: start setup (skippable; Settings → Resume setup brings it back)
   const { data: onboarding } = useApi('/api/onboarding', 0)
@@ -40,6 +54,17 @@ export default function Layout() {
 
   return (
     <div className="min-h-dvh flex flex-col" style={{ background: '#F2F7F3' }}>
+      {demoToken && (
+        <div role="note" className="bg-gold/15 text-ink-900 text-sm px-4 py-2 text-center">
+          You're viewing a demo with sample data.{' '}
+          <button onClick={signUp} className="font-semibold underline underline-offset-2">Sign up to track your own.</button>
+        </div>
+      )}
+      {readOnly && (
+        <div role="alert" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-ink-900 text-white text-sm rounded-xl shadow-lg px-4 py-3 max-w-[calc(100vw-2rem)]">
+          {readOnly}
+        </div>
+      )}
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white border-b border-sage-200"
         style={{ boxShadow: '0 1px 3px rgba(45,106,79,0.06)' }}>
@@ -72,7 +97,7 @@ export default function Layout() {
           <div className="ml-auto flex items-center gap-3">
             <AlertsBell />
             <span className="text-ink-300 text-xs hidden sm:block truncate max-w-[160px]">
-              {user?.displayName || user?.email}
+              {demoToken ? 'Demo' : user?.displayName || user?.email}
             </span>
             <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold"
               style={{ background: '#E8F5EB', color: '#2D6A4F', border: '1px solid #B8CFC0' }}>
@@ -80,7 +105,7 @@ export default function Layout() {
             </div>
             <button onClick={handleLogout}
               className="text-ink-300 hover:text-danger text-xs transition-colors font-medium">
-              Sign out
+              {demoToken ? 'Exit demo' : 'Sign out'}
             </button>
           </div>
         </div>
