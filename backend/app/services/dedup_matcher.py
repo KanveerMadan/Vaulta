@@ -6,19 +6,10 @@ source) into either:
   (a) new evidence merged into an EXISTING canonical Transaction, or
   (b) a brand new canonical Transaction.
 
-Callers (csv ingestion, UPI statement ingestion, manual entry — once each is
-wired up) are responsible for merchant normalization (merchant_normalizer.py)
-and transaction_nature classification (Section 5) BEFORE calling in here.
-This module only matches, merges, and persists — it doesn't know how to read
-a CSV row or a UPI PDF line.
-
-NOT YET WIRED UP ANYWHERE. ingest_csv (transaction_service.py) still inserts
-Transaction rows directly and does not call this. Until it's retrofitted,
-cross-source matching only has UPI-side evidence to work with once
-ingest_upi_statement exists and calls this — CSV-origin transactions remain
-invisible to the matcher. Retrofitting ingest_csv needs csv_parser.py's
-RawTransaction fields verified first (does it expose a UTR buried in
-narration? a debit/credit sign?) rather than guessed at here.
+Callers (transaction_service.import_rows for browser-parsed statement rows,
+and manual entry) are responsible for merchant normalization
+(merchant_normalizer.py) and transaction_nature classification (Section 5)
+BEFORE calling in here. This module only matches, merges, and persists.
 """
 
 from __future__ import annotations
@@ -165,6 +156,7 @@ def _try_tier3_time_and_merchant(
     amount: Decimal,
     raw_timestamp: Optional[datetime],
     counterparty_raw: Optional[str],
+    source: Optional[StatementSourceType] = None,
 ) -> Optional[Transaction]:
     if raw_timestamp is None:
         return None
@@ -183,11 +175,22 @@ def _try_tier3_time_and_merchant(
         .all()
     )
     for txn in candidates:
-        if _infer_transaction_direction(txn) != direction:
+        if _infer_transaction_direction(txn) != direction or _has_evidence_from(txn, source):
             continue
         if _merchant_overlap(counterparty_raw, txn.merchant_clean or txn.merchant_raw):
             return txn
     return None
+
+
+def _has_evidence_from(txn: Transaction, source: Optional[StatementSourceType]) -> bool:
+    """
+    A statement never lists the same transaction twice, so a canonical
+    transaction that already has evidence from this source type is a
+    different transaction (two ₹20 chais on one day), not a cross-source
+    duplicate. Exact re-imports are caught earlier by idempotency key.
+    Fuzzy tiers (3, 4) only; UTR/VPA tiers are exact.
+    """
+    return source is not None and any(r.source == source for r in txn.source_records)
 
 
 def _try_tier4_date_and_merchant(
@@ -197,6 +200,7 @@ def _try_tier4_date_and_merchant(
     amount: Decimal,
     raw_date: Optional[date_type],
     counterparty_raw: Optional[str],
+    source: Optional[StatementSourceType] = None,
 ) -> Optional[Transaction]:
     if raw_date is None:
         return None
@@ -211,7 +215,7 @@ def _try_tier4_date_and_merchant(
         .all()
     )
     for txn in candidates:
-        if _infer_transaction_direction(txn) != direction:
+        if _infer_transaction_direction(txn) != direction or _has_evidence_from(txn, source):
             continue
         if _merchant_overlap(counterparty_raw, txn.merchant_clean or txn.merchant_raw):
             return txn
@@ -229,6 +233,7 @@ def find_match(
     raw_timestamp: Optional[datetime],
     raw_date: Optional[date_type],
     counterparty_raw: Optional[str],
+    source: Optional[StatementSourceType] = None,
 ) -> Tuple[Optional[Transaction], Optional[int]]:
     """
     Runs the Section 4 tier hierarchy in order, strongest signal first.
@@ -247,13 +252,13 @@ def find_match(
             return txn, 2
 
     if raw_timestamp:
-        txn = _try_tier3_time_and_merchant(db, user_id, direction, amount, raw_timestamp, counterparty_raw)
+        txn = _try_tier3_time_and_merchant(db, user_id, direction, amount, raw_timestamp, counterparty_raw, source)
         if txn:
             return txn, 3
 
     effective_date = raw_date or (raw_timestamp.date() if raw_timestamp else None)
     if effective_date:
-        txn = _try_tier4_date_and_merchant(db, user_id, direction, amount, effective_date, counterparty_raw)
+        txn = _try_tier4_date_and_merchant(db, user_id, direction, amount, effective_date, counterparty_raw, source)
         if txn:
             return txn, 4
 
@@ -313,8 +318,8 @@ def ingest_or_match_transaction(
 
     Returns (transaction, source_record, was_matched).
     Raises nothing on duplicate re-ingestion — returns the existing
-    (transaction, source_record, True) instead, mirroring ingest_csv's
-    existing duplicate-handling convention.
+    (transaction, source_record, True) instead, the long-standing
+    duplicate-handling convention.
     """
     existing = _existing_source_record_for_idempotency_key(db, user.id, idempotency_key)
     if existing is not None:
@@ -331,6 +336,7 @@ def ingest_or_match_transaction(
         raw_timestamp=raw_timestamp,
         raw_date=raw_date,
         counterparty_raw=counterparty_raw,
+        source=source,
     )
 
     now = datetime.now(timezone.utc)

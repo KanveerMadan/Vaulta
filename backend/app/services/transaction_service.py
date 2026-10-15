@@ -7,10 +7,12 @@ Routes are thin; this file is where the work happens.
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import re
 import uuid
 from calendar import monthrange
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
 from typing import List, Optional, Tuple
 
@@ -28,13 +30,7 @@ from app.schemas.transaction import (
     MonthlySummary,
     CategorySummary,
 )
-from app.services.csv_parser import parse_csv, CSVParseError, DetectedBank
-from app.services.upi_statement_parser import (
-    parse_upi_statement,
-    UPIParseError,
-    UPISource,
-    RawUPITransaction,
-)
+from app.schemas.imports import ImportRow, ImportBatchResult
 from app.services.merchant_normalizer import normalize
 from app.services.dedup_matcher import ingest_or_match_transaction
 
@@ -47,12 +43,6 @@ logger = logging.getLogger(__name__)
 
 _CATEGORY_SENT_TO_PEOPLE = "Sent to People"
 _CATEGORY_RECEIVED_FROM_PEOPLE = "Received from People"
-
-_UPI_SOURCE_MAP: dict[UPISource, StatementSourceType] = {
-    UPISource.GOOGLE_PAY: StatementSourceType.upi_google_pay,
-    UPISource.PHONEPE: StatementSourceType.upi_phonepe,
-    UPISource.PAYTM: StatementSourceType.upi_paytm,
-}
 
 _SPEND_NATURES = (TransactionNature.expense, TransactionNature.peer_payment_sent)
 _INCOME_NATURES = (TransactionNature.income, TransactionNature.peer_payment_received)
@@ -77,162 +67,108 @@ def _category_from_nature(nature: TransactionNature, normalizer_category: Option
     return normalizer_category
 
 
-def _direction_from_upi_string(direction: str) -> TransactionDirection:
-    if direction == "received":
-        return TransactionDirection.credit
-    return TransactionDirection.debit
-
-
 # ─────────────────────────────────────────────
-# Ingestion
+# Ingestion (rows parsed and sanitized in the browser)
 # ─────────────────────────────────────────────
 
-def ingest_csv(
-    db: Session,
-    user: User,
-    file_bytes: bytes,
-    filename: str,
-) -> dict:
-    bank, raw_transactions = parse_csv(file_bytes, filename=filename)
+IST = timezone(timedelta(hours=5, minutes=30))
 
-    inserted = 0
-    matched_existing = 0
-    skipped_duplicate = 0
-
-    for raw_txn in raw_transactions:
-        normalized = normalize(raw_txn.merchant_raw)
-        merchant_clean = normalized.merchant_clean if normalized.confidence >= 0.5 else None
-        category = normalized.category if normalized.confidence >= 0.5 else None
-
-        try:
-            txn, source_record, was_matched = ingest_or_match_transaction(
-                db,
-                user,
-                source=StatementSourceType.bank_csv,
-                direction=TransactionDirection.debit,
-                amount=raw_txn.amount,
-                transaction_date_hint=raw_txn.transaction_date,
-                idempotency_key=raw_txn.idempotency_key,
-                merchant_raw=raw_txn.merchant_raw,
-                merchant_clean=merchant_clean,
-                category=category,
-                transaction_nature=TransactionNature.expense,
-                legacy_source_enum=TransactionSource.csv,
-                utr=None,
-                vpa=None,
-                raw_timestamp=None,
-                raw_date=raw_txn.transaction_date.date(),
-                counterparty_raw=raw_txn.merchant_raw,
-                currency="INR",
-                raw_row=raw_txn.raw_row,
-            )
-
-            if source_record.match_tier is not None:
-                matched_existing += 1
-            elif was_matched:
-                skipped_duplicate += 1
-            else:
-                inserted += 1
-
-        except Exception as e:
-            logger.error(
-                f"ingest_csv: unexpected error on row idempotency_key="
-                f"{raw_txn.idempotency_key!r}: {e} — skipping"
-            )
-
-    logger.info(
-        f"CSV ingest complete: user={user.id}, bank={bank.value}, "
-        f"total_rows={len(raw_transactions)}, inserted={inserted}, "
-        f"matched_existing={matched_existing}, skipped_duplicate={skipped_duplicate}"
-    )
-
-    return {
-        "bank": bank.value,
-        "total_rows": len(raw_transactions),
-        "inserted": inserted,
-        "matched_existing": matched_existing,
-        "skipped_duplicate": skipped_duplicate,
-    }
+_UPI_KEY_NAMES = {
+    "upi_google_pay": "google_pay",
+    "upi_phonepe": "phonepe",
+    "upi_paytm": "paytm",
+}
 
 
-def ingest_upi_statement(
-    db: Session,
-    user: User,
-    file_bytes: bytes,
-    filename: str,
-) -> dict:
-    upi_source, raw_transactions = parse_upi_statement(file_bytes, filename=filename)
+def _row_idempotency_key(row: ImportRow, occurrence: int) -> str:
+    """
+    UPI rows with a reference keep the key the server-side Google Pay parser
+    used (upi|google_pay|<utr>), so statements imported before the move to
+    browser parsing are recognized. Other rows hash their content; `occurrence`
+    separates genuinely identical rows (two ₹20 chais on one day) within a batch.
+    """
+    if row.source_type in _UPI_KEY_NAMES and row.reference:
+        payload = f"upi|{_UPI_KEY_NAMES[row.source_type]}|{row.reference}"
+    else:
+        payload = "|".join([
+            "row", row.source_type, row.date, row.direction, row.amount,
+            row.description_raw, row.reference or "", str(occurrence),
+        ])
+    return hashlib.sha256(payload.encode()).hexdigest()
 
-    statement_source = _UPI_SOURCE_MAP.get(upi_source)
-    if statement_source is None:
-        raise UPIParseError(f"No StatementSourceType mapping for UPISource.{upi_source.value}")
 
-    inserted = 0
-    matched_existing = 0
-    skipped_duplicate = 0
-    by_nature: dict[str, int] = {}
+def _row_nature(row: ImportRow, merchant_clean: Optional[str]) -> TransactionNature:
+    if row.type == "transfer":
+        return TransactionNature.self_transfer
+    if row.source_type in _UPI_KEY_NAMES:
+        # UPI apps: an unrecognized counterparty is a person (as before)
+        return _nature_from_upi_direction("paid" if row.direction == "debit" else "received", merchant_clean)
+    return TransactionNature.expense if row.direction == "debit" else TransactionNature.income
 
-    for raw_txn in raw_transactions:
-        normalized = normalize(raw_txn.merchant_raw_unspaced)
-        merchant_clean = normalized.merchant_clean if normalized.confidence >= 0.5 else None
-        normalizer_category = normalized.category if normalized.confidence >= 0.5 else None
 
-        nature = _nature_from_upi_direction(raw_txn.direction, merchant_clean)
-        category = _category_from_nature(nature, normalizer_category)
-        direction = _direction_from_upi_string(raw_txn.direction)
+def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchResult:
+    result = ImportBatchResult()
+    seen: dict[tuple, int] = {}
 
-        by_nature[nature.value] = by_nature.get(nature.value, 0) + 1
+    for row in rows:
+        identity = (row.source_type, row.date, row.direction, row.amount, row.description_raw, row.reference)
+        occurrence = seen.get(identity, 0)
+        seen[identity] = occurrence + 1
+
+        is_upi = row.source_type in _UPI_KEY_NAMES
+        # UPI counterparties were normalized with spaces removed; keep that
+        normalized = normalize(row.description_raw.replace(" ", "") if is_upi else row.description_raw)
+        confident = normalized.confidence >= 0.5
+        merchant_clean = normalized.merchant_clean if confident else None
+        nature = _row_nature(row, merchant_clean)
+        category = _category_from_nature(nature, normalized.category if confident else None)
+
+        if "T" in row.date:
+            raw_timestamp = datetime.fromisoformat(row.date).replace(tzinfo=IST)
+            raw_date = raw_timestamp.date()
+        else:
+            raw_timestamp = None
+            raw_date = date.fromisoformat(row.date)
 
         try:
-            txn, source_record, was_matched = ingest_or_match_transaction(
+            _txn, source_record, was_matched = ingest_or_match_transaction(
                 db,
                 user,
-                source=statement_source,
-                direction=direction,
-                amount=raw_txn.amount,
-                transaction_date_hint=raw_txn.transaction_date,
-                idempotency_key=raw_txn.idempotency_key,
-                merchant_raw=raw_txn.merchant_raw,
+                source=StatementSourceType(row.source_type),
+                direction=TransactionDirection(row.direction),
+                amount=Decimal(row.amount),
+                transaction_date_hint=None,
+                idempotency_key=_row_idempotency_key(row, occurrence),
+                merchant_raw=row.description_raw,
                 merchant_clean=merchant_clean,
                 category=category,
                 transaction_nature=nature,
                 legacy_source_enum=TransactionSource.csv,
-                utr=raw_txn.utr,
+                utr=row.reference if row.reference and re.fullmatch(r"\d{12}", row.reference) else None,
                 vpa=None,
-                raw_timestamp=raw_txn.transaction_date,
-                raw_date=raw_txn.transaction_date.date(),
-                counterparty_raw=raw_txn.merchant_raw_unspaced,
+                raw_timestamp=raw_timestamp,
+                raw_date=raw_date,
+                counterparty_raw=row.description_raw,
                 currency="INR",
-                raw_row=raw_txn.raw_row,
+                raw_row=row.model_dump(),
             )
-
-            if source_record.match_tier is not None:
-                matched_existing += 1
-            elif was_matched:
-                skipped_duplicate += 1
-            else:
-                inserted += 1
-
         except Exception as e:
-            logger.error(
-                f"ingest_upi_statement: unexpected error on UTR={raw_txn.utr!r}: {e} — skipping"
-            )
+            db.rollback()
+            result.failed += 1
+            logger.error(f"import_rows: user={user.id} row failed ({e.__class__.__name__}: {e})")
+            continue
 
-    logger.info(
-        f"UPI statement ingest complete: user={user.id}, source={upi_source.value}, "
-        f"total_rows={len(raw_transactions)}, inserted={inserted}, "
-        f"matched_existing={matched_existing}, skipped_duplicate={skipped_duplicate}, "
-        f"by_nature={by_nature}"
-    )
+        if nature == TransactionNature.self_transfer:
+            result.transfers_flagged += 1
+        if was_matched:
+            result.duplicates_merged += 1
+        else:
+            result.imported += 1
+            if category is None:
+                result.rows_needing_review += 1
 
-    return {
-        "source": upi_source.value,
-        "total_rows": len(raw_transactions),
-        "inserted": inserted,
-        "matched_existing": matched_existing,
-        "skipped_duplicate": skipped_duplicate,
-        "by_nature": by_nature,
-    }
+    logger.info(f"Import batch: user={user.id}, rows={len(rows)}, result={result.model_dump()}")
+    return result
 
 
 # ─────────────────────────────────────────────

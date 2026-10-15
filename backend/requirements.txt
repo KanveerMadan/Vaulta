@@ -17,16 +17,12 @@ firebase-admin==6.5.0
 # Security — Fernet symmetric encryption for OAuth token storage
 cryptography==42.0.7
 
-# CSV & data parsing (stdlib csv used, but chardet helps with encoding detection)
-chardet==5.2.0
-
-# PDF parsing — UPI app statement uploads (Google Pay, PhonePe, Paytm)
-pdfplumber==0.11.4
+# Statements are parsed in the browser (frontend/src/import/); no file
+# parsing dependencies on the server. Test-only deps: requirements-dev.txt
 
 # Payments (Phase 2)
 setuptools>=69.0.0  # provides pkg_resources, required by razorpay SDK
 razorpay==1.4.2
-pymupdf
 
 # AI inference (Phase 3)
 # groq==0.8.0

@@ -1,4 +1,8 @@
 """
+REFERENCE ONLY — not used by the app. Statements are parsed in the browser
+(frontend/src/import/); this is the behaviour the JS port is checked
+against (backend/tests/test_reference_parsers.py, fixtures/statements/).
+
 CSV Parser Service — Phase 1
 
 Parses bank statement CSV exports from major Indian banks into normalized
@@ -13,7 +17,7 @@ Supported banks:
   - Kotak Mahindra Bank
 
 Usage:
-    from app.services.csv_parser import parse_csv, DetectedBank
+    from tests.reference.csv_parser import parse_csv, DetectedBank
 
     bank, transactions = parse_csv(file_bytes, filename="hdfc_statement.csv")
 """

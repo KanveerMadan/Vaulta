@@ -51,7 +51,7 @@ class Transaction(Base):
     # What kind of money movement this is (expense / income / peer payment / self-transfer).
     # Defaults to "expense" at the DB level for backfill safety — all rows ingested before
     # this field existed (CSV-only) were de facto merchant spending. New UPI-statement rows
-    # must set this explicitly per the classification logic in upi_statement_parser.py;
+    # must set this explicitly (see transaction_service.import_rows);
     # do not rely on this default for anything written going forward.
     transaction_nature = Column(
         SAEnum(TransactionNature),

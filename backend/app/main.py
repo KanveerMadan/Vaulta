@@ -96,11 +96,10 @@ async def security_headers(request: Request, call_next):
     return response
 
 # ── Routers ────────────────────────────────────────────────────────────────────
-from app.api.routes import auth, transactions, statements, budgets, imports
+from app.api.routes import auth, transactions, budgets, imports
 
 app.include_router(auth.router)
 app.include_router(transactions.router)
-app.include_router(statements.router)
 app.include_router(budgets.router)
 app.include_router(imports.router)
 

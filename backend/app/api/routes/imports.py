@@ -2,6 +2,8 @@
 Statement import routes. Statements are parsed in the browser; the server
 never receives the file.
 
+  POST /api/import/batch                   sanitized JSON rows (max 500) → saved via
+                                           the merchant normalizer and dedup matcher
   GET /api/import/templates/{fingerprint}  saved column mapping for a header layout
   PUT /api/import/templates/{fingerprint}  save/replace it
 """
@@ -11,13 +13,25 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
 from app.core.database import get_db
+from app.core.subscription import require_active_subscription
 from app.models.import_template import ImportTemplate
 from app.models.user import User
-from app.schemas.imports import ImportTemplateResponse, ImportTemplateUpsert
+from app.schemas.imports import ImportBatch, ImportBatchResult, ImportTemplateResponse, ImportTemplateUpsert
+from app.services import transaction_service
 
 router = APIRouter(prefix="/api/import", tags=["import"])
 
 Fingerprint = Path(pattern=r"^[0-9a-f]{64}$")
+
+
+@router.post("/batch", response_model=ImportBatchResult)
+def import_batch(
+    payload: ImportBatch,
+    current_user: User = Depends(get_current_user),
+    _subscription: None = Depends(require_active_subscription),
+    db: Session = Depends(get_db),
+):
+    return transaction_service.import_rows(db, current_user, payload.rows)
 
 
 def _template(db: Session, user: User, fingerprint: str):

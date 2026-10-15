@@ -42,6 +42,7 @@ class StatementSourceType(str, enum.Enum):
     upi_google_pay = "upi_google_pay"
     upi_phonepe = "upi_phonepe"
     upi_paytm = "upi_paytm"
+    credit_card = "credit_card"
     manual = "manual"
 
 

@@ -1,5 +1,5 @@
 """
-The Python statement parsers are kept only as the reference for the browser
+The Python statement parsers (tests/reference/) are kept only as the reference for the browser
 ports (frontend/src/import/). This pins their output on the shared fixtures;
 frontend/src/import/parity.test.js checks the JS ports against the same file.
 """
@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from app.services.csv_parser import parse_csv
-from app.services.upi_statement_parser import parse_upi_statement
+from tests.reference.csv_parser import parse_csv
+from tests.reference.upi_statement_parser import parse_upi_statement
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "statements"
 EXPECTED = json.loads((FIXTURES / "expected.json").read_text())

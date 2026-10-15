@@ -1,4 +1,8 @@
 """
+REFERENCE ONLY — not used by the app. Statements are parsed in the browser
+(frontend/src/import/); this is the behaviour the JS port is checked
+against (backend/tests/test_reference_parsers.py, fixtures/statements/).
+
 UPI Statement Parser Service — Phase 1.5 (post-Gmail/AA pivot)
 
 Parses transaction-history PDFs exported from UPI apps (Google Pay, PhonePe, Paytm).
@@ -26,7 +30,6 @@ from typing import List, Optional, Tuple
 
 import fitz  # pymupdf
 
-from app.services.merchant_normalizer import normalize
 
 logger = logging.getLogger(__name__)
 

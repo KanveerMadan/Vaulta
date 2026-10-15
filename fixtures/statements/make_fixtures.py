@@ -20,8 +20,8 @@ import pymupdf
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent.parent / "backend"))
 
-from app.services.csv_parser import parse_csv  # noqa: E402
-from app.services.upi_statement_parser import parse_upi_statement  # noqa: E402
+from tests.reference.csv_parser import parse_csv  # noqa: E402
+from tests.reference.upi_statement_parser import parse_upi_statement  # noqa: E402
 
 FONT = os.environ.get("FIXTURE_FONT", "/System/Library/Fonts/Supplemental/Georgia.ttf")
 GPAY_PASSWORD = "RAHU0503"
