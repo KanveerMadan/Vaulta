@@ -37,6 +37,7 @@ from app.models.rule import Rule  # noqa: F401
 from app.models.review import ReviewDismissal  # noqa: F401
 from app.models.chat import ChatAction, ChatMessage  # noqa: F401
 from app.models.goal import Goal, GoalEntry  # noqa: F401
+from app.models.alert import Alert  # noqa: F401
 from app.models.anomaly import Anomaly  # noqa: F401
 from app.models.report import Report  # noqa: F401
 from app.models.inbound import GmailConfirmation, InboundEvent  # noqa: F401

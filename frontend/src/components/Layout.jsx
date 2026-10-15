@@ -3,6 +3,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
 import ChatPanel from './ChatPanel'
+import AlertsBell from './AlertsBell'
 
 const NAV = [
   { to: '/', label: 'Home', end: true },
@@ -61,6 +62,7 @@ export default function Layout() {
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
+            <AlertsBell />
             <span className="text-ink-300 text-xs hidden sm:block truncate max-w-[160px]">
               {user?.displayName || user?.email}
             </span>

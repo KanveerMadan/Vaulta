@@ -80,6 +80,9 @@ COVERED = {
     ("DELETE", "/api/goals/{goal_id}"),
     ("POST", "/api/goals/{goal_id}/entries"),
     ("DELETE", "/api/goals/{goal_id}/entries/{entry_id}"),
+    # tests/test_alerts.py::test_bell_unread_and_isolation
+    ("GET", "/api/alerts"),
+    ("POST", "/api/alerts/read"),
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.

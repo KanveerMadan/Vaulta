@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -63,6 +63,9 @@ class Settings(BaseModel):
     email_monthly: bool
     email_annual: bool
     email_configured: bool       # whether this server can send email at all
+    alert_channels: Dict[str, Dict[str, bool]]   # {type: {"telegram": bool, "email": bool}}, defaults filled in
+    quiet_start: int
+    quiet_end: int
 
 
 class SettingsUpdate(BaseModel):
@@ -76,6 +79,18 @@ class SettingsUpdate(BaseModel):
     email_weekly: Optional[bool] = None
     email_monthly: Optional[bool] = None
     email_annual: Optional[bool] = None
+    alert_channels: Optional[Dict[str, Dict[str, bool]]] = None   # partial: only the types/channels given change
+    quiet_start: Optional[int] = Field(default=None, ge=0, le=23)
+    quiet_end: Optional[int] = Field(default=None, ge=0, le=23)
+
+    @field_validator("alert_channels")
+    @classmethod
+    def known_alerts(cls, v):
+        from app.services.alerts import TYPES
+        for kind, chans in (v or {}).items():
+            if kind not in TYPES or not set(chans) <= {"telegram", "email"}:
+                raise ValueError(f"alert types: {', '.join(TYPES)}; channels: telegram, email")
+        return v
 
     @field_validator("timezone")
     @classmethod

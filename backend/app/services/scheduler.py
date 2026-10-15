@@ -8,7 +8,8 @@ period whose send time has passed:
   annual   the previous year, sent on 1 January at 09:00
 Idempotent: a report is built only if it doesn't exist yet, and emailed only
 if it hasn't been (so a failed send is retried next hour). Periods with no
-transactions are skipped. Also purges chat history older than 30 days.
+transactions are skipped. Also: date-based alerts and alerts held for quiet
+hours (services/alerts.py), and purges chat history older than 30 days.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from app.core import clock
 from app.models.report import Report
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.services import analytics, email, report_email, reports
+from app.services import alerts, analytics, email, report_email, reports
 from app.services.chat import purge_old
 from app.services.telegram_bot import send_cash_reminder, send_weekly_summary
 
@@ -74,10 +75,19 @@ def _send(db: Session, user: User, report: Report, now: datetime) -> bool:
 
 def run(db: Session, now: Optional[datetime] = None) -> dict:
     now = now or clock.now()
-    result = {"users": 0, "generated": 0, "emailed": 0, "telegram": 0, "cash_reminders": 0, "skipped_empty": 0, "errors": 0}
+    result = {"users": 0, "generated": 0, "emailed": 0, "telegram": 0, "cash_reminders": 0, "alerts": 0, "alerts_sent": 0,
+              "skipped_empty": 0, "errors": 0}
     for user in db.query(User).order_by(User.created_at):
         result["users"] += 1
         local_now = now.astimezone(user_zone(user))
+        try:
+            done = alerts.run_hourly(db, user, now)
+            result["alerts"] += done["new"]
+            result["alerts_sent"] += done["telegram_sent"]
+        except Exception as e:
+            db.rollback()
+            result["errors"] += 1
+            logger.error(f"alerts: user={user.id} failed: {e.__class__.__name__}: {e}")
         try:
             if local_now.weekday() == 6 and local_now.time() >= WEEKLY_SEND and send_cash_reminder(db, user):
                 result["cash_reminders"] += 1

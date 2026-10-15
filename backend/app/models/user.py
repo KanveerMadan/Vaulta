@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Column, Date, String, Boolean, DateTime, ForeignKey, text
+from sqlalchemy import JSON, BigInteger, Column, Date, String, SmallInteger, Boolean, DateTime, ForeignKey, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -49,6 +49,12 @@ class User(Base):
     telegram_weekly = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     # Week end (Sunday) of the last unaccounted-cash reminder sent on Telegram
     cash_reminded_week = Column(Date, nullable=True)
+
+    # --- Alerts: per-type channel choices ({type: {"telegram": bool, "email": bool}}; missing = default)
+    # and Telegram quiet hours in local time (start hour inclusive, end hour exclusive)
+    alert_prefs = Column(JSON, nullable=True)
+    quiet_start = Column(SmallInteger, nullable=False, default=22, server_default=text("22"))
+    quiet_end = Column(SmallInteger, nullable=False, default=8, server_default=text("8"))
 
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled

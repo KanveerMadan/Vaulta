@@ -18,6 +18,50 @@ function Toggle({ checked, onChange, label, disabled }) {
   );
 }
 
+const ALERTS = {
+  budget_threshold: "Budget reaches 80% / 100%",
+  duplicate_charge: "Possible duplicate charge",
+  failed_upi_unreversed: "Failed payment not refunded",
+  renewal_tomorrow: "Bill or subscription due tomorrow",
+  price_change: "Subscription price change",
+  salary_received: "Salary or large income received",
+  unusual_amount: "Unusually large payment",
+};
+const hour = (h) => `${String(h).padStart(2, "0")}:00`;
+
+function AlertsSection({ data, save }) {
+  return (
+    <section className="card p-5 space-y-3">
+      <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Alerts</h2>
+      <p className="text-xs text-ink-500">Every alert appears under the bell. Choose where else each one goes. Alerts contain merchant names and amounts only.</p>
+      <ul className="divide-y divide-sage-50">
+        {Object.entries(ALERTS).map(([type, label]) => (
+          <li key={type} className="py-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="text-sm text-ink-900 flex-1 min-w-[12rem]">{label}</span>
+            <Toggle checked={data.alert_channels[type].telegram} label="Telegram"
+              onChange={(v) => save({ alert_channels: { [type]: { telegram: v } } })} />
+            <Toggle checked={data.alert_channels[type].email} label="Email" disabled={!data.email_configured}
+              onChange={(v) => save({ alert_channels: { [type]: { email: v } } })} />
+          </li>
+        ))}
+      </ul>
+      <div className="flex flex-wrap items-center gap-2 text-sm text-ink-700">
+        <span>Quiet hours for Telegram:</span>
+        <select value={data.quiet_start} onChange={(e) => save({ quiet_start: Number(e.target.value) })} aria-label="Quiet hours start"
+          className="border border-sage-200 rounded-lg px-2 py-1.5 bg-white">
+          {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{hour(h)}</option>)}
+        </select>
+        <span>to</span>
+        <select value={data.quiet_end} onChange={(e) => save({ quiet_end: Number(e.target.value) })} aria-label="Quiet hours end"
+          className="border border-sage-200 rounded-lg px-2 py-1.5 bg-white">
+          {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{hour(h)}</option>)}
+        </select>
+      </div>
+      <p className="text-xs text-ink-500">Telegram alerts that arrive during quiet hours are sent when they end.</p>
+    </section>
+  );
+}
+
 function TelegramSection() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { data } = useApi("/api/telegram", refreshKey);
@@ -90,6 +134,8 @@ export default function Settings() {
       </section>
 
       <TelegramSection />
+
+      <AlertsSection data={data} save={save} />
 
       <section className="card p-5 space-y-2">
         <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Time zone</h2>

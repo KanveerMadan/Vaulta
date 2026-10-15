@@ -32,6 +32,7 @@ from app.models.user import User
 from app.services.dedup_matcher import _merchant_overlap
 from app.models.rule import Rule
 from app.services.people import apply_person_defaults, link_people
+from app.services import alerts
 from app.services.anomalies import sync_anomalies
 from app.services.cash import classify as classify_cash
 from app.services.recurring import sync_series
@@ -291,5 +292,8 @@ def run_detection(db: Session, user: User, today: Optional[date] = None) -> Ctx:
     sync_series(db, user, ctx.txns, today or clock.today())
     db.flush()
     sync_anomalies(db, user, ctx.txns, today or clock.today())
+    db.flush()
+    new_alerts = alerts.evaluate(db, user, ctx.txns, today or clock.today())
     db.commit()
+    alerts.deliver(db, user, new_alerts)
     return ctx
