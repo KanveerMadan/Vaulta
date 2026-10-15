@@ -15,3 +15,10 @@ __pycache__/
 # IDE
 .vscode/
 .idea/
+
+# Environment files: never commit real values. .env.e2e holds only fake test values.
+.env*
+!frontend/.env.e2e
+
+# Real statements or alert emails kept for local testing
+local-statements/
