@@ -15,6 +15,7 @@ import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Cash from './pages/Cash'
 import Review from './pages/Review'
+import Goals from './pages/Goals'
 import Layout from './components/Layout'
 
 function PrivateRoute() {
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/cash" element={<Cash />} />
           <Route path="/review" element={<Review />} />
+          <Route path="/goals" element={<Goals />} />
         </Route>
       </Route>
       <Route path="*" element={user ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />} />

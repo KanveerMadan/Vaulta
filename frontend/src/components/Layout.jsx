@@ -5,8 +5,9 @@ import { useAuthStore } from '../store/authStore'
 import ChatPanel from './ChatPanel'
 
 const NAV = [
-  { to: '/', label: 'Dashboard', end: true },
+  { to: '/', label: 'Home', end: true },
   { to: '/budgets', label: 'Budgets' },
+  { to: '/goals', label: 'Goals' },
   { to: '/cash', label: 'Cash' },
   { to: '/recurring', label: 'Recurring' },
   { to: '/reports', label: 'Reports' },

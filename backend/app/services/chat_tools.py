@@ -22,6 +22,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core import clock
+from app.models.goal import Goal
 from app.models.person import Person
 from app.models.transaction import Budget, KIND_DIRECTIONS, Transaction, TransactionKind
 from app.models.user import User
@@ -29,6 +30,7 @@ from app.schemas.transaction import CATEGORIES, ManualTransactionCreate, Transac
 from app.services import analytics, cash, transaction_service
 from app.services.budgets import create_or_reactivate
 from app.services.detection import run_detection
+from app.services.goals import add_entry, create_goal, find_goal
 from app.services.keys import merchant_key
 from app.services.people import set_tag
 from app.services.recurring import add_months
@@ -201,6 +203,7 @@ READ_TOOLS: dict[str, Callable[[Session, User, dict], Any]] = {
     "forecast_month_end": lambda db, u, a: analytics.forecast_month_end(db, u.id, _month(a.get("month"))),
     "safe_to_spend_today": lambda db, u, a: analytics.safe_to_spend_today(db, u.id),
     "cash_wallet": lambda db, u, a: cash.wallet(db, u.id),
+    "goal_status": lambda db, u, a: {"goals": analytics.goals_overview(db, u.id)},
     "search_transactions": search_transactions,
     "what_if_reduce": what_if_reduce,
 }
@@ -292,6 +295,26 @@ def propose(db: Session, user: User, tool: str, args: dict) -> tuple[dict, str]:
             raise ToolError("date can't be in the future")
         return ({"amount": str(amount), "description": description, "date": day.isoformat()},
                 f"Add a cash expense: {description}, {inr(amount)} on {day:%d %b %Y}")
+    if tool == "create_goal":
+        name = str(args.get("name") or "").strip()[:80]
+        if not name:
+            raise ToolError("name is required")
+        amount = _amount(args.get("target_amount"), "target_amount")
+        day = _date(args.get("target_date"), "target_date")
+        if day <= clock.today():
+            raise ToolError("target_date must be in the future")
+        category = _category(args["category"]) if args.get("category") else None
+        return ({"name": name, "target_amount": str(amount), "target_date": day.isoformat(), "category": category},
+                f"Create a goal: {name}, {inr(amount)} by {day:%d %b %Y}" + (f", cutting {category}" if category else ""))
+    if tool == "add_to_goal":
+        matches = find_goal(db, user, str(args.get("goal") or ""))
+        if not matches:
+            raise ToolError(f"No goal matching '{args.get('goal')}'")
+        if len(matches) > 1:
+            raise ToolError(f"'{args.get('goal')}' matches {', '.join(g.name for g in matches)}. Which one?")
+        amount = _amount(args.get("amount"))
+        return ({"goal_id": str(matches[0].id), "amount": str(amount)},
+                f"Record {inr(amount)} put towards {matches[0].name}")
     raise ToolError(f"Unknown action {tool}")
 
 
@@ -336,10 +359,19 @@ def execute(db: Session, user: User, tool: str, args: dict) -> str:
             client_id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"chat|{user.id}|{args}")),
             date=args["date"], amount=args["amount"], merchant=args["description"], payment_method="cash"))
         return f"Added {args['description']}, {inr(Decimal(args['amount']))}."
+    if tool == "create_goal":
+        goal = create_goal(db, user, args["name"], Decimal(args["target_amount"]), date.fromisoformat(args["target_date"]), args["category"])
+        return f"Goal created: {goal.name}, {inr(goal.target_amount)} by {goal.target_date:%d %b %Y}."
+    if tool == "add_to_goal":
+        goal = db.query(Goal).filter(Goal.id == uuid.UUID(args["goal_id"]), Goal.user_id == user.id).first()
+        if goal is None:
+            raise ToolError("That goal no longer exists")
+        add_entry(db, goal, Decimal(args["amount"]), clock.today())
+        return f"Recorded {inr(Decimal(args['amount']))} towards {goal.name}."
     raise ToolError(f"Unknown action {tool}")
 
 
-ACTION_TOOLS = ("set_budget", "remove_budget", "recategorize", "tag_person", "mark_kind", "add_cash_expense")
+ACTION_TOOLS = ("set_budget", "remove_budget", "recategorize", "tag_person", "mark_kind", "add_cash_expense", "create_goal", "add_to_goal")
 
 
 # ── Tables shown in the chat panel (computed here, not typed by the model) ────
@@ -365,6 +397,9 @@ def table_for(tool: str, result: dict) -> Optional[dict]:
     if tool == "person_balances":
         return {"title": "People", "columns": ["", "Paid", "Received", "Balance"],
                 "rows": [[p["name"], inr(p["paid_total"]), inr(p["received_total"]), inr(p["balance"])] for p in result["people"][:8]]}
+    if tool == "goal_status":
+        return {"title": "Goals", "columns": ["", "Saved", "Target", "By"],
+                "rows": [[g["name"], inr(g["saved"]), inr(g["target_amount"]), g["target_date"]] for g in result["goals"][:8]]} if result["goals"] else None
     if tool == "income_summary":
         return {"title": "Income", "columns": ["", "Amount"], "rows": [[s["label"], inr(s["total"])] for s in result["sources"][:8]]}
     if tool == "search_transactions":
@@ -398,6 +433,7 @@ TOOL_SCHEMAS = [
     _fn("forecast_month_end", "Projected month-end spending at the current pace.", {"month": _MONTH}),
     _fn("safe_to_spend_today", "How much can be spent today and stay within this month's limit.", {}),
     _fn("cash_wallet", "Cash in hand: expected balance, cash withdrawn/received/spent since the last count, and how much isn't logged.", {}),
+    _fn("goal_status", "Savings goals: saved so far, required per month, on track or behind, projected date.", {}),
     _fn("search_transactions", "Find transactions. All filters optional.",
         {"query": {"type": "string"}, "start": _DATE, "end": _DATE, "category": {"type": "string"},
          "merchant": {"type": "string"}, "min_amount": {"type": "number"}, "max_amount": {"type": "number"},
@@ -420,4 +456,10 @@ TOOL_SCHEMAS = [
         ("transaction_id", "kind")),
     _fn("add_cash_expense", "Propose adding a cash expense (user must confirm).",
         {"amount": {"type": "number"}, "description": {"type": "string"}, "date": _DATE}, ("amount", "description")),
+    _fn("create_goal", "Propose a savings goal (user must confirm).",
+        {"name": {"type": "string"}, "target_amount": {"type": "number"}, "target_date": _DATE,
+         "category": {"type": "string", "description": "optional spending category to cut"}},
+        ("name", "target_amount", "target_date")),
+    _fn("add_to_goal", "Propose recording money the user put towards a goal (user must confirm).",
+        {"goal": {"type": "string", "description": "goal name"}, "amount": {"type": "number"}}, ("goal", "amount")),
 ]

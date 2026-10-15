@@ -6,6 +6,8 @@ export const rupees = (v) => `₹${Number(v).toLocaleString("en-IN", { maximumFr
 export const shortDay = (iso) =>
   new Date(`${String(iso).slice(0, 10)}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 
+export const GOAL_STATUS = { done: "Reached", on_track: "On track", behind: "Behind", not_started: "Not started" };
+
 /** GET `url` whenever `refreshKey` changes. Returns {data, error}. */
 export function useApi(url, refreshKey) {
   const [state, setState] = useState({ data: null, error: null });

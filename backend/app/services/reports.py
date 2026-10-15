@@ -189,6 +189,9 @@ def build_report(db: Session, user_id: uuid.UUID, period_type: PeriodType, start
         "cash": {k: v for k, v in cash.wallet(db, user_id).items() if k in ("balance", "unaccounted", "spent", "withdrawn")},
         "safe_to_spend_next": _allowance(db, user_id, *next_period(period_type, end)) if period_type != "annual" else None,
     }
+    if period_type == "monthly":
+        report["goals"] = [{k: g[k] for k in ("name", "target_amount", "target_date", "saved", "remaining", "required_monthly",
+                                                "status", "projected_date")} for g in analytics.goals_overview(db, user_id)]
     if period_type == "annual":
         report["wrapped"] = _wrapped(db, user_id, start.year)
     return json.loads(json.dumps(llm_safe(report)))   # plain JSON: Decimals → strings, nothing private

@@ -54,6 +54,9 @@ def _rows(pairs: list[tuple[str, str]]) -> str:
         f'<td style="padding:4px 0;text-align:right;font-family:monospace">{escape(v)}</td></tr>' for k, v in pairs)
 
 
+GOAL_STATUS = {"done": "reached", "on_track": "on track", "behind": "behind", "not_started": "not started"}
+
+
 def render(report: Report, user: User) -> tuple[str, str, str, dict]:
     """(subject, html, text, headers)."""
     d = report.json
@@ -72,6 +75,8 @@ def render(report: Report, user: User) -> tuple[str, str, str, dict]:
             wrapped.append(("Most expensive month", f"{w['most_expensive_month']['month']} {inr(w['most_expensive_month']['amount'])}"))
         wrapped.append(("Subscriptions", inr(w["subscriptions_total"])))
         wrapped.append(("Transactions", str(w["transaction_count"])))
+    goals = [(g["name"], f"{inr(g['saved'])} of {inr(g['target_amount'])} · {GOAL_STATUS.get(g['status'], g['status'])}")
+             for g in d.get("goals") or []]
     link, unsub = report_url(report), unsubscribe_url(user, report.period_type)
     narrative_html = "<br>".join(escape(line) for line in report.narrative.splitlines())
 
@@ -83,7 +88,7 @@ def render(report: Report, user: User) -> tuple[str, str, str, dict]:
 <h1 style="font-size:22px;font-weight:600;margin:4px 0 16px">{escape(label)}</h1>
 <div style="background:#fff;border:1px solid #D4E4D7;border-radius:12px;padding:16px 18px">
 <p style="font-size:14px;line-height:1.6;margin:0">{narrative_html}</p>
-{section("Totals", totals)}{section("Top categories", top)}{section("Money Wrapped", wrapped)}
+{section("Totals", totals)}{section("Top categories", top)}{section("Goals", goals)}{section("Money Wrapped", wrapped)}
 <p style="margin:20px 0 0"><a href="{escape(link)}" style="background:#2D6A4F;color:#F2F7F3;text-decoration:none;padding:10px 16px;border-radius:8px;font-size:14px;display:inline-block">View the full report</a></p>
 </div>
 <p style="font-size:12px;color:#8FAF98;margin-top:16px">You get this because {escape(TYPE_NAMES[report.period_type])} reports are on in your Vaulta settings.
@@ -93,6 +98,7 @@ def render(report: Report, user: User) -> tuple[str, str, str, dict]:
         [f"Vaulta {TYPE_NAMES[report.period_type]} report: {label}", "", report.narrative, ""]
         + [f"{k}: {v}" for k, v in totals]
         + ([""] + ["Top categories:"] + [f"  {k}: {v}" for k, v in top] if top else [])
+        + ([""] + ["Goals:"] + [f"  {k}: {v}" for k, v in goals] if goals else [])
         + ([""] + ["Money Wrapped:"] + [f"  {k}: {v}" for k, v in wrapped] if wrapped else [])
         + ["", f"Full report: {link}", f"Stop {TYPE_NAMES[report.period_type]} emails: {unsub}"])
     headers = {"List-Unsubscribe": f"<{unsub}>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"}

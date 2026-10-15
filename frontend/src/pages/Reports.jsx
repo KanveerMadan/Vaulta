@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../lib/api";
-import { rupees, useApi } from "../lib/format";
+import { GOAL_STATUS, rupees, useApi } from "../lib/format";
 
 const TYPES = [["weekly", "Weekly"], ["monthly", "Monthly"], ["annual", "Annual"]];
 
@@ -72,6 +72,11 @@ function ReportView({ report }) {
         <Rows items={[...d.people.owed_to_you.map((x) => ({ ...x, text: `${x.name} owes you` })), ...d.people.you_owe.map((x) => ({ ...x, text: `You owe ${x.name}` }))]}
           render={(x) => <><span>{x.text}{x.days != null ? ` · ${x.days} days` : ""}</span><span className="font-mono">{rupees(x.amount)}</span></>} />
       </Section>
+      {d.goals?.length > 0 && (
+        <Section title="Goals">
+          <Rows items={d.goals} render={(g) => <><span>{g.name} · {GOAL_STATUS[g.status]}</span><span className="font-mono">{rupees(g.saved)} / {rupees(g.target_amount)}</span></>} />
+        </Section>
+      )}
       {d.safe_to_spend_next?.amount != null && (
         <Section title="Safe to spend next period">
           <p className="text-sm text-ink-700">

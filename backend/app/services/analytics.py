@@ -15,6 +15,7 @@ strings in the returned dicts so chat and reports serialize them as-is.
 from __future__ import annotations
 
 import calendar
+import math
 import uuid
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
@@ -24,6 +25,7 @@ from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from app.core import clock
+from app.models.goal import Goal
 from app.models.person import Person
 from app.models.recurring import RecurringSeries
 from app.models.transaction import Budget, Transaction, TransactionKind
@@ -349,3 +351,77 @@ def safe_to_spend_today(db: Session, user_id: uuid.UUID) -> dict:
     return {"date": today.isoformat(), "amount": max(money(remaining / days), ZERO), "basis": basis,
             "limit": money(limit), "spent_so_far": f["so_far"], "recurring_due": f["recurring_due"],
             "remaining": remaining, "days_left_including_today": days}
+
+
+# ── Goals ─────────────────────────────────────────────────────────────────────
+
+GOAL_ESTIMATE_MONTHS = 3          # savings-rate estimate: average of the last 3 full months
+DAYS_PER_MONTH = Decimal("30.44")
+
+
+def _months_between(a: date, b: date) -> int:
+    return (b.year - a.year) * 12 + b.month - a.month
+
+
+def _after_months(start: date, months: Decimal) -> date:
+    return start + timedelta(days=math.ceil(months * DAYS_PER_MONTH))
+
+
+def monthly_savings_estimate(db: Session, user_id: uuid.UUID) -> Optional[Decimal]:
+    """Average (income − spend) over the last full months; None without income in them."""
+    first = clock.today().replace(day=1)
+    start = (first - timedelta(days=1)).replace(day=1)
+    for _ in range(GOAL_ESTIMATE_MONTHS - 1):
+        start = (start - timedelta(days=1)).replace(day=1)
+    s = savings_rate(db, user_id, start, first - timedelta(days=1))
+    return money(s["saved"] / GOAL_ESTIMATE_MONTHS) if s["income"] else None
+
+
+def goal_status(db: Session, goal: Goal, savings_estimate: Optional[Decimal] = None) -> dict:
+    """
+    Progress from the user's own contributions (goal entries, not transactions).
+      required_monthly   what's left ÷ whole months to the target date (at least 1)
+      pace               contributions so far ÷ months since the first one (at least 1)
+      projected_date     when the pace reaches the target
+      status             done | on_track (projected by the target date) | behind | not_started
+    The savings-rate estimate is separate and labelled as an estimate.
+    """
+    today = clock.today()
+    saved = money(sum((e.amount for e in goal.entries), ZERO))
+    target = money(goal.target_amount)
+    remaining = max(target - saved, ZERO)
+    months_left = max(_months_between(today, goal.target_date), 1) if goal.target_date >= today else 0
+    required = money(remaining / months_left) if months_left else (remaining if remaining else ZERO)
+    first = min((e.entry_date for e in goal.entries), default=None)
+    pace = money(saved / max(_months_between(first, today) + 1, 1)) if first and saved > 0 else ZERO
+    projected = (today if remaining == 0 else _after_months(today, remaining / pace)) if pace > 0 else None
+    if remaining == 0:
+        status = "done"
+    elif not goal.entries:
+        status = "not_started"
+    else:
+        status = "on_track" if projected and projected <= goal.target_date else "behind"
+    out = {
+        "id": str(goal.id), "name": goal.name, "target_amount": target, "target_date": goal.target_date.isoformat(),
+        "category": goal.category, "saved": saved, "remaining": remaining,
+        "progress_pct": (saved / target * 100).quantize(Decimal("0.1")) if target else None,
+        "months_left": months_left, "required_monthly": required, "monthly_pace": pace,
+        "projected_date": projected.isoformat() if projected else None, "status": status,
+        "entries": [{"id": str(e.id), "amount": money(e.amount), "date": e.entry_date.isoformat()} for e in goal.entries],
+        "estimate": None, "category_spend": None,
+    }
+    if savings_estimate and savings_estimate > 0 and remaining > 0:
+        out["estimate"] = {"monthly_savings": savings_estimate,
+                           "projected_date": _after_months(today, remaining / savings_estimate).isoformat(),
+                           "label": f"Estimate from your average savings over the last {GOAL_ESTIMATE_MONTHS} months"}
+    if goal.category:
+        start, end = month_bounds(today)
+        this_month = next((g["total"] for g in spend_summary(db, goal.user_id, start, end)["groups"] if g["label"] == goal.category), ZERO)
+        out["category_spend"] = {"category": goal.category, "this_month": this_month}
+    return out
+
+
+def goals_overview(db: Session, user_id: uuid.UUID) -> list[dict]:
+    goals = db.query(Goal).filter(Goal.user_id == user_id).order_by(Goal.target_date, Goal.created_at).all()
+    estimate = monthly_savings_estimate(db, user_id) if goals else None
+    return [goal_status(db, g, estimate) for g in goals]
