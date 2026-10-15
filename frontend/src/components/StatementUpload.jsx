@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from "react";
 import api from "../lib/api";
+import { useAuthStore } from "../store/authStore";
 import { parseStatement, ImportError } from "../import";
 import { applyMapping, guessMapping } from "../import/mapping";
 import { sanitizeRows, NEVER_READ, REMOVED_LABELS } from "../import/pii";
@@ -160,6 +161,8 @@ function Result({ result, onAnother, onClose }) {
 }
 
 export default function StatementUpload({ onSuccess, onClose }) {
+  // Used in memory to replace the holder's own name in narrations with "SELF"
+  const holderName = useAuthStore((s) => s.user?.displayName);
   const [step, setStep] = useState("pick"); // pick | password | mapping | preview | done
   const [file, setFile] = useState(null);
   const [password, setPassword] = useState("");
@@ -175,9 +178,9 @@ export default function StatementUpload({ onSuccess, onClose }) {
 
   const preview = useMemo(() => {
     if (!rawResult) return null;
-    const { rows, removed } = sanitizeRows(rawResult.rows);
+    const { rows, removed } = sanitizeRows(rawResult.rows, { holderName });
     return { ...rawResult, rows, removed };
-  }, [rawResult]);
+  }, [rawResult, holderName]);
 
   const reset = () => {
     setStep("pick"); setFile(null); setPassword(""); setPasswordWrong(false); setMappingState(null);

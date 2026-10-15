@@ -9,6 +9,8 @@
 //   - IFSC codes        → removed
 //   - 9+ digit runs     → "XXXX" (account / card / long reference numbers)
 //   - references        → kept only if they look like a transaction id
+//   - the account holder's own name (full, reversed, first or last) → "SELF"
+//     (display name from Firebase, passed in memory only; never stored)
 //
 // Merchant (business) VPAs are kept, minus long digit runs: the dedup engine
 // (backend dedup_matcher.py) never receives a VPA from any import path; it
@@ -55,9 +57,28 @@ export function cleanReference(ref) {
   return /[A-Za-z]/.test(s) ? s : null; // bare 9–11 or 13+ digits could be an account number
 }
 
-export function sanitizeDescription(text, counts = {}) {
+/**
+ * Regex for the holder's name: full name, reversed (bank narrations often
+ * print SURNAME FIRSTNAME), and the first and last token (3+ letters) alone.
+ * Tokens are letters only, so they need no escaping.
+ */
+export function holderNamePattern(displayName) {
+  const tokens = String(displayName || "").split(/\s+/).filter((t) => /^\p{L}{3,}$/u.test(t));
+  if (!tokens.length) return null;
+  const alternatives = [...new Set([
+    tokens.join("\\s+"), [...tokens].reverse().join("\\s+"), tokens[0], tokens[tokens.length - 1],
+  ])].sort((x, y) => y.length - x.length);
+  return new RegExp(`(?<!\\p{L})(?:${alternatives.join("|")})(?!\\p{L})`, "giu");
+}
+
+export function sanitizeDescription(text, counts = {}, namePattern = null) {
   const bump = (k) => { counts[k] = (counts[k] || 0) + 1; };
   let s = String(text ?? "");
+  if (namePattern) {
+    const before = s;
+    s = s.replace(namePattern, "SELF").replace(/\bSELF(?:\s+SELF)+\b/g, "SELF");
+    if (s !== before) bump("holder_name");
+  }
   s = s.replace(VPA, (m, local, handle) => {
     if (isBusinessVpa(m)) return m;
     bump("upi_ids");
@@ -73,8 +94,9 @@ export function sanitizeDescription(text, counts = {}) {
  * Sanitize parsed rows. Returns {rows, removed}: rows contain exactly the
  * fields sent to the server; removed counts what was masked or dropped.
  */
-export function sanitizeRows(rows) {
+export function sanitizeRows(rows, { holderName } = {}) {
   const removed = {};
+  const namePattern = holderNamePattern(holderName);
   const out = rows.map((r) => {
     let reference = cleanReference(r.reference);
     if (r.reference && !reference) removed.references = (removed.references || 0) + 1;
@@ -83,7 +105,7 @@ export function sanitizeRows(rows) {
     }
     return {
       date: r.date,
-      description_raw: sanitizeDescription(r.description_raw, removed) || "Unknown",
+      description_raw: sanitizeDescription(r.description_raw, removed, namePattern) || "Unknown",
       amount: r.amount,
       direction: r.direction,
       reference,
@@ -105,6 +127,7 @@ export const NEVER_READ = [
 ];
 
 export const REMOVED_LABELS = {
+  holder_name: "Your own name replaced with SELF",
   upi_ids: "Personal UPI IDs masked",
   phone_numbers: "Phone numbers masked",
   ifsc_codes: "IFSC codes removed from descriptions",

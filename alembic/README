@@ -1,1 +1,18 @@
-Generic single-database configuration.
+Vaulta migrations
+
+Fresh database:      alembic upgrade head      (from the repo root, DATABASE_URL set)
+New migration:       alembic revision -m "..."  — import any new model in env.py
+
+History starts at 0b5e1a9c7d21 (baseline: the users table that predates
+Alembic), then 45e4169519ab (phase1_initial) onwards.
+
+Existing databases (Neon) were created before the baseline existed. Their
+alembic_version holds a revision at or after 45e4169519ab, which descends
+from the baseline, so Alembic treats the baseline as applied and `alembic
+upgrade head` just continues from where they are. No stamping is needed.
+Only a database whose schema exists but whose alembic_version table is
+missing needs `alembic stamp 45e4169519ab` (or the revision its schema
+matches) before upgrading.
+
+backend/tests/test_migrations.py builds a fresh database, upgrades,
+downgrades to base, upgrades again and checks the result matches the models.

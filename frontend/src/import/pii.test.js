@@ -86,3 +86,25 @@ describe("no fixture PII survives sanitizing", () => {
     expect(rows[0].reference).toBe("412345678901");
   });
 });
+
+describe("holder name → SELF", () => {
+  const strip = (text, name = "Rahul Kumar Sharma") => {
+    const { rows } = sanitizeRows([{ date: "2024-01-01", description_raw: text, amount: "1.00", direction: "debit",
+      reference: null, source_type: "bank_csv", source_label: "HDFC Bank", type: "transaction" }], { holderName: name });
+    return rows[0].description_raw;
+  };
+  it.each([
+    ["NEFT-RAHUL KUMAR SHARMA-HDFC SAVINGS", "NEFT-SELF-HDFC SAVINGS"],
+    ["IMPS/SHARMA KUMAR RAHUL/OWN", "IMPS/SELF/OWN"],
+    ["UPI-rahul sharma-R***@okaxis", "UPI-SELF-R***@okaxis"], // first + last tokens collapse to one SELF
+    ["Self transfer to SHARMA", "Self transfer to SELF"],
+    ["MR RAHUL K SHARMA", "MR SELF K SELF"],
+    ["UPI-RAHULRAJ TRADERS", "UPI-RAHULRAJ TRADERS"], // not a whole-word match
+    ["UPI-AMIT KUMAR-A***@oksbi", "UPI-AMIT KUMAR-A***@oksbi"], // middle name isn't matched alone
+  ])("%s", (input, output) => expect(strip(input)).toBe(output));
+
+  it("no name, no change; counted when replaced", () => {
+    expect(sanitizeRows([{ description_raw: "NEFT-RAHUL", amount: "1.00" }], {}).rows[0].description_raw).toBe("NEFT-RAHUL");
+    expect(sanitizeRows([{ description_raw: "NEFT-RAHUL", amount: "1.00" }], { holderName: "Rahul" }).removed).toEqual({ holder_name: 1 });
+  });
+});
