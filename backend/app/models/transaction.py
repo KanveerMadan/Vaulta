@@ -102,6 +102,9 @@ class Transaction(Base):
     transfer_group_id = Column(UUID(as_uuid=True), nullable=True, index=True)
     # The individual this P2P transaction is with (services/keys.py)
     person_id = Column(UUID(as_uuid=True), ForeignKey("people.id", ondelete="SET NULL"), nullable=True, index=True)
+    # Cash wallet movement (services/cash.py, set by detection):
+    # withdrawal (ATM → wallet) | spend (cash paid out) | received (cash in)
+    cash_flow = Column(String(10), nullable=True)
     # Split: the parent stays (is_split) but is excluded from totals; its
     # children (split_parent_id) carry the parts and count instead
     is_split = Column(Boolean, nullable=False, default=False, server_default=text("false"))

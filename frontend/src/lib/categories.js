@@ -3,7 +3,7 @@ export const CATEGORIES = [
   "Food & Dining", "Groceries", "Transport", "Shopping", "Utilities", "Rent & Housing",
   "Health", "Entertainment", "Travel", "Education", "Software & Cloud", "Finance",
   "Insurance", "Investments", "Taxes & Government", "Sent to People", "Received from People",
-  "Transfers", "Cash", "Other",
+  "Transfers", "Cash", "Misc cash", "Other",
 ];
 
 // Same rules as KIND_DIRECTIONS in backend/app/models/transaction.py

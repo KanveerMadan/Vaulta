@@ -6,7 +6,7 @@ The Telegram bot. One update in, replies out (services/telegram.py).
   pending entry with [✓ Save] [✎ Edit category] [✗ Cancel]; nothing is saved
   without ✓. Anything else goes to the chat assistant (same tools, AI toggle
   and confirmation tokens), whose actions are confirmed with buttons.
-- Commands: /today /week /safe /undo /unlink /help.
+- Commands: /today /week /safe /cash /undo /unlink /help.
 - Photos are not processed: the reply points to the web capture.
 """
 
@@ -29,7 +29,7 @@ from app.core.config import settings
 from app.models.telegram import TelegramEntry, TelegramLinkCode
 from app.models.user import User
 from app.schemas.transaction import CATEGORIES, ManualTransactionCreate
-from app.services import analytics, chat, telegram, transaction_service
+from app.services import analytics, cash, chat, telegram, transaction_service
 from app.services.chat_tools import inr
 from app.services.quick_add import parse_quick_add
 
@@ -47,7 +47,7 @@ LINK_FIRST = ("This chat isn't linked to a Vaulta account yet. In Vaulta, open S
               "then send /start followed by the code shown there.")
 HELP = ("Send an expense like \"150 auto cash\" or \"1.2k groceries yesterday\" and tap ✓ Save.\n"
         "Ask anything, e.g. \"how much on food this month?\"\n"
-        "/today · /week · /safe · /undo · /unlink")
+        "/today · /week · /safe · /cash · /undo · /unlink")
 PHOTO = ("I don't read photos here, so your bill stays private. Use Scan bill on the Vaulta dashboard: "
          "the photo is read on your phone and never uploaded.")
 
@@ -157,6 +157,32 @@ def _undo(db: Session, user: User) -> str:
     return f"Removed: {_entry_text(entry.payload)}"
 
 
+def _cash(db: Session, user: User) -> str:
+    w = cash.wallet(db, user.id)
+    since = f"since {w['since']}" if w["since"] else "so far"
+    text = (f"Cash in hand (expected): {inr(w['balance'])}\n"
+            f"{since.capitalize()}: withdrawn {inr(w['withdrawn'])}, received {inr(w['received'])}, spent {inr(w['spent'])}.")
+    if w["unaccounted"] > cash.RECONCILE_THRESHOLD:
+        text += f"\n{inr(w['unaccounted'])} isn't logged yet."
+    return text
+
+
+def _cash_buttons() -> list:
+    return [[("Food & Dining", "cashcat:Food & Dining"), ("Transport", "cashcat:Transport")],
+            [("I still have it", "cash:have"), ("Untracked misc", "cash:misc")]]
+
+
+def send_cash_reminder(db: Session, user: User) -> bool:
+    """Weekly unaccounted-cash message (once per week end), if linked."""
+    due = cash.needs_reconciliation(db, user)
+    if not (due and user.telegram_chat_id and telegram.configured()) or user.cash_reminded_week == due["week_end"]:
+        return False
+    telegram.send(user.telegram_chat_id, f"{inr(due['amount'])} cash unaccounted this week. What happened to it?", _cash_buttons())
+    user.cash_reminded_week = due["week_end"]
+    db.commit()
+    return True
+
+
 def _ask_assistant(db: Session, user: User, chat_id: int, text: str) -> None:
     if not user.ai_chat_enabled:
         telegram.send(chat_id, "AI chat is turned off in Vaulta's Settings, so I can only log expenses.")
@@ -199,6 +225,8 @@ def _message(db: Session, chat_id: int, msg: dict) -> None:
         telegram.send(chat_id, _week(db, user))
     elif command == "/safe":
         telegram.send(chat_id, _safe(db, user))
+    elif command == "/cash":
+        telegram.send(chat_id, _cash(db, user))
     elif command == "/undo":
         telegram.send(chat_id, _undo(db, user))
     elif command:
@@ -224,6 +252,13 @@ def _callback(db: Session, cb: dict) -> None:
         telegram.send(chat_id, LINK_FIRST)
         return
     action, _, rest = (cb.get("data") or "").partition(":")
+
+    if action in ("cash", "cashcat"):
+        if action == "cashcat" and rest not in CATEGORIES:
+            return
+        message = cash.reconcile(db, user, rest if action == "cash" else "category", category=rest if action == "cashcat" else None)
+        telegram.edit(chat_id, message_id, message)
+        return
 
     if action in ("ok", "no"):
         if not user.ai_chat_enabled:

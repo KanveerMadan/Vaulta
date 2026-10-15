@@ -16,7 +16,7 @@ from app.services.merchant_normalizer import _PATTERNS
 # Every category the normalizer can assign, plus the ones set by nature or
 # by hand. frontend/src/lib/categories.js lists the same names.
 CATEGORIES = frozenset({category for _, _, category, _ in _PATTERNS}) | {
-    "Sent to People", "Received from People", "Transfers", "Cash", "Other",
+    "Sent to People", "Received from People", "Transfers", "Cash", "Misc cash", "Other",
 }
 
 
@@ -71,6 +71,7 @@ class TransactionResponse(TransactionBase):
     transfer_group_id: Optional[uuid.UUID] = None
     refund_of_id: Optional[uuid.UUID] = None
     person_id: Optional[uuid.UUID] = None
+    cash_flow: Optional[str] = None
     is_split: bool = False
     split_parent_id: Optional[uuid.UUID] = None
     splits: List[SplitPart] = []

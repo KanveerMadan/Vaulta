@@ -25,7 +25,7 @@ from app.models.transaction import Transaction
 from app.models.user import User
 from app.services import analytics, email, report_email, reports
 from app.services.chat import purge_old
-from app.services.telegram_bot import send_weekly_summary
+from app.services.telegram_bot import send_cash_reminder, send_weekly_summary
 
 logger = logging.getLogger(__name__)
 
@@ -74,10 +74,17 @@ def _send(db: Session, user: User, report: Report, now: datetime) -> bool:
 
 def run(db: Session, now: Optional[datetime] = None) -> dict:
     now = now or clock.now()
-    result = {"users": 0, "generated": 0, "emailed": 0, "telegram": 0, "skipped_empty": 0, "errors": 0}
+    result = {"users": 0, "generated": 0, "emailed": 0, "telegram": 0, "cash_reminders": 0, "skipped_empty": 0, "errors": 0}
     for user in db.query(User).order_by(User.created_at):
         result["users"] += 1
         local_now = now.astimezone(user_zone(user))
+        try:
+            if local_now.weekday() == 6 and local_now.time() >= WEEKLY_SEND and send_cash_reminder(db, user):
+                result["cash_reminders"] += 1
+        except Exception as e:
+            db.rollback()
+            result["errors"] += 1
+            logger.error(f"cash reminder: user={user.id} failed: {e.__class__.__name__}: {e}")
         for period_type in PERIOD_TYPES:
             if not getattr(user, f"reports_{period_type}"):
                 continue

@@ -22,7 +22,7 @@ from app.models.anomaly import Anomaly
 from app.models.recurring import RecurringSeries
 from app.models.report import Report
 from app.models.transaction import Transaction, TransactionKind
-from app.services import analytics, llm
+from app.services import analytics, cash, llm
 from app.services.anomalies import SPIKE_TRAILING_PERIODS, category_spikes
 from app.services.chat_tools import inr, llm_safe
 from app.services.recurring import CADENCES, CANCELLED_AFTER, series_key
@@ -186,6 +186,7 @@ def build_report(db: Session, user_id: uuid.UUID, period_type: PeriodType, start
         "recurring": _recurring_changes(db, user_id, start, end),
         "anomalies": _anomalies(db, user_id, period_type, start, end),
         "people": _people(db, user_id),
+        "cash": {k: v for k, v in cash.wallet(db, user_id).items() if k in ("balance", "unaccounted", "spent", "withdrawn")},
         "safe_to_spend_next": _allowance(db, user_id, *next_period(period_type, end)) if period_type != "annual" else None,
     }
     if period_type == "annual":

@@ -67,6 +67,10 @@ COVERED = {
     ("POST", "/api/telegram/link-code"),
     ("PATCH", "/api/telegram"),
     ("DELETE", "/api/telegram"),
+    # tests/test_cash.py::test_wallet_is_per_user
+    ("GET", "/api/cash"),
+    ("POST", "/api/cash/declare"),
+    ("POST", "/api/cash/reconcile"),
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.

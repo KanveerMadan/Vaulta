@@ -6,7 +6,7 @@ run_detection() recomputes from scratch every time, so it is idempotent and
 undoing an input (a deleted rule, a dismissed tag) undoes its effect. A field
 the user corrected (see models/correction.py) is never changed.
 
-Order: defaults → failed-UPI reversals → own-account transfers → refunds →
+Order: defaults → failed-UPI reversals → cash wallet (ATM → transfer) → own-account transfers → refunds →
 learned/user rules → people (link + tag defaults) → recurring series → anomalies.
 
 ponytail: loads all of a user's transactions into memory per run. Fine for
@@ -20,7 +20,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Iterable, Optional
+from typing import Optional
 
 from sqlalchemy.orm import Session, selectinload
 
@@ -33,6 +33,7 @@ from app.services.dedup_matcher import _merchant_overlap
 from app.models.rule import Rule
 from app.services.people import apply_person_defaults, link_people
 from app.services.anomalies import sync_anomalies
+from app.services.cash import classify as classify_cash
 from app.services.recurring import sync_series
 from app.services.rules import apply_rules
 
@@ -201,6 +202,8 @@ def _token_overlap(a: Transaction, b: Transaction) -> bool:
 
 
 def _transfer_eligible(ctx: Ctx, t: Transaction) -> bool:
+    if t.cash_flow == "withdrawal":
+        return False      # already a transfer into the cash wallet; never paired with an account credit
     if ctx.is_locked(t, "kind"):
         return t.kind == TransactionKind.transfer
     return t.kind in (TransactionKind.spend, TransactionKind.income, TransactionKind.transfer)
@@ -275,6 +278,7 @@ def run_detection(db: Session, user: User, today: Optional[date] = None) -> Ctx:
     ctx = load_context(db, user)
     _reset(ctx)
     _reversals(ctx)
+    classify_cash(ctx)
     _transfers(ctx)
     _refunds(ctx)
     people = link_people(db, user, ctx.txns)   # before rules: rules skip person transactions

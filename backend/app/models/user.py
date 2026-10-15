@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Column, String, Boolean, DateTime, ForeignKey, text
+from sqlalchemy import BigInteger, Column, Date, String, Boolean, DateTime, ForeignKey, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -47,6 +47,8 @@ class User(Base):
     # --- Telegram bot ---
     telegram_chat_id = Column(BigInteger, nullable=True, unique=True)
     telegram_weekly = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    # Week end (Sunday) of the last unaccounted-cash reminder sent on Telegram
+    cash_reminded_week = Column(Date, nullable=True)
 
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled

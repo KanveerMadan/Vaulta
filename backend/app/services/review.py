@@ -28,6 +28,7 @@ from app.models.transaction_source import TransactionDirection
 from app.models.user import User
 from app.schemas.transaction import TransactionUpdate
 from app.services import transaction_service
+from app.services.cash import needs_reconciliation, reconcile
 from app.services.budgets import SUGGESTION_MONTHS, create_or_reactivate, suggest_budgets
 from app.services.detection import find_transfer_pairs, load_context, run_detection
 from app.services.keys import merchant_key
@@ -161,7 +162,19 @@ def build_cards(db: Session, user: User) -> list[Card]:
             target=a,
         ))
 
-    # 7. Suggested budgets, once there are enough full months of history
+    # 7. Unaccounted cash at the end of the week
+    due = needs_reconciliation(db, user)
+    if due:
+        cards.append(Card(
+            id=f"cash:{due['week_end'].isoformat()}", type="cash",
+            question=f"{_rupees(due['amount'])} cash unaccounted.",
+            detail="Cash you withdrew or received that isn't logged as spent. Allocate it, or tell us you still have it.",
+            options=[{"value": c, "label": f"Allocate to {c}"} for c in suggestions[:2]]
+            + [{"value": "have", "label": "I still have it"}, {"value": "misc", "label": "Untracked misc"}, SKIP],
+            target=due,
+        ))
+
+    # 8. Suggested budgets, once there are enough full months of history
     for category, limit, totals in suggest_budgets(db, user):
         cards.append(Card(
             id=f"budget:{category}", type="budget",
@@ -195,6 +208,11 @@ def answer_card(db: Session, user: User, card: Card, answer: str) -> None:
     elif card.type == "anomaly":
         card.target.status = "dismissed"
         db.commit()
+    elif card.type == "cash":
+        if answer in ("have", "misc"):
+            reconcile(db, user, answer)
+        else:
+            reconcile(db, user, "category", category=answer)
     elif card.type == "budget":
         category, limit = card.target
         create_or_reactivate(db, user, category, limit)

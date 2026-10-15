@@ -26,7 +26,7 @@ from app.models.person import Person
 from app.models.transaction import Budget, KIND_DIRECTIONS, Transaction, TransactionKind
 from app.models.user import User
 from app.schemas.transaction import CATEGORIES, ManualTransactionCreate, TransactionUpdate
-from app.services import analytics, transaction_service
+from app.services import analytics, cash, transaction_service
 from app.services.budgets import create_or_reactivate
 from app.services.detection import run_detection
 from app.services.keys import merchant_key
@@ -200,6 +200,7 @@ READ_TOOLS: dict[str, Callable[[Session, User, dict], Any]] = {
     "savings_rate": lambda db, u, a: analytics.savings_rate(db, u.id, *_range(a)),
     "forecast_month_end": lambda db, u, a: analytics.forecast_month_end(db, u.id, _month(a.get("month"))),
     "safe_to_spend_today": lambda db, u, a: analytics.safe_to_spend_today(db, u.id),
+    "cash_wallet": lambda db, u, a: cash.wallet(db, u.id),
     "search_transactions": search_transactions,
     "what_if_reduce": what_if_reduce,
 }
@@ -396,6 +397,7 @@ TOOL_SCHEMAS = [
     _fn("savings_rate", "Income, spending and savings rate in a date range.", {"start": _DATE, "end": _DATE}, ("start", "end")),
     _fn("forecast_month_end", "Projected month-end spending at the current pace.", {"month": _MONTH}),
     _fn("safe_to_spend_today", "How much can be spent today and stay within this month's limit.", {}),
+    _fn("cash_wallet", "Cash in hand: expected balance, cash withdrawn/received/spent since the last count, and how much isn't logged.", {}),
     _fn("search_transactions", "Find transactions. All filters optional.",
         {"query": {"type": "string"}, "start": _DATE, "end": _DATE, "category": {"type": "string"},
          "merchant": {"type": "string"}, "min_amount": {"type": "number"}, "max_amount": {"type": "number"},
