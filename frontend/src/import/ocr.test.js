@@ -2,6 +2,7 @@
 // bank_hdfc_photo.png and bank_hdfc_scanned.pdf, rendered from bank_hdfc.pdf).
 // In the browser a scanned PDF page is rendered to a canvas; here the
 // renderer is injected and returns the same page as a PNG.
+import { Buffer } from "node:buffer";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

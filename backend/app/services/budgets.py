@@ -13,6 +13,7 @@ from typing import Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.models.transaction import Budget, Transaction
 from app.models.user import User
 from app.services.recurring import add_months
@@ -53,7 +54,7 @@ def suggest_budgets(db: Session, user: User, today: Optional[date] = None) -> li
     categories without an active budget, once the user has SUGGESTION_MONTHS
     full months of history. Limit = median monthly net spend, rounded up.
     """
-    today = today or date.today()
+    today = today or clock.today()
     first_of_this_month = today.replace(day=1)
     window_start = add_months(first_of_this_month, -SUGGESTION_MONTHS)
     earliest = db.query(func.min(Transaction.transaction_date)).filter(Transaction.user_id == user.id).scalar()

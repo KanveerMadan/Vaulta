@@ -209,9 +209,26 @@ _PATTERNS: List[Tuple[str, str, str, float]] = [
     (r"figma\b", "Figma", "Software & Cloud", 0.91),
 ]
 
+def _anchor_short_alternatives(pattern: str) -> str:
+    """
+    Short alternatives (<= 4 letters, e.g. "vi", "ola", "lic", "rent") must
+    start at a word boundary, or they match inside names and words: RAVI →
+    Vodafone Idea, MOTOROLA → Ola, PUBLIC → LIC, CURRENT → Rent. Longer
+    brand names keep substring matching, which Google Pay's space-stripped
+    counterparties ("ZEPTOMARKETPLACEPRIVATELIMITED") rely on. Alternatives
+    with groups are left as written.
+    """
+    def anchor(alt: str) -> str:
+        core = re.sub(r"\\b|\\s\?|\.\?|\?", "", alt)
+        if alt.startswith("\\b") or "(" in alt or ")" in alt or len(core) > 4:
+            return alt
+        return "\\b" + alt
+    return "|".join(anchor(a) for a in pattern.split("|"))
+
+
 # Compile all patterns once at module load — not on every call
 _COMPILED_PATTERNS: List[Tuple[re.Pattern, str, str, float]] = [
-    (re.compile(pattern, re.IGNORECASE), merchant, category, confidence)
+    (re.compile(_anchor_short_alternatives(pattern), re.IGNORECASE), merchant, category, confidence)
     for pattern, merchant, category, confidence in _PATTERNS
 ]
 

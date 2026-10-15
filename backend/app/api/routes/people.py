@@ -7,12 +7,12 @@ People (P2P UPI).
 """
 
 import uuid
-from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.core.auth import get_current_user
 from app.core.database import get_db
 from app.models.person import Person
@@ -30,7 +30,7 @@ def _views(db: Session, user: User, only: uuid.UUID | None = None) -> list[Perso
     people = db.query(Person).filter(Person.user_id == user.id).all()
     txns = db.query(Transaction).filter(Transaction.user_id == user.id, Transaction.person_id.isnot(None)).all()
     bal = balances(txns)
-    today = date.today()
+    today = clock.today()
     out = []
     for p in people:
         if only and p.id != only:

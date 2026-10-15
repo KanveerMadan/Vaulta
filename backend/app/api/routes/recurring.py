@@ -7,12 +7,13 @@ Recurring payments.
 """
 
 import uuid
-from datetime import date, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core import clock
 from app.core.auth import get_current_user
 from app.core.database import get_db
 from app.models.recurring import RecurringSeries
@@ -47,7 +48,7 @@ def list_recurring(current_user: User = Depends(get_current_user), db: Session =
         .all()
     )
     visible = [s for s in rows if s.user_status != "dismissed"]
-    today = date.today()
+    today = clock.today()
     return RecurringOverview(
         series=[_view(s) for s in visible],
         monthly_committed=sum((monthly_equivalent(s) for s in visible if s.status in _COMMITTED), Decimal("0.00")),

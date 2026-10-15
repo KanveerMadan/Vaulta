@@ -91,14 +91,20 @@ def _amount_profile(amounts: list[Decimal]) -> Optional[tuple[Decimal, Optional[
         if prev and abs(latest - prev) > prev * PRICE_CHANGE_THRESHOLD:
             return latest, prev.quantize(Decimal("0.01"))
         return Decimal(median(amounts)).quantize(Decimal("0.01")), None
-    # one price change point: earliest split where both sides are steady
-    for k in range(1, len(amounts)):
-        before, after = amounts[:k], amounts[k:]
-        if _within(before) and _within(after):
-            old, new = Decimal(median(before)), Decimal(median(after))
-            if abs(new - old) > old * PRICE_CHANGE_THRESHOLD:
-                return new.quantize(Decimal("0.01")), old.quantize(Decimal("0.01"))
-    return None
+    # One price-change point: of the splits where both sides are steady, the
+    # one whose sides are tightest (499, 499 | 649 rather than 499 | 499, 649)
+    def spread(seg: list[Decimal]) -> Decimal:
+        m = Decimal(median(seg))
+        return sum((abs(a - m) for a in seg), Decimal("0"))
+
+    splits = [k for k in range(1, len(amounts)) if _within(amounts[:k]) and _within(amounts[k:])]
+    if not splits:
+        return None
+    k = min(splits, key=lambda k: spread(amounts[:k]) + spread(amounts[k:]))
+    old, new = Decimal(median(amounts[:k])), Decimal(median(amounts[k:]))
+    if abs(new - old) > old * PRICE_CHANGE_THRESHOLD:
+        return new.quantize(Decimal("0.01")), old.quantize(Decimal("0.01"))
+    return new.quantize(Decimal("0.01")), None
 
 
 def _trailing_run(txns: list[Transaction], cadence: str) -> list[Transaction]:

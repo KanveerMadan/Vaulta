@@ -24,6 +24,7 @@ from typing import Iterable, Optional
 
 from sqlalchemy.orm import Session, selectinload
 
+from app.core import clock
 from app.models.correction import Correction
 from app.models.transaction import Transaction, TransactionKind, TransactionNature
 from app.models.transaction_source import StatementSourceType, TransactionDirection
@@ -282,6 +283,6 @@ def run_detection(db: Session, user: User, today: Optional[date] = None) -> Ctx:
         for part in t.splits:
             part.kind = t.kind  # split parts are the parent's money; they mean what it means
     db.flush()
-    sync_series(db, user, ctx.txns, today or date.today())
+    sync_series(db, user, ctx.txns, today or clock.today())
     db.commit()
     return ctx

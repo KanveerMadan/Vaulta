@@ -38,17 +38,23 @@ COVERED = {
     ("DELETE", "/api/rules/{rule_id}"),
     ("GET", "/api/review"),            # tests/test_review.py::test_review_is_per_user
     ("POST", "/api/review/{card_id}/answer"),
+    ("GET", "/api/budgets"),           # test_bob_cannot_touch_alice_budgets below
+    ("POST", "/api/budgets"),
+    ("PATCH", "/api/budgets/{budget_id}"),
+    ("DELETE", "/api/budgets/{budget_id}"),
 }
-GUARDED_PREFIXES = ("/api/transactions", "/api/import", "/api/recurring", "/api/people", "/api/rules", "/api/review")
+# Routes that only ever act on the caller's own user row (no id in the path)
+# or on no user at all. Listed so the guard still notices new routes.
+EXEMPT = {
+    ("GET", "/auth/me"), ("PATCH", "/auth/me"), ("DELETE", "/auth/me"),
+    ("POST", "/api/payments/create-subscription"), ("GET", "/api/payments/status"),
+    ("POST", "/api/payments/webhook"),    # no user; Razorpay HMAC signature instead
+}
 
 
 def test_every_route_is_covered():
-    routes = {
-        (method, r.path)
-        for r in app.routes if isinstance(r, APIRoute) and r.path.startswith(GUARDED_PREFIXES)
-        for method in r.methods
-    }
-    assert routes == COVERED
+    routes = {(method, r.path) for r in app.routes if isinstance(r, APIRoute) for method in r.methods} - {("GET", "/health")}
+    assert routes - EXEMPT == COVERED
 
 
 def _alice_data(client):
@@ -126,3 +132,14 @@ def test_bob_cannot_see_or_change_alice_recurring(client):
     assert client.patch(f"/api/recurring/{series[0]['id']}", json={"user_status": "dismissed"}, headers=BOB).status_code == 404
     client.post("/api/recurring/refresh", headers=BOB)
     assert client.get("/api/recurring", headers=ALICE).json()["series"] == series
+
+
+def test_bob_cannot_touch_alice_budgets(client):
+    budget = client.post("/api/budgets", json={"category": "Food & Dining", "monthly_limit": "5000"}, headers=ALICE).json()
+    assert client.get("/api/budgets", headers=BOB).json()["items"] == []
+    assert client.patch(f"/api/budgets/{budget['id']}", json={"monthly_limit": "1"}, headers=BOB).status_code == 404
+    assert client.delete(f"/api/budgets/{budget['id']}", headers=BOB).status_code == 404
+    # Bob's own budget for the same category is independent
+    assert client.post("/api/budgets", json={"category": "Food & Dining", "monthly_limit": "100"}, headers=BOB).status_code == 201
+    mine = client.get("/api/budgets", headers=ALICE).json()["items"]
+    assert [(b["id"], b["monthly_limit"], b["is_active"]) for b in mine] == [(budget["id"], "5000.00", True)]
