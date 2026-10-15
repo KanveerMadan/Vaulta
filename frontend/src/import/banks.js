@@ -6,6 +6,7 @@
 //     which silently dropped every row when a bank padded its headers)
 //   - the header row may appear below preamble rows (XLS exports have them)
 import { parseDate, formatDate } from "./strptime.js";
+import { LOW_CONFIDENCE } from "./ocr.js";
 
 /** Python `_parse_amount`: positive amount as "1234.50", or null. */
 export function parseAmount(raw) {
@@ -90,11 +91,11 @@ export function findBankHeader(table) {
  * Rows that fail (no date, no description, unparseable date, no amount) are
  * skipped, like the Python per-row try/except.
  */
-export function parseBankRows(bankKey, header, rows, sourceType = "bank_csv") {
+export function parseBankRows(bankKey, header, rows, sourceType = "bank_csv", rowConfidence = null) {
   const bank = BANKS[bankKey];
   const names = header.map((h) => String(h ?? "").trim());
   const out = [];
-  for (const cells of rows) {
+  for (const [i, cells] of rows.entries()) {
     const row = {};
     names.forEach((name, i) => { row[name] = cells[i] == null ? "" : String(cells[i]); });
     const get = (name) => (name in row ? row[name] : "");
@@ -125,6 +126,7 @@ export function parseBankRows(bankKey, header, rows, sourceType = "bank_csv") {
       source_type: sourceType,
       source_label: bank.label,
       type: "transaction",
+      ...((rowConfidence?.[i] ?? 100) < LOW_CONFIDENCE && { low_confidence: true }),
     });
   }
   return out;

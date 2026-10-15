@@ -8,7 +8,8 @@ import { sendRows, loadTemplate, saveTemplate } from "../import/submit";
 import ColumnMapping from "./ColumnMapping";
 
 const MAX_FILE_SIZE_MB = 20;
-const ACCEPT = ".csv,.xls,.xlsx,.pdf,text/csv,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const ACCEPT = ".csv,.xls,.xlsx,.pdf,.png,.jpg,.jpeg,.webp,text/csv,application/pdf,image/*,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const VALID = { date: /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/, amount: /^\d{1,10}\.\d{2}$/, description_raw: /\S/ };
 
 export const ON_DEVICE_NOTICE =
   "Your statement is processed on your device and never uploaded. Only the rows shown here are sent.";
@@ -47,8 +48,17 @@ function ErrorBox({ message }) {
 
 const fmtDate = (d) => new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
-function Preview({ parsed, onConfirm, onBack, sending, progress }) {
-  const { rows, removed } = parsed;
+function EditCell({ value, field, onEdit, label }) {
+  const bad = !VALID[field].test(value);
+  return (
+    <input value={value} onChange={(e) => onEdit(field, e.target.value)} aria-label={label} aria-invalid={bad}
+      className={`w-full min-w-[5rem] border rounded px-1 py-0.5 bg-white ${bad ? "border-danger" : "border-gold"}`} />
+  );
+}
+
+function Preview({ parsed, onConfirm, onBack, sending, progress, onEdit }) {
+  const { rows, removed, lowConfidence } = parsed;
+  const invalid = [...lowConfidence].some((i) => Object.entries(VALID).some(([f, re]) => !re.test(rows[i][f])));
   const [excluded, setExcluded] = useState(() => new Set());
   const [showRemoved, setShowRemoved] = useState(false);
   const toggle = (i) => setExcluded((s) => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; });
@@ -67,6 +77,13 @@ function Preview({ parsed, onConfirm, onBack, sending, progress }) {
           {showRemoved ? "Hide" : "Show"} what was removed
         </button>
       </div>
+
+      {lowConfidence.size > 0 && (
+        <div className="bg-gold/10 border border-gold/30 rounded-xl px-3 py-2.5 text-sm text-ink-700">
+          {lowConfidence.size} row{lowConfidence.size === 1 ? " was" : "s were"} read from a scan or photo with low confidence.
+          Check the highlighted rows and fix anything misread before importing.
+        </div>
+      )}
 
       {showRemoved && (
         <div className="bg-sage-50 rounded-xl px-4 py-3 text-xs text-ink-600 space-y-1">
@@ -97,14 +114,24 @@ function Preview({ parsed, onConfirm, onBack, sending, progress }) {
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={i} className={`border-t border-sage-50 ${excluded.has(i) ? "opacity-40" : ""}`}>
+              <tr key={i} className={`border-t border-sage-50 ${excluded.has(i) ? "opacity-40" : ""} ${lowConfidence.has(i) ? "bg-gold/10" : ""}`}>
                 <td className="px-2 py-1">
                   <input type="checkbox" checked={!excluded.has(i)} onChange={() => toggle(i)}
                     aria-label={`Include ${r.description_raw} on ${r.date}`} />
                 </td>
-                <td className="px-2 py-1 whitespace-nowrap text-ink-600">{r.date.slice(0, 10)}</td>
-                <td className="px-2 py-1 text-ink-800 max-w-[14rem] truncate" title={r.description_raw}>{r.description_raw}</td>
-                <td className="px-2 py-1 text-right font-mono whitespace-nowrap">₹{Number(r.amount).toLocaleString("en-IN")}</td>
+                {lowConfidence.has(i) ? (
+                  <>
+                    <td className="px-2 py-1"><EditCell value={r.date} field="date" label="Date" onEdit={(f, v) => onEdit(i, f, v)} /></td>
+                    <td className="px-2 py-1"><EditCell value={r.description_raw} field="description_raw" label="Merchant" onEdit={(f, v) => onEdit(i, f, v)} /></td>
+                    <td className="px-2 py-1"><EditCell value={r.amount} field="amount" label="Amount" onEdit={(f, v) => onEdit(i, f, v)} /></td>
+                  </>
+                ) : (
+                  <>
+                    <td className="px-2 py-1 whitespace-nowrap text-ink-600">{r.date.slice(0, 10)}</td>
+                    <td className="px-2 py-1 text-ink-800 max-w-[14rem] truncate" title={r.description_raw}>{r.description_raw}</td>
+                    <td className="px-2 py-1 text-right font-mono whitespace-nowrap">₹{Number(r.amount).toLocaleString("en-IN")}</td>
+                  </>
+                )}
                 <td className={`px-2 py-1 whitespace-nowrap ${r.direction === "credit" ? "text-safe" : "text-ink-600"}`}>
                   {r.type === "transfer" ? "Transfer" : r.direction === "credit" ? "Credit" : "Debit"}
                 </td>
@@ -119,7 +146,7 @@ function Preview({ parsed, onConfirm, onBack, sending, progress }) {
         <button onClick={onBack} disabled={sending} className="btn-ghost flex-1 text-sm py-2">Choose another file</button>
         <button
           onClick={() => onConfirm(included)}
-          disabled={!included.length || sending}
+          disabled={!included.length || sending || invalid}
           className="btn-primary flex-1 text-sm py-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {sending ? `Sending ${progress?.[0] ?? 0}/${progress?.[1] ?? included.length}…` : `Import ${included.length} transactions`}
@@ -178,8 +205,8 @@ export default function StatementUpload({ onSuccess, onClose }) {
 
   const preview = useMemo(() => {
     if (!rawResult) return null;
-    const { rows, removed } = sanitizeRows(rawResult.rows, { holderName });
-    return { ...rawResult, rows, removed };
+    const { rows, removed, lowConfidence } = sanitizeRows(rawResult.rows, { holderName });
+    return { ...rawResult, rows, removed, lowConfidence };
   }, [rawResult, holderName]);
 
   const reset = () => {
@@ -298,13 +325,16 @@ export default function StatementUpload({ onSuccess, onClose }) {
                 <input ref={inputRef} type="file" accept={ACCEPT} className="hidden"
                   onChange={(e) => handleFile(e.target.files?.[0])} />
                 {busy ? (
-                  <p className="text-sm text-ink-600">Reading {file?.name} on your device…</p>
+                  <p className="text-sm text-ink-600">
+                    Reading {file?.name} on your device…
+                    {/\.(png|jpe?g|webp)$/i.test(file?.name || "") && " Recognising text in the image can take a minute."}
+                  </p>
                 ) : (
                   <>
                     <p className="text-sm text-ink-600">
                       Drop your statement here, or <span className="text-forest-600 font-medium">browse</span>
                     </p>
-                    <p className="text-xs text-ink-400 mt-1">CSV, Excel or PDF, up to {MAX_FILE_SIZE_MB} MB. Bank or app is detected automatically.</p>
+                    <p className="text-xs text-ink-400 mt-1">CSV, Excel, PDF or a photo of a statement, up to {MAX_FILE_SIZE_MB} MB. Bank or app is detected automatically.</p>
                   </>
                 )}
               </div>
@@ -352,7 +382,10 @@ export default function StatementUpload({ onSuccess, onClose }) {
           )}
 
           {step === "preview" && preview && (
-            <Preview parsed={preview} onConfirm={confirm} onBack={reset} sending={busy} progress={progress} />
+            <Preview parsed={preview} onConfirm={confirm} onBack={reset} sending={busy} progress={progress}
+              onEdit={(i, field, value) => setRawResult((r) => ({
+                ...r, rows: r.rows.map((row, j) => (j === i ? { ...row, [field]: value } : row)),
+              }))} />
           )}
 
           {step === "done" && result && <Result result={result} onAnother={reset} onClose={onClose} />}

@@ -3,6 +3,7 @@
 // saved server-side under a fingerprint of the header row and reused.
 import { parseDate, formatDate } from "./strptime.js";
 import { parseAmount } from "./banks.js";
+import { LOW_CONFIDENCE } from "./ocr.js";
 
 export const MAPPING_FIELDS = ["date", "description", "debit", "credit", "amount", "reference"];
 
@@ -72,11 +73,15 @@ function signedAmount(raw, amountSign) {
   return { amount, direction: debit ? "debit" : "credit" };
 }
 
-/** Apply a mapping to table rows → normalized rows. Rows without a parseable date or amount are skipped. */
-export function applyMapping({ rows }, mapping, { source_type, source_label }) {
+/**
+ * Apply a mapping to table rows → normalized rows. Rows without a parseable
+ * date or amount are skipped. OCR'd rows below LOW_CONFIDENCE get
+ * low_confidence: true (preview-only; never sent).
+ */
+export function applyMapping({ rows, rowConfidence }, mapping, { source_type, source_label }) {
   const cell = (r, i) => (i == null ? "" : String(r[i] ?? "").trim());
   const out = [];
-  for (const r of rows) {
+  for (const [i, r] of rows.entries()) {
     const parsed = parseDate(cell(r, mapping.date), [mapping.date_format]);
     const description = cell(r, mapping.description);
     if (!parsed || !description) continue;
@@ -97,6 +102,7 @@ export function applyMapping({ rows }, mapping, { source_type, source_label }) {
       source_type,
       source_label,
       type: "transaction",
+      ...((rowConfidence?.[i] ?? 100) < LOW_CONFIDENCE && { low_confidence: true }),
     });
   }
   return out;

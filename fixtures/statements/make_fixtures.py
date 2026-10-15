@@ -208,6 +208,17 @@ def make_cards():
         save(doc, name)
 
 
+# ── Scans: the bank statement as a photo (PNG) and an image-only PDF ─────────
+def make_scans():
+    page = pymupdf.open(HERE / "bank_hdfc.pdf")[0]
+    pix = page.get_pixmap(dpi=200)
+    pix.save(HERE / "bank_hdfc_photo.png")
+    doc = pymupdf.open()
+    scanned = doc.new_page(width=page.rect.width, height=page.rect.height)
+    scanned.insert_image(scanned.rect, filename=str(HERE / "bank_hdfc_photo.png"))
+    doc.save(HERE / "bank_hdfc_scanned.pdf", garbage=4, deflate=True)
+
+
 def golden():
     out = {}
     for bank in ("hdfc", "icici", "sbi", "axis", "kotak"):
@@ -236,5 +247,6 @@ if __name__ == "__main__":
     make_paytm()
     make_bank_pdf()
     make_cards()
+    make_scans()
     result = golden()
     print({k: len(v) for k, v in result.items()})

@@ -91,8 +91,9 @@ export function sanitizeDescription(text, counts = {}, namePattern = null) {
 }
 
 /**
- * Sanitize parsed rows. Returns {rows, removed}: rows contain exactly the
- * fields sent to the server; removed counts what was masked or dropped.
+ * Sanitize parsed rows. Returns {rows, removed, lowConfidence}: rows contain
+ * exactly the fields sent to the server; removed counts what was masked or
+ * dropped; lowConfidence holds indices of OCR'd rows the user should check.
  */
 export function sanitizeRows(rows, { holderName } = {}) {
   const removed = {};
@@ -114,7 +115,8 @@ export function sanitizeRows(rows, { holderName } = {}) {
       type: r.type,
     };
   });
-  return { rows: out, removed };
+  const lowConfidence = new Set(rows.flatMap((r, i) => (r.low_confidence ? [i] : [])));
+  return { rows: out, removed, lowConfidence };
 }
 
 /** Labels for the "Show what was removed" toggle. */

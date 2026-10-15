@@ -34,12 +34,14 @@ export function buildLines(items) {
       if (cell && gap <= Math.max(it.h, 4) * 0.8) {
         cell.text += gap > it.h * 0.15 ? ` ${it.str}` : it.str;
         cell.x1 = Math.max(cell.x1, it.x + it.w);
+        cell.conf = Math.min(cell.conf, it.conf ?? 100);
       } else {
-        cells.push({ x0: it.x, x1: it.x + it.w, text: it.str });
+        cells.push({ x0: it.x, x1: it.x + it.w, text: it.str, conf: it.conf ?? 100 });
       }
     }
     cells.forEach((c) => { c.text = c.text.replace(/\s+/g, " ").trim(); });
-    return { y, h, cells, text: cells.map((c) => c.text).join(" ") };
+    // conf: OCR word confidence (0–100); text from a real text layer is 100
+    return { y, h, cells, text: cells.map((c) => c.text).join(" "), conf: Math.min(...cells.map((c) => c.conf)) };
   });
 }
 
@@ -83,12 +85,28 @@ function toItems(content) {
     }));
 }
 
+function pagesResult(pages) {
+  return {
+    pages,
+    text: pages.map((p) => blockText(p.lines)).join("\n"),
+    lineTexts: pages.flatMap((p) => p.lines.map((l) => l.text)),
+    lineConfidence: pages.flatMap((p) => p.lines.map((l) => l.conf)),
+  };
+}
+
+/** OCR items per page → the same shape extractPdf returns. */
+export function ocrPagesResult(itemsPerPage) {
+  return pagesResult(itemsPerPage.map((items) => ({ lines: buildLines(items) })));
+}
+
 /**
  * Extract text from PDF bytes. `pdfjs` is the pdfjs-dist module (browser or
  * legacy build). The password is used only to open the document here.
- * Returns {pages: [{lines}], text, lineTexts}.
+ * Returns {pages: [{lines}], text, lineTexts, lineConfidence}. If the PDF has
+ * no text layer and `ocr` is given ({recognize, renderPage}), each page is
+ * rendered and OCR'd instead.
  */
-export async function extractPdf(data, { pdfjs, password } = {}) {
+export async function extractPdf(data, { pdfjs, password, ocr } = {}) {
   let doc;
   try {
     doc = await pdfjs.getDocument({
@@ -109,12 +127,16 @@ export async function extractPdf(data, { pdfjs, password } = {}) {
       const page = await doc.getPage(n);
       pages.push({ lines: buildLines(toItems(await page.getTextContent())) });
     }
+    const hasText = pages.some((p) => p.lines.length);
+    if (!hasText && ocr) {
+      const itemsPerPage = [];
+      for (let n = 1; n <= doc.numPages; n++) {
+        itemsPerPage.push(await ocr.recognize(await ocr.renderPage(await doc.getPage(n))));
+      }
+      return { ...ocrPagesResult(itemsPerPage), ocr: true };
+    }
   } finally {
     await doc.destroy();
   }
-  return {
-    pages,
-    text: pages.map((p) => blockText(p.lines)).join("\n"),
-    lineTexts: pages.flatMap((p) => p.lines.map((l) => l.text)),
-  };
+  return pagesResult(pages);
 }

@@ -42,11 +42,15 @@ function nearestColumn(centres, x) {
   return best;
 }
 
-/** pages: [{lines}] from extractPdf. Returns {header, rows} or null. */
+/**
+ * pages: [{lines}] from extractPdf. Returns {header, rows, rowConfidence} or
+ * null; rowConfidence[i] is the lowest OCR confidence among rows[i]'s lines.
+ */
 export function reconstructTable(pages, isHeader = isBankHeader) {
   let header = null;
   let centres = null;
   const rows = [];
+  const rowConfidence = [];
   for (const { lines } of pages) {
     let last = null;
     let lastY = null;
@@ -68,6 +72,7 @@ export function reconstructTable(pages, isHeader = isBankHeader) {
       if (looksLikeDate(cells[dateCol] || "")) {
         last = cells;
         rows.push(cells);
+        rowConfidence.push(line.conf ?? 100);
         lastY = line.y;
       } else if (
         last && descCol >= 0 && cells[descCol] &&
@@ -75,11 +80,12 @@ export function reconstructTable(pages, isHeader = isBankHeader) {
         lastY - line.y <= line.h * 2.5
       ) {
         last[descCol] = `${last[descCol]} ${cells[descCol]}`.trim();
+        rowConfidence[rowConfidence.length - 1] = Math.min(rowConfidence[rowConfidence.length - 1], line.conf ?? 100);
         lastY = line.y;
       } else {
         last = null;
       }
     }
   }
-  return header && rows.length ? { header, rows } : null;
+  return header && rows.length ? { header, rows, rowConfidence } : null;
 }

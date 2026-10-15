@@ -5,6 +5,7 @@
 // type "transfer" so they don't count as income or spend.
 import { parseDate, formatDate } from "./strptime.js";
 import { toAmountString } from "./banks.js";
+import { LOW_CONFIDENCE } from "./ocr.js";
 
 const AMOUNT = "([\\d,]+\\.\\d{2})";
 
@@ -59,10 +60,10 @@ export function isCardBillPayment(description) {
     && !/refund|reversal|cashback|chargeback/i.test(description);
 }
 
-export function parseCardStatement(issuerKey, lines) {
+export function parseCardStatement(issuerKey, lines, lineConfidence = null) {
   const issuer = ISSUERS[issuerKey];
   const out = [];
-  for (const text of lines) {
+  for (const [i, text] of lines.entries()) {
     const m = issuer.line.exec(text.trim().replace(/\s+/g, " "));
     if (!m) continue;
     const groups = m.slice(1);
@@ -82,6 +83,7 @@ export function parseCardStatement(issuerKey, lines) {
       source_type: "credit_card",
       source_label: issuer.label,
       type: credit && isCardBillPayment(description) ? "transfer" : "transaction",
+      ...((lineConfidence?.[i] ?? 100) < LOW_CONFIDENCE && { low_confidence: true }),
     });
   }
   return out;
