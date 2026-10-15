@@ -1,6 +1,6 @@
 """Home screen (GET /api/home): every card from services/analytics.py."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
