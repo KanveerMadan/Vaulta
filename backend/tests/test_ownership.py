@@ -51,6 +51,9 @@ COVERED = {
     # tests/test_chat.py::test_ai_chat_toggle (one user's setting doesn't affect another)
     ("GET", "/api/settings"),
     ("PATCH", "/api/settings"),
+    # tests/test_anomalies.py::test_dismiss_via_review_persists_and_is_per_user
+    ("GET", "/api/anomalies"),
+    ("PATCH", "/api/anomalies/{anomaly_id}"),
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.

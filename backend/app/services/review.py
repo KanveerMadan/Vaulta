@@ -19,6 +19,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.models.anomaly import Anomaly
 from app.models.person import Person
 from app.models.recurring import RecurringSeries
 from app.models.review import ReviewDismissal
@@ -145,7 +146,22 @@ def build_cards(db: Session, user: User) -> list[Card]:
             target=(key, label),
         ))
 
-    # 6. Suggested budgets, once there are enough full months of history
+    # 6. Anomalies: confirm they're fine, or leave them open (reports keep showing them)
+    for a in db.query(Anomaly).filter(Anomaly.user_id == user.id, Anomaly.status == "open").order_by(Anomaly.occurred_on.desc()):
+        d = a.details
+        question = {
+            "duplicate_charge": f"{d.get('merchant')} charged {_rupees(d.get('amount', 0))} twice within minutes. Expected?",
+            "unusual_amount": f"{_rupees(d.get('amount', 0))} at {d.get('merchant')} is over 3× your usual {_rupees(d.get('typical', 0))}. Expected?",
+            "category_spike": f"{d.get('category')} is {_rupees(d.get('amount', 0))}, well above your usual {_rupees(d.get('trailing_average', 0))}.",
+            "unreversed_failed_upi": f"A failed {_rupees(d.get('amount', 0))} payment to {d.get('merchant')} hasn't been reversed yet.",
+        }[a.type]
+        cards.append(Card(
+            id=f"anomaly:{a.id}", type="anomaly", question=question, detail=f"On {a.occurred_on:%d %b %Y}.",
+            options=[{"value": "fine", "label": "It's fine"}, {"value": "skip", "label": "I'll check"}],
+            target=a,
+        ))
+
+    # 7. Suggested budgets, once there are enough full months of history
     for category, limit, totals in suggest_budgets(db, user):
         cards.append(Card(
             id=f"budget:{category}", type="budget",
@@ -176,6 +192,9 @@ def answer_card(db: Session, user: User, card: Card, answer: str) -> None:
     elif card.type == "merchant":
         key, label = card.target
         upsert_rule(db, user, key, label, "category", answer, "review")
+    elif card.type == "anomaly":
+        card.target.status = "dismissed"
+        db.commit()
     elif card.type == "budget":
         category, limit = card.target
         create_or_reactivate(db, user, category, limit)
