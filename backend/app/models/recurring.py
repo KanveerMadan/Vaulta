@@ -27,6 +27,8 @@ class RecurringSeries(Base):
     typical_amount = Column(Numeric(12, 2), nullable=False)
     last_amount = Column(Numeric(12, 2), nullable=False)
     last_date = Column(Date, nullable=False)
+    # Date of the payment that made it a series (the 3rd monthly/weekly, 2nd yearly)
+    established_on = Column(Date, nullable=True)
     next_expected = Column(Date, nullable=False)
     occurrences = Column(Integer, nullable=False)
     status = Column(String(10), nullable=False)           # active | missed | cancelled

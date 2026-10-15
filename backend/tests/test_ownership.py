@@ -54,6 +54,10 @@ COVERED = {
     # tests/test_anomalies.py::test_dismiss_via_review_persists_and_is_per_user
     ("GET", "/api/anomalies"),
     ("PATCH", "/api/anomalies/{anomaly_id}"),
+    # tests/test_reports.py::test_reports_are_idempotent_and_per_user
+    ("GET", "/api/reports"),
+    ("GET", "/api/reports/{report_id}"),
+    ("POST", "/api/reports/generate"),
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.

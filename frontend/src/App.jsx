@@ -11,6 +11,7 @@ import Recurring from './pages/Recurring'
 import People from './pages/People'
 import Rules from './pages/Rules'
 import Budgets from './pages/Budgets'
+import Reports from './pages/Reports'
 import Layout from './components/Layout'
 
 function PrivateRoute() {
@@ -59,6 +60,8 @@ export default function App() {
           <Route path="/people" element={<People />} />
           <Route path="/rules" element={<Rules />} />
           <Route path="/budgets" element={<Budgets />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/reports/:id" element={<Reports />} />
         </Route>
       </Route>
       <Route path="*" element={user ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />} />

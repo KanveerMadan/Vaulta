@@ -60,6 +60,7 @@ class Detected:
     type_guess: str
     previous_amount: Optional[Decimal]
     category: Optional[str]
+    established_on: date
 
 
 def add_months(d: date, months: int) -> date:
@@ -195,6 +196,7 @@ def detect_series(txns: list[Transaction], today: date) -> list[Detected]:
             status=_status(last, nxt, cadence, today),
             type_guess=_type_guess(run, cadence, is_person, typical),
             previous_amount=previous, category=run[-1].category,
+            established_on=run[CADENCES[cadence][3] - 1].transaction_date.date(),
         ))
     return found
 
