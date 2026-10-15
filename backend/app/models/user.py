@@ -29,6 +29,14 @@ class User(Base):
 
     # --- Settings ---
     ai_chat_enabled = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    timezone = Column(String(64), nullable=False, default="Asia/Kolkata", server_default="Asia/Kolkata")
+    # Which reports are built for the user, and which are also emailed
+    reports_weekly = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    reports_monthly = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    reports_annual = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    email_weekly = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    email_monthly = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    email_annual = Column(Boolean, nullable=False, default=True, server_default=text("true"))
 
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled

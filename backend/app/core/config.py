@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     # Any Groq chat model with tool calling
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
+    # ── Reports by email (Resend) and the internal scheduler ────────────────
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = ""             # e.g. "Vaulta <reports@yourdomain.in>" (a domain verified in Resend)
+    APP_BASE_URL: str = "http://localhost:5173"   # frontend, for "view the full report" links
+    API_BASE_URL: str = "http://localhost:8000"   # backend, for unsubscribe links
+    INTERNAL_SECRET: str = ""        # X-Internal-Secret for /internal/*; unset → /internal refuses everything
+
     # ── Razorpay (Phase 2) ───────────────────────────────────────────────────
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
