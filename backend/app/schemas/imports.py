@@ -77,7 +77,7 @@ class ImportRow(BaseModel):
     amount: str = Field(pattern=r"^\d{1,10}\.\d{2}$")
     direction: Literal["debit", "credit"]
     reference: Optional[str] = Field(default=None, pattern=r"^[A-Za-z0-9/-]{3,40}$")
-    source_type: Literal["bank_csv", "bank_pdf", "credit_card", "upi_google_pay", "upi_phonepe", "upi_paytm"]
+    source_type: Literal["bank_csv", "bank_pdf", "credit_card", "upi_google_pay", "upi_phonepe", "upi_paytm", "email_alert"]
     source_label: str = Field(min_length=1, max_length=60, pattern=r"^[A-Za-z0-9 ()&.,'/-]+$")
     type: Literal["transaction", "transfer"] = "transaction"
 

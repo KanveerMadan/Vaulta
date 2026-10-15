@@ -72,6 +72,7 @@ class Settings(BaseSettings):
     APP_BASE_URL: str = "http://localhost:5173"   # frontend, for "view the full report" links
     API_BASE_URL: str = "http://localhost:8000"   # backend, for unsubscribe links
     INTERNAL_SECRET: str = ""        # X-Internal-Secret for /internal/*; unset → /internal refuses everything
+    INBOUND_DOMAIN: str = ""         # alert forwarding addresses are <token>@in.<INBOUND_DOMAIN>
 
     # ── Razorpay (Phase 2) ───────────────────────────────────────────────────
     RAZORPAY_KEY_ID: str = ""

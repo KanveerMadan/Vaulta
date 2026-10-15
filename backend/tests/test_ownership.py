@@ -58,6 +58,10 @@ COVERED = {
     ("GET", "/api/reports"),
     ("GET", "/api/reports/{report_id}"),
     ("POST", "/api/reports/generate"),
+    # tests/test_inbound.py::test_addresses_are_per_user
+    ("GET", "/api/inbound"),
+    ("POST", "/api/inbound/regenerate"),
+    ("POST", "/api/inbound/gmail-confirmation/dismiss"),
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.
@@ -67,6 +71,7 @@ EXEMPT = {
     ("POST", "/api/payments/webhook"),    # no user; Razorpay HMAC signature instead
     # no user session: X-Internal-Secret (tests/test_delivery.py::test_internal_endpoint_needs_the_secret)
     ("POST", "/internal/run-reports"),
+    ("POST", "/internal/inbound-email"),   # tests/test_inbound.py::test_endpoint_guards
     # no user session: signed per-user token (tests/test_delivery.py::test_unsubscribe)
     ("GET", "/unsubscribe"), ("POST", "/unsubscribe"),
 }

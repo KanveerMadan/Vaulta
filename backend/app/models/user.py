@@ -38,6 +38,12 @@ class User(Base):
     email_monthly = Column(Boolean, nullable=False, default=True, server_default=text("true"))
     email_annual = Column(Boolean, nullable=False, default=True, server_default=text("true"))
 
+    # --- Inbound alert email: <token>@in.<INBOUND_DOMAIN> ---
+    # sha256 of the token for lookup; the token itself encrypted (ENCRYPTION_KEY) so the
+    # address can be shown again. Regenerating replaces both; the old address stops working.
+    inbound_token_hash = Column(String(64), nullable=True, unique=True)
+    inbound_token_encrypted = Column(String, nullable=True)
+
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled
     subscription_status = Column(String, nullable=True, default="trial")

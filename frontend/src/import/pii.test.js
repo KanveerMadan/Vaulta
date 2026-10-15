@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanReference, sanitizeDescription, sanitizeRows } from "./pii.js";
+import { cleanReference, holderNamePattern, sanitizeDescription, sanitizeRows } from "./pii.js";
 import { parseStatement } from "./index.js";
 import { applyMapping, guessMapping } from "./mapping.js";
 import { fixtureFile, pdfjs } from "./testUtils.js";
@@ -121,4 +121,13 @@ describe("holder name → SELF (whole name only)", () => {
     expect(sanitizeRows([{ description_raw: "NEFT-RAHUL SHARMA", amount: "1.00" }], { holderName: "Rahul Sharma" }).removed)
       .toEqual({ holder_name: 1 });
   });
+});
+
+describe("shared cases with the server (fixtures/pii_cases.json)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const cases = JSON.parse(readFileSync(new URL("../../../fixtures/pii_cases.json", import.meta.url), "utf8"));
+  it.each(cases.descriptions)("%s (%s)", (text, holder, expected) => {
+    expect(sanitizeDescription(text, {}, holderNamePattern(holder))).toBe(expected);
+  });
+  it.each(cases.references)("reference %s", (ref, expected) => expect(cleanReference(ref)).toBe(expected));
 });

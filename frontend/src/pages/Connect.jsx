@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuthStore } from "../store/authStore";
 import StatementUpload from "../components/StatementUpload";
 import ManualEntryModal from "../components/ManualEntryModal";
+import InboundCard from "../components/InboundCard";
 
 // ─────────────────────────────────────────────
 // Data source definitions
@@ -191,6 +192,8 @@ export default function Connect() {
           <SourceCard key={source.id} source={source} onAction={handleSourceAction} />
         ))}
       </div>
+
+      <InboundCard />
 
       {/* Privacy table */}
       <PrivacyTable />

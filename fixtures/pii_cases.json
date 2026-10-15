@@ -1,0 +1,37 @@
+{
+  "_about": "Shared PII-stripping cases. Run by frontend/src/import/pii.test.js (browser rules) and backend/tests/test_pii.py (server rules for bank alert emails); both must produce exactly these outputs.",
+  "descriptions": [
+    ["UPI-RAHUL SHARMA-rahul.s@okaxis-HDFC0001234-412398765432-Sent", null, "UPI-RAHUL SHARMA-R***@okaxis-XXXX-Sent"],
+    ["UPI-SWIGGY-swiggy.rzp@axisbank-UTIB0000100-412345678901-Payment", null, "UPI-SWIGGY-swiggy.rzp@axisbank-XXXX-Payment"],
+    ["UPI/412300002222/Paid to Priya/9123456789@ybl/Yes Bank", null, "UPI/XXXX/Paid to Priya/X***@ybl/Yes Bank"],
+    ["UPI/paytmqr2810050501011xyz@paytm/Tea stall", null, "UPI/paytmqrXXXXxyz@paytm/Tea stall"],
+    ["IMPS/P2A/415333330000/9988776655/MOM", null, "IMPS/P2A/XXXX/XXXXXXXX55/MOM"],
+    ["Recharge for +91-9876543210", null, "Recharge for XXXXXXXX10"],
+    ["NEFT CR-ACME CORP PAYROLL-50100123456789", null, "NEFT CR-ACME CORP PAYROLL-XXXX"],
+    ["POS 512345XXXXXX6789 DMART AVENUE", null, "POS 512345XXXXXX6789 DMART AVENUE"],
+    ["Paid to amit.k@oksbi", null, "Paid to A***@oksbi"],
+    ["Rs.450.00 debited from a/c **1234 to VPA rahul.s@okaxis RAHUL SHARMA", null, "Rs.450.00 debited from a/c **1234 to VPA R***@okaxis RAHUL SHARMA"],
+    ["NEFT-KANVEER MADAN-HDFC SAVINGS", "Kanveer Madan", "NEFT-SELF-HDFC SAVINGS"],
+    ["IMPS/MADAN KANVEER/OWN", "Kanveer Madan", "IMPS/SELF/OWN"],
+    ["NEFT-K MADAN-SAVINGS", "Kanveer Madan", "NEFT-SELF-SAVINGS"],
+    ["NEFT-K. MADAN", "Kanveer Madan", "NEFT-SELF"],
+    ["MR KANVEER S MADAN", "Kanveer Madan", "MR SELF"],
+    ["UPI-KANVEER SINGH-K***@oksbi-XXXX", "Kanveer Madan", "UPI-KANVEER SINGH-K***@oksbi-XXXX"],
+    ["UPI-RITU MADAN-R***@ybl", "Kanveer Madan", "UPI-RITU MADAN-R***@ybl"],
+    ["KMADAN TRADERS", "Kanveer Madan", "KMADAN TRADERS"],
+    ["NEFT-RAHUL", "Rahul", "NEFT-RAHUL"],
+    ["IMPS TO JOSÉ ÁLVAREZ", "José Álvarez", "IMPS TO SELF"]
+  ],
+  "references": [
+    ["0000412345678901", "412345678901"],
+    ["UPI-416511112222", "416511112222"],
+    ["612456562367", "612456562367"],
+    ["T2406030815123456789", "T2406030815123456789"],
+    ["N123456789", "N123456789"],
+    ["123456", "123456"],
+    ["4897691162091", null],
+    ["50100123456789", null],
+    ["TRANSFER TO 4897691162091", null],
+    ["", null]
+  ]
+}
