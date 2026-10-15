@@ -237,6 +237,7 @@ export default function Dashboard() {
   const { data: home, error } = useApi(`/api/home?month=${month}`, refreshKey);
   const { data: txnPage } = useApi(`/api/transactions?page=1&page_size=${RECENT}${range}`, refreshKey);
   const txns = txnPage?.items ?? null;
+  const { data: onboarding } = useApi("/api/onboarding", 0);
   const refresh = () => setRefreshKey((k) => k + 1);
 
   const undoRule = async () => {
@@ -259,6 +260,11 @@ export default function Dashboard() {
           <button onClick={() => setMonth(shiftMonth(month, 1))} disabled={current} className="btn-ghost px-3 py-1.5 disabled:opacity-30" aria-label="Next month">›</button>
         </div>
       </div>
+      {onboarding?.status === "active" && (
+        <Link to="/onboarding" className="block card p-4 text-sm text-ink-700 hover:border-forest-300">
+          Finish setting up — tracking coverage {onboarding.coverage.percent}%. <span className="font-medium text-forest-600">Continue →</span>
+        </Link>
+      )}
       {!current && (
         <button onClick={() => setMonth(thisMonth)} className="text-sm font-medium text-forest-600 hover:underline">← Back to this month</button>
       )}

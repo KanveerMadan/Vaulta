@@ -56,6 +56,9 @@ class User(Base):
     quiet_start = Column(SmallInteger, nullable=False, default=22, server_default=text("22"))
     quiet_end = Column(SmallInteger, nullable=False, default=8, server_default=text("8"))
 
+    # --- Onboarding (services/onboarding.py): step, answers, done/skipped ---
+    onboarding = Column(JSON, nullable=True)
+
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled
     subscription_status = Column(String, nullable=True, default="trial")

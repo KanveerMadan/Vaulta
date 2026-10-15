@@ -19,7 +19,7 @@ function Copy({ text, label = "Copy" }) {
 }
 
 /** Bank alert forwarding: address, Gmail setup, and what has arrived. */
-export default function InboundCard() {
+export default function InboundCard({ banks = null }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const { data, error } = useApi("/api/inbound", refreshKey);
   const [showBanks, setShowBanks] = useState(false);
@@ -33,7 +33,9 @@ export default function InboundCard() {
     setRefreshKey((k) => k + 1);
   };
   const dismiss = async () => { await api.post("/api/inbound/gmail-confirmation/dismiss"); setRefreshKey((k) => k + 1); };
-  const filter = `from:(${data.banks.flatMap((b) => b.senders).join(" OR ")})`;
+  // onboarding passes the banks the user picked; the filter then covers only those
+  const chosen = banks?.length ? data.banks.filter((b) => banks.includes(b.key)) : data.banks;
+  const filter = `from:(${chosen.flatMap((b) => b.senders).join(" OR ")})`;
 
   return (
     <section className="card p-5 space-y-4">
@@ -94,7 +96,7 @@ export default function InboundCard() {
         </button>
         {showBanks && (
           <ul className="mt-2 text-xs text-ink-500 space-y-0.5">
-            {data.banks.map((b) => <li key={b.name}><span className="text-ink-700">{b.name}:</span> {b.senders.join(", ")}</li>)}
+            {chosen.map((b) => <li key={b.name}><span className="text-ink-700">{b.name}:</span> {b.senders.join(", ")}</li>)}
           </ul>
         )}
       </details>

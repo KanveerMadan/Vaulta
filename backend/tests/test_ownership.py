@@ -83,6 +83,10 @@ COVERED = {
     # tests/test_alerts.py::test_bell_unread_and_isolation
     ("GET", "/api/alerts"),
     ("POST", "/api/alerts/read"),
+    # tests/test_onboarding.py (state is the caller's own; Bob never sees Alice's)
+    ("GET", "/api/onboarding"),
+    ("PATCH", "/api/onboarding"),
+    ("POST", "/api/onboarding/test-email"),
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.

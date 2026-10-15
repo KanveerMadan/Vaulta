@@ -16,6 +16,7 @@ import Settings from './pages/Settings'
 import Cash from './pages/Cash'
 import Review from './pages/Review'
 import Goals from './pages/Goals'
+import Onboarding from './pages/Onboarding'
 import Layout from './components/Layout'
 
 function PrivateRoute() {
@@ -57,6 +58,7 @@ export default function App() {
       <Route path="/welcome" element={<Landing />} />
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
       <Route element={<PrivateRoute />}>
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/connect" element={<Connect />} />

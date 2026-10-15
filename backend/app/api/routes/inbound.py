@@ -45,6 +45,7 @@ class Confirmation(BaseModel):
 
 
 class BankSenders(BaseModel):
+    key: str
     name: str
     senders: List[str]
 
@@ -82,7 +83,7 @@ def status_for(db: Session, user: User) -> InboundStatus:
         unreadable=[Unreadable(bank=b or "Unknown", count=n) for b, n in unreadable],
         gmail_confirmation=Confirmation(link=confirmation.link, code=confirmation.code,
                                         received_at=confirmation.received_at.isoformat()) if confirmation else None,
-        banks=[BankSenders(name=b["name"], senders=b["senders"]) for b in BANKS],
+        banks=[BankSenders(key=b["key"], name=b["name"], senders=b["senders"]) for b in BANKS],
     )
 
 

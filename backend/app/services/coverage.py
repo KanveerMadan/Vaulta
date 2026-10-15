@@ -22,6 +22,10 @@ from app.models.transaction_source import StatementSourceType, TransactionSource
 from app.models.user import User
 
 STALE_AFTER = timedelta(days=7)
+# Tracking coverage meter (onboarding): points per part, out of 100
+METER = {"basics": 10, "statements": 30, "email": 25, "telegram": 10, "review": 25}
+HISTORY_TARGET_MONTHS = 3        # full statement points at 3 months of history
+REVIEW_POINTS_PER_OPEN_CARD = 5
 NOT_STATEMENTS = (StatementSourceType.email_alert, StatementSourceType.manual)
 
 
@@ -50,3 +54,17 @@ def sources(db: Session, user: User) -> dict:
     # what to fix on the Connect page: never-set-up statements/email, or alerts that went quiet
     out["needs_attention"] = [k for k in ("statements", "email") if not out[k]["active"]]
     return out
+
+
+def meter(user: User, src: dict, open_reviews: int, email_verified: bool = False) -> dict:
+    """Tracking coverage %: sources set up, history length and review completion."""
+    basics = bool((user.onboarding or {}).get("basics_done"))
+    has_data = src["statements"]["active"] or src["email"]["connected"]
+    parts = {
+        "basics": METER["basics"] if basics else 0,
+        "statements": round(METER["statements"] * min(src["statements"]["months"], HISTORY_TARGET_MONTHS) / HISTORY_TARGET_MONTHS),
+        "email": METER["email"] if src["email"]["active"] or email_verified else 0,
+        "telegram": METER["telegram"] if src["telegram"]["active"] else 0,
+        "review": max(METER["review"] - REVIEW_POINTS_PER_OPEN_CARD * open_reviews, 0) if has_data else 0,
+    }
+    return {"percent": sum(parts.values()), "parts": parts, "max": METER}

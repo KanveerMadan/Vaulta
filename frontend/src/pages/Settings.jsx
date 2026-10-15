@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import { useApi } from "../lib/format";
+import TelegramLink from "../components/TelegramLink";
 
 const REPORTS = [
   ["weekly", "Weekly", "Monday–Sunday, on Sunday at 7 pm"],
@@ -62,42 +64,19 @@ function AlertsSection({ data, save }) {
   );
 }
 
-function TelegramSection() {
-  const [refreshKey, setRefreshKey] = useState(0);
-  const { data } = useApi("/api/telegram", refreshKey);
-  const [code, setCode] = useState(null);
-  const reload = () => setRefreshKey((k) => k + 1);
-  if (!data || !data.configured) return null;
-
-  const getCode = async () => setCode((await api.post("/api/telegram/link-code")).data);
-  const unlink = async () => { await api.delete("/api/telegram"); setCode(null); reload(); };
-  const setWeekly = async (weekly) => { await api.patch("/api/telegram", { weekly }); reload(); };
-
+function ResumeSetup() {
+  const navigate = useNavigate();
+  const { data } = useApi("/api/onboarding", 0);
+  if (!data) return null;
+  const resume = async () => {
+    await api.patch("/api/onboarding", { status: "active", ...(data.status === "done" ? { step: "basics" } : {}) });
+    navigate("/onboarding");
+  };
   return (
-    <section className="card p-5 space-y-3">
-      <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Telegram</h2>
-      <p className="text-xs text-ink-500">
-        Log expenses and ask questions from Telegram. Messages you send to the bot pass through Telegram.
-        Bill photos are never read there; use Scan bill in the app so the photo stays on your phone.
-      </p>
-      {data.linked ? (
-        <>
-          <p className="text-sm text-safe">✓ Linked{data.bot_username ? ` to @${data.bot_username}` : ""}</p>
-          <Toggle checked={data.weekly} onChange={setWeekly} label="Also send my weekly report summary on Telegram" />
-          <button onClick={unlink} className="text-xs text-ink-400 hover:text-danger">Unlink Telegram</button>
-        </>
-      ) : code ? (
-        <div className="text-sm space-y-2">
-          {data.bot_username && (
-            <a href={`https://t.me/${data.bot_username}?start=${code.code}`} target="_blank" rel="noopener noreferrer"
-              className="inline-block btn-primary text-sm py-1.5 px-3">Open @{data.bot_username} and link</a>
-          )}
-          <p className="text-ink-700">Or send <code>/start {code.code}</code> to the bot. The code works once, for 10 minutes.</p>
-          <button onClick={reload} className="text-xs text-forest-600">I've sent it</button>
-        </div>
-      ) : (
-        <button onClick={getCode} className="btn-primary-light text-sm py-1.5 px-3">Link Telegram</button>
-      )}
+    <section className="card p-5 space-y-2">
+      <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Setup</h2>
+      <p className="text-sm text-ink-600">Tracking coverage {data.coverage.percent}%{data.status === "done" ? " · setup finished" : ""}.</p>
+      <button onClick={resume} className="btn-primary-light text-sm">{data.status === "done" ? "Run setup again" : "Resume setup"}</button>
     </section>
   );
 }
@@ -124,6 +103,8 @@ export default function Settings() {
       <h1 className="font-display text-2xl font-semibold text-ink-900">Settings</h1>
       {saveError && <p className="text-sm text-danger">{saveError}</p>}
 
+      <ResumeSetup />
+
       <section className="card p-5 space-y-2">
         <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">AI chat</h2>
         <Toggle checked={data.ai_chat_enabled} onChange={(v) => save({ ai_chat_enabled: v })} label="Let me ask questions in chat" />
@@ -133,7 +114,7 @@ export default function Settings() {
         </p>
       </section>
 
-      <TelegramSection />
+      <TelegramLink />
 
       <AlertsSection data={data} save={save} />
 

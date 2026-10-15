@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { useApi } from '../lib/format'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
@@ -27,6 +29,12 @@ export default function Layout() {
     logout()
     navigate('/welcome')
   }
+
+  // First login: start setup (skippable; Settings → Resume setup brings it back)
+  const { data: onboarding } = useApi('/api/onboarding', 0)
+  useEffect(() => {
+    if (onboarding?.status === 'new') navigate('/onboarding', { replace: true })
+  }, [onboarding, navigate])
 
   const initial = (user?.displayName?.[0] || user?.email?.[0] || 'U').toUpperCase()
 
