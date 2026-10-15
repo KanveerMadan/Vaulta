@@ -76,7 +76,8 @@ export default function ChatPanel() {
   const [input, setInput] = useState('')
   const [disabled, setDisabled] = useState(false)
   const [sessionId, setSessionId] = useState(newSessionId)
-  const { chatMessages, chatLoading, addChatMessage, setChatLoading, setChatMessages } = useFinanceStore()
+  const { chatMessages, chatLoading, addChatMessage, setChatLoading, setChatMessages,
+    chatOpen, setChatOpen, takePendingQuestion } = useFinanceStore()
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -102,6 +103,13 @@ export default function ChatPanel() {
     } finally { setChatLoading(false) }
   }
 
+  // The home ask bar puts a question in the store; send it from here
+  const sendRef = useRef(send)
+  useEffect(() => { sendRef.current = send })
+  useEffect(() => useFinanceStore.subscribe((state) => {
+    if (state.pendingQuestion) sendRef.current(takePendingQuestion())
+  }), [takePendingQuestion])
+
   const enable = async () => {
     await api.patch('/api/settings', { ai_chat_enabled: true })
     setDisabled(false)
@@ -115,7 +123,9 @@ export default function ChatPanel() {
   }
 
   return (
-    <aside className="w-72 shrink-0 hidden lg:flex flex-col rounded-xl overflow-hidden sticky top-20 h-[calc(100vh-5.5rem)]"
+    <aside aria-label="AI Assistant"
+      className={clsx('flex-col overflow-hidden lg:w-72 lg:shrink-0 lg:rounded-xl lg:sticky lg:top-20 lg:h-[calc(100vh-5.5rem)] lg:flex',
+        chatOpen ? 'flex fixed inset-0 z-50 lg:static lg:inset-auto' : 'hidden')}
       style={{ background: '#FFFFFF', border: '1px solid #D4E4D7', boxShadow: '0 1px 3px rgba(45,106,79,0.06), 0 4px 16px rgba(45,106,79,0.04)' }}>
 
       <div className="px-4 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid #E8F0EA' }}>
@@ -123,9 +133,12 @@ export default function ChatPanel() {
           <p className="text-sm font-semibold" style={{ color: '#1A2E1E' }}>AI Assistant</p>
           <p className="text-xs mt-0.5" style={{ color: '#7A9E80' }}>Answers from your own numbers</p>
         </div>
-        {chatMessages.length > 0 && !disabled && (
-          <button onClick={clear} className="text-[11px]" style={{ color: '#8FAF98' }} title="Clear conversation">Clear</button>
-        )}
+        <div className="flex items-center gap-1">
+          {chatMessages.length > 0 && !disabled && (
+            <button onClick={clear} className="text-[11px] px-2" style={{ color: '#8FAF98' }} title="Clear conversation">Clear</button>
+          )}
+          <button onClick={() => setChatOpen(false)} className="lg:hidden text-sm px-2" style={{ color: '#4A6B50' }} aria-label="Close assistant">✕</button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ background: '#F2F7F3' }}>

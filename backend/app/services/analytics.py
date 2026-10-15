@@ -303,23 +303,44 @@ def forecast_month_end(db: Session, user_id: uuid.UUID, month: date) -> dict:
     }
 
 
-def safe_to_spend_today(db: Session, user_id: uuid.UUID) -> dict:
+def month_limit(db: Session, user_id: uuid.UUID, month: date) -> tuple[Optional[Decimal], Optional[str]]:
     """
-    What's left for today without going over the month's limit:
-    (limit − spend so far − recurring still due) ÷ days left including today.
-    Limit = overall budget cap, else the sum of category budgets, else this
-    month's income so far. None when there's no limit to measure against.
+    The month's spending limit and what it is: the overall budget cap, else the
+    sum of category budgets, else the month's income so far. (None, None) without any.
     """
-    today = clock.today()
-    start, end = month_bounds(today)
     budgets = active_budgets(db, user_id)
     if None in budgets:
-        limit, basis = budgets[None], "overall budget"
-    elif budgets:
-        limit, basis = sum(budgets.values(), ZERO), "sum of category budgets"
-    else:
-        income = income_summary(db, user_id, start, today)["total"]
-        limit, basis = (income, "income this month") if income else (None, None)
+        return budgets[None], "overall budget"
+    if budgets:
+        return sum(budgets.values(), ZERO), "sum of category budgets"
+    start, end = month_bounds(month)
+    income = income_summary(db, user_id, start, min(end, clock.today()))["total"]
+    return (income, "income this month") if income else (None, None)
+
+
+OUTLOOK_AMBER_PCT = Decimal(90)   # forecast above 90% of the limit → amber; above 100% → red
+
+
+def month_outlook(db: Session, user_id: uuid.UUID, month: date) -> dict:
+    """The month-end forecast against the month's limit: green / amber / red."""
+    f = forecast_month_end(db, user_id, month)
+    limit, basis = month_limit(db, user_id, month)
+    if limit is None:
+        return {**f, "limit": None, "basis": None, "difference": None, "status": None}
+    pct = f["forecast"] / limit * 100 if limit else Decimal(100)
+    status = "red" if f["forecast"] > limit else "amber" if pct > OUTLOOK_AMBER_PCT else "green"
+    return {**f, "limit": money(limit), "basis": basis, "difference": money(f["forecast"] - limit), "status": status}
+
+
+def safe_to_spend_today(db: Session, user_id: uuid.UUID) -> dict:
+    """
+    What's left for today without going over the month's limit (month_limit):
+    (limit − spend so far − recurring still due) ÷ days left including today.
+    None when there's no limit to measure against.
+    """
+    today = clock.today()
+    _, end = month_bounds(today)
+    limit, basis = month_limit(db, user_id, today)
     f = forecast_month_end(db, user_id, today)
     days = (end - today).days + 1
     if limit is None:
