@@ -46,7 +46,7 @@ function SeriesRow({ s, onChange }) {
         <span>{s.status === "cancelled" ? `last paid ${day(s.last_date)}` : `next ${day(s.next_expected)}`}</span>
         <span>·</span>
         <select value={s.type} onChange={(e) => patch({ type: e.target.value })} aria-label="Type"
-          className="border border-sage-200 rounded px-1 py-0.5 bg-white">
+          className="border border-sage-200 rounded px-1 py-0.5 bg-surface">
           {TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
         </select>
         <div className="ml-auto flex gap-1">

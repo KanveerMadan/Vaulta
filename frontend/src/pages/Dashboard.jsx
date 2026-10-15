@@ -8,7 +8,8 @@ import SubscriptionBanner from "../components/SubscriptionBanner";
 import QuickAddBar from "../components/QuickAddBar";
 import BudgetBars from "../components/BudgetBars";
 import { ReviewCard } from "../components/ReviewQueue";
-import TransactionRow, { RuleToast } from "../components/TransactionRow";
+import TransactionRow from "../components/TransactionRow";
+import { ruleToast } from "../lib/ruleToast";
 
 const RECENT = 10;
 const OUTLOOK_STYLE = {
@@ -212,7 +213,7 @@ function PeriodTotals() {
       <div className="flex gap-1 bg-sage-100 rounded-lg p-1">
         {[["month", "Month"], ["year", "Year"], ["lifetime", "All time"]].map(([v, l]) => (
           <button key={v} onClick={() => setPeriod(v)} aria-pressed={period === v}
-            className={`px-3 py-1 rounded-md text-xs font-medium ${period === v ? "bg-white text-ink-900 shadow-sm" : "text-ink-500"}`}>{l}</button>
+            className={`px-3 py-1 rounded-md text-xs font-medium ${period === v ? "bg-surface text-ink-900 shadow-sm" : "text-ink-500"}`}>{l}</button>
         ))}
       </div>
     }>
@@ -231,7 +232,6 @@ export default function Dashboard() {
   const thisMonth = monthKey(new Date());
   const [month, setMonth] = useState(thisMonth);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [learnedRule, setLearnedRule] = useState(null);
   const current = month === thisMonth;
   const range = current ? "" : `&date_from=${month}-01T00:00:00&date_to=${month}-${lastDay(month)}T23:59:59`;
   const { data: home, error } = useApi(`/api/home?month=${month}`, refreshKey);
@@ -240,17 +240,10 @@ export default function Dashboard() {
   const { data: onboarding } = useApi("/api/onboarding", 0);
   const refresh = () => setRefreshKey((k) => k + 1);
 
-  const undoRule = async () => {
-    const id = learnedRule.rule_id;
-    setLearnedRule(null);
-    await api.delete(`/api/rules/${id}`);
-    refresh();
-  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-4">
       <SubscriptionBanner />
-      {learnedRule && <RuleToast rule={learnedRule} onUndo={undoRule} onClose={() => setLearnedRule(null)} />}
 
       <div className="flex items-center justify-between gap-2">
         <h1 className="font-display text-2xl text-ink-900">{current ? "Today" : monthLabel(month)}</h1>
@@ -295,7 +288,7 @@ export default function Dashboard() {
 
       <Card title={current ? "Recent transactions" : `Transactions · ${monthLabel(month)}`}>
         {txns === null ? <SkeletonTransactionFeed /> : txns.length ? (
-          txns.map((t) => <TransactionRow key={t.id} txn={t} onChanged={refresh} onRuleLearned={setLearnedRule} />)
+          txns.map((t) => <TransactionRow key={t.id} txn={t} onChanged={refresh} onRuleLearned={(rule) => ruleToast(rule, refresh)} />)
         ) : (
           <Empty to="/connect" cta="Import a statement">
             {current ? "No transactions yet. Add one above, forward bank alerts, or" : "Nothing recorded this month."}

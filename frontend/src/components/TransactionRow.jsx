@@ -5,21 +5,6 @@ import { rupees } from "../lib/format";
 import { CATEGORIES, KINDS, kindsFor } from "../lib/categories";
 import { updateTransaction, deleteTransaction } from "../lib/transactions";
 
-export function RuleToast({ rule, onUndo, onClose }) {
-  const what = rule.field === "kind" ? (KINDS[rule.value]?.label ?? rule.value) : rule.value;
-  return (
-    <div role="status" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-ink-900 text-white text-sm rounded-xl shadow-lg px-4 py-3 flex items-center gap-3 max-w-[calc(100vw-2rem)]">
-      <span>
-        {rule.applied_count > 0
-          ? `Applied ${what} to ${rule.applied_count} other ${rule.merchant} transaction${rule.applied_count === 1 ? "" : "s"}.`
-          : `${rule.merchant} will be ${what} from now on.`}
-      </span>
-      <button onClick={onUndo} className="font-semibold underline">Undo</button>
-      <button onClick={onClose} aria-label="Dismiss" className="text-white/60">✕</button>
-    </div>
-  );
-}
-
 export default function TransactionRow({ txn, onChanged, onRuleLearned }) {
   const atm = txn.cash_flow === "withdrawal";
   const name = txn.merchant_clean || (atm ? "ATM withdrawal" : txn.merchant_raw);
@@ -75,7 +60,7 @@ export default function TransactionRow({ txn, onChanged, onRuleLearned }) {
               defaultValue={txn.category || ""}
               onChange={(e) => setCategory(e.target.value)}
               onBlur={() => !busy && setEditing(false)}
-              className="border border-sage-200 rounded px-1 py-0.5 text-xs bg-white text-ink-700"
+              className="border border-sage-200 rounded px-1 py-0.5 text-xs bg-surface text-ink-700"
               aria-label="Category"
             >
               <option value="">Uncategorized</option>
@@ -94,7 +79,7 @@ export default function TransactionRow({ txn, onChanged, onRuleLearned }) {
               defaultValue={txn.kind}
               onChange={(e) => setKind(e.target.value)}
               onBlur={() => !busy && setEditingKind(false)}
-              className="border border-sage-200 rounded px-1 py-0.5 text-xs bg-white text-ink-700"
+              className="border border-sage-200 rounded px-1 py-0.5 text-xs bg-surface text-ink-700"
               aria-label="Kind"
             >
               {kindsFor(txn.direction).map(([value, k]) => <option key={value} value={value}>{k.label}</option>)}

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { auth, googleProvider } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import Wordmark from '../ui/Wordmark'
 
 const ERROR_MAP = {
   'auth/invalid-credential':    'Incorrect email or password.',
@@ -47,96 +48,69 @@ export default function Login() {
   }
 
   return (
-    // In Login.jsx, replace the outermost div's className:
-<div className="min-h-dvh flex">
-
-  {/* Left panel — keep dark */}
-  <div className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 p-12 grain"
-    style={{ background: '#0A1A0E', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-    {/* ... existing left panel content unchanged ... */}
-  </div>
-
-  {/* Right panel — light */}
-  <div className="flex-1 flex items-center justify-center p-6"
-    style={{ background: '#F2F7F3' }}>
-    <div className="w-full max-w-sm animate-fade-up">
-
-      {/* Mobile logo */}
-      <div className="lg:hidden mb-10 text-center">
-        <span className="font-display text-2xl font-light tracking-tight" style={{ color: '#1A2E1E' }}>Vaulta</span>
-        <p className="text-sm mt-1" style={{ color: '#7A9E80' }}>Personal Finance AI for India</p>
-      </div>
-
-      <div className="mb-8">
-        <h1 className="text-xl font-semibold" style={{ color: '#1A2E1E' }}>
-          {mode === 'login' ? 'Welcome back' : 'Create your account'}
-        </h1>
-        <p className="text-sm mt-1" style={{ color: '#7A9E80' }}>
-          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-          <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
-            className="underline underline-offset-2 transition-colors"
-            style={{ color: '#2D6A4F' }}>
-            {mode === 'login' ? 'Sign up' : 'Log in'}
-          </button>
-        </p>
-      </div>
-
-      <div className="rounded-xl p-6 space-y-4"
-        style={{ background: '#FFFFFF', border: '1px solid #D4E4D7', boxShadow: '0 1px 3px rgba(45,106,79,0.06), 0 4px 16px rgba(45,106,79,0.04)' }}>
-
-        {/* Google button */}
-        <button onClick={handleGoogle} disabled={loading}
-          className="w-full flex items-center justify-center gap-3 text-sm font-medium transition-all duration-150 disabled:opacity-40 active:scale-[0.98]"
-          style={{ background: '#F2F7F3', border: '1px solid #D4E4D7', borderRadius: '8px', padding: '0.75rem', color: '#1A2E1E' }}
-          onMouseEnter={e => e.currentTarget.style.background = '#E8F0EA'}
-          onMouseLeave={e => e.currentTarget.style.background = '#F2F7F3'}>
-          <GoogleIcon />
-          Continue with Google
-        </button>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px" style={{ background: '#E8F0EA' }} />
-          <span className="text-xs" style={{ color: '#8FAF98' }}>or</span>
-          <div className="flex-1 h-px" style={{ background: '#E8F0EA' }} />
+    <div className="min-h-dvh grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] bg-canvas">
+      <section className="hidden lg:flex flex-col justify-between p-12 border-r border-line bg-surface">
+        <Wordmark to="/welcome" size="text-2xl" />
+        <div className="space-y-6 max-w-md">
+          <p className="font-display text-display-s text-ink">Every rupee, accounted for. Nothing you didn't choose to share.</p>
+          <ul className="space-y-3 text-sm text-ink-2">
+            <li className="rule pt-3">Statements are read on your device and never uploaded.</li>
+            <li className="rule pt-3">Account numbers, balances and passwords are never stored.</li>
+            <li className="rule pt-3">Delete everything, anytime.</li>
+          </ul>
         </div>
+        <Link to="/security" className="text-sm text-accent-text hover:underline">How each of these works</Link>
+      </section>
 
-        {/* Form */}
-        <form onSubmit={handleEmail} className="space-y-3">
-          <div>
-            <label className="label block mb-1.5">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com" required className="input" autoComplete="email" />
-          </div>
-          <div>
-            <label className="label block mb-1.5">Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••" required className="input"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
-          </div>
-          {error && (
-            <div className="rounded-lg px-3 py-2.5" style={{ background: '#FEE2E2', border: '1px solid #FECACA' }}>
-              <p className="text-xs" style={{ color: '#991B1B' }}>{error}</p>
+      <section className="flex items-center justify-center p-6">
+        <div className="w-full max-w-sm animate-rise">
+          <div className="lg:hidden mb-10"><Wordmark to="/welcome" size="text-2xl" /></div>
+          <h1 className="font-display text-display-s text-ink">{mode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
+          <p className="text-sm mt-2 text-muted">
+            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+            <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
+              className="font-medium text-accent-text underline underline-offset-2">
+              {mode === 'login' ? 'Sign up' : 'Log in'}
+            </button>
+          </p>
+
+          <div className="mt-8 space-y-5">
+            <button onClick={handleGoogle} disabled={loading} className="btn-secondary w-full h-11">
+              <GoogleIcon /> Continue with Google
+            </button>
+            <div className="flex items-center gap-3 text-micro text-muted" aria-hidden>
+              <span className="flex-1 h-px bg-line" />or<span className="flex-1 h-px bg-line" />
             </div>
-          )}
-          <button type="submit" disabled={loading || !email || !password} className="btn-primary w-full justify-center mt-1">
-            {loading ? 'Please wait...' : mode === 'login' ? 'Log in' : 'Create account'}
-          </button>
-        </form>
-      </div>
-
-      <p className="text-center text-xs mt-6 leading-relaxed" style={{ color: '#8FAF98' }}>
-        By continuing you agree to our terms of service.<br /><a href="/security" className="underline">What happens to your data</a>
-      </p>
+            <form onSubmit={handleEmail} className="space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="login-email" className="label">Email</label>
+                <input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)} spellCheck={false}
+                  placeholder="you@example.com" required className="input" autoComplete="email" name="email" />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="login-password" className="label">Password</label>
+                <input id="login-password" type="password" value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••" required className="input" name="password"
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
+              </div>
+              {error && <p role="alert" className="text-sm text-danger bg-danger-tint rounded-sm px-3 py-2">{error}</p>}
+              <button type="submit" disabled={loading || !email || !password} className="btn-primary w-full h-11">
+                {loading ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Create account'}
+              </button>
+            </form>
+          </div>
+          <p className="text-xs mt-8 text-muted">
+            By continuing you agree to our terms of service. <Link to="/security" className="underline">What happens to your data</Link>
+          </p>
+        </div>
+      </section>
     </div>
-  </div>
-</div>
   )
 }
 
 function GoogleIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
       <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
       <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
       <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>

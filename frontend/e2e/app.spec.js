@@ -167,7 +167,7 @@ test('chat: question answered from tools (mocked LLM)', async ({ page, request }
   await page.getByLabel('Ask a question').fill('How much did I spend this month?')
   await page.getByRole('button', { name: 'Ask', exact: true }).click()
   const chat = page.getByRole('complementary', { name: 'AI Assistant' })
-  await expect(chat.getByText("Here's your spending this month, from your own transactions.")).toBeVisible()
+  await expect(chat.getByText("Here's your spending this month, from your own transactions.").first()).toBeVisible()
   await expect(chat.getByText('Spending', { exact: true })).toBeVisible()
   await checkLayout(page, testInfo)
 })

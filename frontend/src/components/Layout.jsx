@@ -7,18 +7,22 @@ import { useAuthStore } from '../store/authStore'
 import ChatPanel from './ChatPanel'
 import AlertsBell from './AlertsBell'
 import { useFinanceStore } from '../store/financeStore'
+import { ChartPieSlice, ChatCircleText, Flag, GearSix, House, List, Money, Newspaper, Plugs, Repeat, SignOut, SlidersHorizontal, Users, X } from '@phosphor-icons/react'
+import ThemeSwitch from '../ui/ThemeSwitch'
+import Wordmark from '../ui/Wordmark'
+import { useMedia } from '../lib/useMedia'
 
 const NAV = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/budgets', label: 'Budgets' },
-  { to: '/goals', label: 'Goals' },
-  { to: '/cash', label: 'Cash' },
-  { to: '/recurring', label: 'Recurring' },
-  { to: '/reports', label: 'Reports' },
-  { to: '/people', label: 'People' },
-  { to: '/rules', label: 'Rules' },
-  { to: '/connect', label: 'Connect' },
-  { to: '/settings', label: 'Settings' },
+  { to: '/', label: 'Home', end: true, icon: House },
+  { to: '/budgets', label: 'Budgets', icon: ChartPieSlice },
+  { to: '/goals', label: 'Goals', icon: Flag },
+  { to: '/cash', label: 'Cash', icon: Money },
+  { to: '/recurring', label: 'Recurring', icon: Repeat },
+  { to: '/reports', label: 'Reports', icon: Newspaper },
+  { to: '/people', label: 'People', icon: Users },
+  { to: '/rules', label: 'Rules', icon: SlidersHorizontal },
+  { to: '/connect', label: 'Connect', icon: Plugs },
+  { to: '/settings', label: 'Settings', icon: GearSix },
 ]
 
 export default function Layout() {
@@ -53,76 +57,85 @@ export default function Layout() {
     if (onboarding?.status === 'new') navigate('/onboarding', { replace: true })
   }, [onboarding, navigate])
 
-  const initial = (user?.displayName?.[0] || user?.email?.[0] || 'U').toUpperCase()
+  const desktop = useMedia('(min-width: 1024px)')   // render one shell, so the bell polls once
+  const who = demoToken ? 'Demo account' : user?.displayName || user?.email
+
+  const navList = (
+    <ul className="flex flex-col gap-0.5">
+      {NAV.map(({ to, label, end, icon: Icon }) => (
+        <li key={to}>
+          <NavLink to={to} end={end} onClick={() => setMenuOpen(false)}
+            className={({ isActive }) => `flex items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition-colors duration-fast
+              ${isActive ? 'bg-accent-tint text-accent-text' : 'text-ink-2 hover:bg-sunken hover:text-ink'}`}>
+            <Icon size={18} aria-hidden />{label}
+          </NavLink>
+        </li>
+      ))}
+    </ul>
+  )
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ background: '#F2F7F3' }}>
+    <div className="min-h-dvh bg-canvas">
+      <a href="#main" className="sr-only-focusable fixed left-3 top-3 z-[80] btn-primary">Skip to content</a>
       {demoToken && (
-        <div role="note" className="bg-gold/15 text-ink-900 text-sm px-4 py-2 text-center">
+        <div role="note" className="bg-warn-tint text-ink text-sm px-4 py-2 text-center border-b border-line">
           You're viewing a demo with sample data.{' '}
           <button onClick={signUp} className="font-semibold underline underline-offset-2">Sign up to track your own.</button>
         </div>
       )}
       {readOnly && (
-        <div role="alert" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-ink-900 text-white text-sm rounded-xl shadow-lg px-4 py-3 max-w-[calc(100vw-2rem)]">
+        <div role="alert" className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-[75] bg-inverse text-on-inverse text-sm rounded-md shadow-3 px-4 py-3 max-w-[calc(100vw-2rem)] animate-rise">
           {readOnly}
         </div>
       )}
-      {/* Header: full nav from lg up; a menu button below */}
-      <header className="sticky top-0 z-30 bg-white border-b border-sage-200"
-        style={{ boxShadow: '0 1px 3px rgba(45,106,79,0.06)' }}>
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-2">
+
+      {/* Phones and tablets: top bar with a menu */}
+      {!desktop && <header className="lg:hidden sticky top-0 z-30 bg-surface/95 backdrop-blur border-b border-line">
+        <div className="h-14 px-3 flex items-center gap-1">
           <button onClick={() => setMenuOpen((v) => !v)} aria-expanded={menuOpen} aria-controls="main-nav"
-            className="lg:hidden w-11 h-11 -ml-2 flex items-center justify-center rounded-lg text-ink-700 hover:bg-sage-100" aria-label="Menu">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-              {menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-            </svg>
+            className="w-11 h-11 flex items-center justify-center rounded-sm text-ink hover:bg-sunken" aria-label="Menu">
+            {menuOpen ? <X size={20} /> : <List size={20} />}
           </button>
-          <span className="font-display text-lg font-light tracking-tight mr-2" style={{ color: '#1A2E1E' }}>Vaulta</span>
-
-          <nav id="main-nav" aria-label="Main"
-            className={`${menuOpen ? 'flex' : 'hidden'} lg:flex flex-col lg:flex-row absolute lg:static top-14 left-0 right-0 bg-white lg:bg-transparent border-b lg:border-0 border-sage-200 p-2 lg:p-0 gap-1 shadow-card lg:shadow-none`}>
-            {NAV.map(({ to, label, end }) => (
-              <NavLink key={to} to={to} end={end} onClick={() => setMenuOpen(false)}
-                className={({ isActive }) =>
-                  `px-3 py-3 lg:py-1.5 rounded-lg text-sm whitespace-nowrap transition-all duration-150 font-medium ${
-                    isActive ? 'bg-forest-50 text-forest-400' : 'text-ink-500 hover:text-ink-700 hover:bg-sage-100'
-                  }`
-                }
-              >
-                {label}
-              </NavLink>
-            ))}
-          </nav>
-
-          <div className="ml-auto flex items-center gap-1 sm:gap-3">
+          <Wordmark className="ml-1" />
+          <div className="ml-auto flex items-center gap-1">
             <AlertsBell />
-            <span className="text-ink-300 text-xs hidden sm:block truncate max-w-[160px]">
-              {demoToken ? 'Demo' : user?.displayName || user?.email}
-            </span>
-            <div className="w-7 h-7 rounded-full hidden sm:flex items-center justify-center shrink-0 text-xs font-semibold"
-              style={{ background: '#E8F5EB', color: '#2D6A4F', border: '1px solid #B8CFC0' }}>
-              {initial}
-            </div>
-            <button onClick={handleLogout}
-              className="text-ink-300 hover:text-danger text-xs transition-colors font-medium px-2 min-h-[44px]">
-              {demoToken ? 'Exit demo' : 'Sign out'}
-            </button>
           </div>
         </div>
-      </header>
+        <nav id="main-nav" aria-label="Main" className={`${menuOpen ? 'block' : 'hidden'} border-t border-line px-3 py-3 max-h-[calc(100dvh-3.5rem)] overflow-y-auto`}>
+          {navList}
+          <div className="mt-3 pt-3 border-t border-line flex items-center justify-between gap-2">
+            <ThemeSwitch compact />
+            <button onClick={handleLogout} className="btn-quiet text-sm">{demoToken ? 'Exit demo' : 'Sign out'}</button>
+          </div>
+        </nav>
+      </header>}
 
-      {/* Main content */}
-      <div className="flex-1 flex max-w-7xl mx-auto w-full px-4 py-6 gap-5">
-        <main className="flex-1 min-w-0">
+      <div className="lg:grid lg:grid-cols-[232px_minmax(0,1fr)] xl:grid-cols-[232px_minmax(0,1fr)_320px]">
+        {/* Desktop: sidebar */}
+        {desktop && <aside className="hidden lg:flex flex-col sticky top-0 h-dvh border-r border-line bg-surface px-3 py-4">
+          <div className="flex items-center justify-between px-2 mb-4">
+            <Wordmark />
+            <AlertsBell />
+          </div>
+          <nav aria-label="Main" className="flex-1 overflow-y-auto">{navList}</nav>
+          <div className="pt-3 mt-3 border-t border-line space-y-3">
+            <ThemeSwitch compact />
+            <div className="flex items-center gap-2 px-1">
+              <span className="flex-1 truncate text-micro text-muted" title={who}>{who}</span>
+              <button onClick={handleLogout} className="btn-quiet h-8 text-micro"><SignOut size={14} aria-hidden />{demoToken ? 'Exit demo' : 'Sign out'}</button>
+            </div>
+          </div>
+        </aside>}
+
+        <main id="main" tabIndex={-1} className="min-w-0 px-4 sm:px-6 py-6 outline-none">
           <Outlet />
         </main>
         <ChatPanel />
       </div>
       {!chatOpen && (
         <button onClick={() => setChatOpen(true)} aria-label="Ask the assistant"
-          className="lg:hidden fixed bottom-4 right-4 z-40 btn-primary rounded-full shadow-lg min-h-[48px] px-5">
-          Ask
+          className="xl:hidden fixed bottom-4 right-4 z-40 btn-primary rounded-full shadow-3 h-12 px-5">
+          <ChatCircleText size={18} aria-hidden /> Ask
         </button>
       )}
     </div>

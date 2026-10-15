@@ -55,7 +55,7 @@ function PersonRow({ p, others, onChange }) {
           </span>
         )}
         <select value={p.tag || ""} onChange={(e) => patch({ tag: e.target.value || null })} aria-label="Tag"
-          className="ml-auto border border-sage-200 rounded px-1 py-0.5 text-xs bg-white">
+          className="ml-auto border border-sage-200 rounded px-1 py-0.5 text-xs bg-surface">
           <option value="">No tag</option>
           {TAGS.map((t) => <option key={t}>{t}</option>)}
         </select>
@@ -66,7 +66,7 @@ function PersonRow({ p, others, onChange }) {
         <span>{p.transaction_count} transactions · last {shortDay(p.last_date)}</span>
         {others.length > 0 && (
           <select value="" onChange={(e) => mergeInto(e.target.value)} aria-label={`Merge ${p.name} into another person`}
-            className="border border-sage-200 rounded px-1 py-0.5 bg-white text-ink-500">
+            className="border border-sage-200 rounded px-1 py-0.5 bg-surface text-ink-500">
             <option value="">Same person as…</option>
             {others.map((o) => <option key={o.id} value={o.id}>{o.name}{o.masked_vpa ? ` (${o.masked_vpa})` : ""}</option>)}
           </select>

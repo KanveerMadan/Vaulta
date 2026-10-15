@@ -1,3 +1,4 @@
+import Sheet from "../ui/Sheet";
 import { useState } from "react";
 import { CATEGORIES } from "../lib/categories";
 import { addManualTransaction } from "../lib/transactions";
@@ -38,19 +39,15 @@ export default function ManualEntryModal({ initial = {}, onClose, onSaved }) {
     }
   };
 
-  const input = "w-full border border-sage-200 rounded-lg px-3 py-2 text-sm bg-white";
+  const input = "input";
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
-      <form onSubmit={submit} className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold text-ink-900">Add transaction</h2>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-ink-400 hover:text-ink-700" aria-label="Close">✕</button>
-        </div>
+    <Sheet title="Add transaction" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
 
         <div className="flex gap-1 bg-sage-100 rounded-lg p-1">
           {[["debit", "Spent"], ["credit", "Received"]].map(([value, label]) => (
             <button type="button" key={value} onClick={() => setForm((f) => ({ ...f, direction: value }))}
-              className={`flex-1 py-1.5 rounded-md text-sm font-medium ${form.direction === value ? "bg-white text-ink-900 shadow-sm" : "text-ink-500"}`}>
+              className={`flex-1 py-1.5 rounded-md text-sm font-medium ${form.direction === value ? "bg-surface text-ink-900 shadow-sm" : "text-ink-500"}`}>
               {label}
             </button>
           ))}
@@ -92,10 +89,10 @@ export default function ManualEntryModal({ initial = {}, onClose, onSaved }) {
         </label>
 
         {error && <p className="text-sm text-danger">{error}</p>}
-        <button type="submit" disabled={saving} className="btn-primary w-full py-2.5 disabled:opacity-50">
+        <button type="submit" disabled={saving} className="btn-primary w-full h-11">
           {saving ? "Saving…" : "Add transaction"}
         </button>
       </form>
-    </div>
+    </Sheet>
   );
 }

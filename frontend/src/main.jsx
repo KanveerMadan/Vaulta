@@ -3,12 +3,9 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 // Fonts are bundled with the app (no third-party font requests)
-import '@fontsource-variable/fraunces'
-import '@fontsource/instrument-sans/latin-400.css'
-import '@fontsource/instrument-sans/latin-500.css'
-import '@fontsource/instrument-sans/latin-600.css'
-import '@fontsource/jetbrains-mono/latin-400.css'
-import '@fontsource/jetbrains-mono/latin-500.css'
+import '@fontsource-variable/bricolage-grotesque/opsz.css'
+import '@fontsource-variable/geist'
+import '@fontsource-variable/geist-mono'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(

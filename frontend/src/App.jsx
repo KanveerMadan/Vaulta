@@ -19,6 +19,7 @@ import Goals from './pages/Goals'
 import Onboarding from './pages/Onboarding'
 import Security from './pages/Security'
 import Layout from './components/Layout'
+import { Toaster } from './ui/Toast'
 
 function PrivateRoute() {
   const { user, demoToken } = useAuthStore()
@@ -27,15 +28,10 @@ function PrivateRoute() {
 
 function Loader() {
   return (
-    <div className="min-h-dvh bg-forest-950 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-5">
-        <span className="font-display text-2xl font-light text-cream-200 tracking-tight">Vaulta</span>
-        <div className="flex gap-1.5">
-          {[0,1,2].map(i => (
-            <div key={i} className="w-1.5 h-1.5 rounded-full bg-forest-300 animate-skeleton"
-              style={{ animationDelay: `${i * 0.2}s` }} />
-          ))}
-        </div>
+    <div className="min-h-dvh bg-canvas flex items-center justify-center" role="status" aria-label="Loading Vaulta">
+      <div className="flex flex-col items-center gap-4">
+        <span className="font-display text-2xl font-semibold tracking-tight text-ink">Vaulta</span>
+        <span className="block w-24 h-px bg-line overflow-hidden"><span className="block h-px w-1/3 bg-accent animate-pulse" /></span>
       </div>
     </div>
   )
@@ -56,6 +52,8 @@ export default function App() {
   if (loading) return <Loader />
 
   return (
+    <>
+    <Toaster />
     <Routes>
       <Route path="/welcome" element={<Landing />} />
       <Route path="/security" element={<Security />} />
@@ -79,5 +77,6 @@ export default function App() {
       </Route>
       <Route path="*" element={signedIn ? <Navigate to="/" replace /> : <Navigate to="/welcome" replace />} />
     </Routes>
+    </>
   )
 }

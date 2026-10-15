@@ -30,7 +30,7 @@ function Chips({ choices, selected, onChange, label }) {
       <div className="flex flex-wrap gap-2">
         {choices.map(({ value, name }) => (
           <button type="button" key={value} onClick={() => toggle(value)} aria-pressed={selected.includes(value)}
-            className={`text-sm px-3 py-2 rounded-full border ${selected.includes(value) ? "bg-forest-400 text-white border-forest-400" : "bg-white text-ink-700 border-sage-200"}`}>
+            className={`text-sm px-3 py-2 rounded-full border ${selected.includes(value) ? "bg-forest-400 text-white border-forest-400" : "bg-surface text-ink-700 border-sage-200"}`}>
             {name}
           </button>
         ))}
@@ -204,7 +204,7 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-dvh bg-sage-50">
-      <header className="bg-white border-b border-sage-200">
+      <header className="bg-surface border-b border-sage-200">
         <div className="max-w-2xl mx-auto px-4 py-3 space-y-2">
           <div className="flex items-center justify-between gap-3">
             <span className="font-display text-lg text-ink-900">Vaulta</span>

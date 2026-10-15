@@ -1,3 +1,4 @@
+import Sheet from "../ui/Sheet";
 import { useState } from "react";
 import api from "../lib/api";
 import { CATEGORIES } from "../lib/categories";
@@ -36,19 +37,16 @@ export default function SplitModal({ txn, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
-      <form onSubmit={save} className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
-        <div>
-          <h2 className="font-display text-lg font-semibold text-ink-900">Split {txn.merchant_clean || txn.merchant_raw}</h2>
-          <p className="text-sm text-ink-500">{rupees(txn.amount)} into parts with their own categories.</p>
-        </div>
+    <Sheet title={`Split ${txn.merchant_clean || txn.merchant_raw}`} onClose={onClose}>
+      <form onSubmit={save} className="space-y-4">
+        <p className="text-sm text-muted">{rupees(txn.amount)} into parts with their own categories.</p>
         {parts.map((p, i) => (
           <div key={i} className="flex gap-2 items-center">
             <input value={p.amount} onChange={(e) => set(i, "amount", e.target.value)} inputMode="decimal" required
               pattern="\d{1,10}(\.\d{1,2})?" aria-label={`Part ${i + 1} amount`}
-              className="w-28 border border-sage-200 rounded-lg px-2 py-1.5 text-sm" />
+              className="input w-28" />
             <select value={p.category} onChange={(e) => set(i, "category", e.target.value)} aria-label={`Part ${i + 1} category`}
-              className="flex-1 border border-sage-200 rounded-lg px-2 py-1.5 text-sm bg-white">
+              className="input flex-1">
               <option value="">Uncategorized</option>
               {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
             </select>
@@ -73,6 +71,6 @@ export default function SplitModal({ txn, onClose, onSaved }) {
           </button>
         </div>
       </form>
-    </div>
+    </Sheet>
   );
 }

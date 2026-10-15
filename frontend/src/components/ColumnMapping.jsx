@@ -69,7 +69,7 @@ export default function ColumnMapping({ table, initialMapping, sourceType, onCon
           <label key={key} className="text-sm text-ink-700 flex flex-col gap-1">
             <span>{label}{required && <span className="text-danger"> *</span>}</span>
             <select
-              className="border border-sage-200 rounded-lg px-2 py-1.5 bg-white"
+              className="border border-sage-200 rounded-lg px-2 py-1.5 bg-surface"
               value={mapping[key] ?? ""}
               onChange={(e) => set(key, e.target.value === "" ? null : Number(e.target.value))}
             >
@@ -83,7 +83,7 @@ export default function ColumnMapping({ table, initialMapping, sourceType, onCon
         <label className="text-sm text-ink-700 flex flex-col gap-1">
           <span>Date format</span>
           <select
-            className="border border-sage-200 rounded-lg px-2 py-1.5 bg-white"
+            className="border border-sage-200 rounded-lg px-2 py-1.5 bg-surface"
             value={mapping.date_format}
             onChange={(e) => set("date_format", e.target.value)}
           >
@@ -94,7 +94,7 @@ export default function ColumnMapping({ table, initialMapping, sourceType, onCon
           <label className="text-sm text-ink-700 flex flex-col gap-1">
             <span>Amount sign</span>
             <select
-              className="border border-sage-200 rounded-lg px-2 py-1.5 bg-white"
+              className="border border-sage-200 rounded-lg px-2 py-1.5 bg-surface"
               value={mapping.amount_sign}
               onChange={(e) => set("amount_sign", e.target.value)}
             >

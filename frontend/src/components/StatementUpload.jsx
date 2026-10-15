@@ -1,3 +1,4 @@
+import Sheet from "../ui/Sheet";
 import { useState, useRef, useMemo } from "react";
 import api from "../lib/api";
 import { useAuthStore } from "../store/authStore";
@@ -52,7 +53,7 @@ function EditCell({ value, field, onEdit, label }) {
   const bad = !VALID[field].test(value);
   return (
     <input value={value} onChange={(e) => onEdit(field, e.target.value)} aria-label={label} aria-invalid={bad}
-      className={`w-full min-w-[5rem] border rounded px-1 py-0.5 bg-white ${bad ? "border-danger" : "border-gold"}`} />
+      className={`w-full min-w-[5rem] border rounded px-1 py-0.5 bg-surface ${bad ? "border-danger" : "border-gold"}`} />
   );
 }
 
@@ -169,7 +170,7 @@ function Result({ result, onAnother, onClose }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
         {stats.map(([label, value]) => (
-          <div key={label} className="bg-white rounded-lg p-2.5 border border-sage-100">
+          <div key={label} className="bg-surface rounded-lg p-2.5 border border-sage-100">
             <p className="font-mono text-lg font-semibold text-ink-900">{value}</p>
             <p className="text-xs text-ink-400 mt-0.5 leading-tight">{label}</p>
           </div>
@@ -296,21 +297,11 @@ export default function StatementUpload({ onSuccess, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
-      <div className={`bg-white rounded-2xl shadow-2xl w-full ${step === "preview" || step === "mapping" ? "max-w-3xl" : "max-w-lg"} max-h-[92vh] overflow-y-auto`}>
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-sage-100">
-          <div>
-            <h2 className="font-display text-lg font-semibold text-ink-900">Import statement</h2>
-            <p className="text-sm text-ink-500 mt-0.5">Bank CSV / Excel / PDF · Credit card PDF · Google Pay · PhonePe · Paytm</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-ink-400 hover:text-ink-700 hover:bg-sage-50" aria-label="Close">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <Sheet title="Import statement" onClose={onClose} wide={step === "preview" || step === "mapping"}>
+      <div>
+        <p className="text-sm text-muted -mt-1 mb-4">Bank CSV, Excel or PDF, credit card PDF, Google Pay, PhonePe or Paytm</p>
 
-        <div className="px-6 py-5 space-y-5">
+        <div className="space-y-5">
           {error && <ErrorBox message={typeof error === "string" ? error : "Import failed."} />}
 
           {step === "pick" && (
@@ -393,6 +384,6 @@ export default function StatementUpload({ onSuccess, onClose }) {
           {step === "done" && result && <Result result={result} onAnother={reset} onClose={onClose} />}
         </div>
       </div>
-    </div>
+    </Sheet>
   );
 }

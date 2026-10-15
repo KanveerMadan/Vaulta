@@ -56,7 +56,7 @@ export default function Cash() {
           <p className="text-sm font-medium text-ink-900">{rupees(unaccounted)} unaccounted</p>
           <div className="flex flex-wrap gap-2 items-center">
             <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category"
-              className="border border-sage-200 rounded-lg px-2 py-1.5 text-sm bg-white">
+              className="border border-sage-200 rounded-lg px-2 py-1.5 text-sm bg-surface">
               {SPEND_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
             </select>
             <button onClick={() => reconcile({ action: "category", category })} className="btn-primary-light text-sm py-1.5 px-3">Allocate</button>

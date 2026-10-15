@@ -37,6 +37,7 @@ test('demo is read-only', async ({ page, guard }, testInfo) => {
   await page.reload()
   await expect(page.getByLabel('Let me ask questions in chat')).toBeChecked()   // nothing changed
 
+  if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Menu' }).click()
   await page.getByRole('button', { name: 'Exit demo' }).click()
   await expect(page).toHaveURL(/\/welcome$/)
 })

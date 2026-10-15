@@ -50,12 +50,12 @@ function AlertsSection({ data, save }) {
       <div className="flex flex-wrap items-center gap-2 text-sm text-ink-700">
         <span>Quiet hours for Telegram:</span>
         <select value={data.quiet_start} onChange={(e) => save({ quiet_start: Number(e.target.value) })} aria-label="Quiet hours start"
-          className="border border-sage-200 rounded-lg px-2 py-1.5 bg-white">
+          className="border border-sage-200 rounded-lg px-2 py-1.5 bg-surface">
           {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{hour(h)}</option>)}
         </select>
         <span>to</span>
         <select value={data.quiet_end} onChange={(e) => save({ quiet_end: Number(e.target.value) })} aria-label="Quiet hours end"
-          className="border border-sage-200 rounded-lg px-2 py-1.5 bg-white">
+          className="border border-sage-200 rounded-lg px-2 py-1.5 bg-surface">
           {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{hour(h)}</option>)}
         </select>
       </div>
@@ -153,7 +153,7 @@ export default function Settings() {
       <section className="card p-5 space-y-2">
         <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Time zone</h2>
         <select value={data.timezone} onChange={(e) => save({ timezone: e.target.value })} aria-label="Time zone"
-          className="border border-sage-200 rounded-lg px-2 py-1.5 text-sm bg-white">
+          className="border border-sage-200 rounded-lg px-2 py-1.5 text-sm bg-surface">
           {zones.map((z) => <option key={z}>{z}</option>)}
         </select>
         <p className="text-xs text-ink-500">Reports are sent at these local times.</p>

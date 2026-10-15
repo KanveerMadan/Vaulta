@@ -1,0 +1,27 @@
+dist/registerSW.js                                               0.13 kB
+dist/manifest.webmanifest                                        0.44 kB
+dist/index.html                                                  0.97 kB │ gzip:   0.50 kB
+dist/assets/fraunces-vietnamese-wght-normal-CnvboYUG.woff2      11.57 kB
+dist/assets/instrument-sans-latin-400-normal-DRC__1Mx.woff2     16.86 kB
+dist/assets/instrument-sans-latin-500-normal-Dk9ku72i.woff2     17.23 kB
+dist/assets/instrument-sans-latin-600-normal-B7fBEWYG.woff2     17.40 kB
+dist/assets/jetbrains-mono-latin-400-normal-V6pRDFza.woff2      21.16 kB
+dist/assets/instrument-sans-latin-400-normal-D1W7dsQl.woff      21.24 kB
+dist/assets/instrument-sans-latin-500-normal-Z6ESRlEs.woff      21.65 kB
+dist/assets/instrument-sans-latin-600-normal-B9e8oLYv.woff      21.67 kB
+dist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2      21.83 kB
+dist/assets/jetbrains-mono-latin-400-normal-6-qcROiO.woff       27.49 kB
+dist/assets/jetbrains-mono-latin-500-normal-CJOVTJB7.woff       28.20 kB
+dist/assets/fraunces-latin-ext-wght-normal-Ca2vKHc0.woff2       33.58 kB
+dist/assets/fraunces-latin-wght-normal-ukD16Tqj.woff2           36.62 kB
+dist/assets/pdf.worker.min-yatZIOMy.mjs                      1,375.83 kB
+dist/assets/index-4TtYDVlh.css                                  29.01 kB │ gzip:   6.96 kB
+dist/assets/pdf.worker.min-Crr82RAx.js                           0.06 kB │ gzip:   0.08 kB
+dist/assets/src-NYOqpMnt.js                                     18.97 kB │ gzip:   7.84 kB
+dist/assets/pdf-B8hWUcAU.js                                    330.02 kB │ gzip:  97.03 kB
+dist/assets/xlsx-CKkngM-o.js                                   493.28 kB │ gzip: 160.68 kB
+dist/assets/index-CY2j1kJt.js                                  584.37 kB │ gzip: 180.60 kB
+[INEFFECTIVE_DYNAMIC_IMPORT] node_modules/firebase/auth/dist/esm/index.esm.js is dynamically imported by src/lib/api.js, src/pages/Settings.jsx but also statically imported by src/App.jsx, src/components/Layout.jsx, src/lib/firebase.js, src/pages/Landing.jsx, src/pages/Login.jsx, dynamic import will not move module into another chunk.
+precache  25 entries (1608.14 KiB)
+  dist/sw.js
+  dist/workbox-9c191d2f.js
