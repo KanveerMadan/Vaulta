@@ -28,7 +28,6 @@ from app.models.person import Person
 from app.models.recurring import RecurringSeries
 from app.models.transaction import Budget, Transaction, TransactionKind
 from app.services.people import balances
-from app.services.keys import merchant_key
 from app.services.recurring import series_key
 
 ZERO = Decimal("0.00")
@@ -147,10 +146,13 @@ def compare_periods(db: Session, user_id: uuid.UUID, a_start: date, a_end: date,
 # ── Income and savings ────────────────────────────────────────────────────────
 
 def income_summary(db: Session, user_id: uuid.UUID, start: date, end: date) -> dict:
-    """Income in the period by source: merchant, else category, else the cleaned narration."""
+    """
+    Income in the period by source: normalized merchant, else category, else
+    "Other income". Never narration text (these labels reach the LLM).
+    """
     by: dict[str, list] = {}
     for t in db.query(Transaction).filter(*counted(user_id, start, end), Transaction.kind == TransactionKind.income):
-        label = t.merchant_clean or t.category or merchant_key(t).title() or "Other income"
+        label = t.merchant_clean or t.category or "Other income"
         entry = by.setdefault(label, [ZERO, 0])
         entry[0] += t.amount
         entry[1] += 1

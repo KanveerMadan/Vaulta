@@ -35,6 +35,7 @@ from app.models.recurring import RecurringSeries  # noqa: F401
 from app.models.person import Person  # noqa: F401
 from app.models.rule import Rule  # noqa: F401
 from app.models.review import ReviewDismissal  # noqa: F401
+from app.models.chat import ChatAction, ChatMessage  # noqa: F401
 # Phase 2+: import new models here as they're created
 
 # ── Config ────────────────────────────────────────────────────────────────────

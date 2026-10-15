@@ -55,6 +55,8 @@ class Settings(BaseSettings):
 
     # ── Groq (Phase 3) ───────────────────────────────────────────────────────
     GROQ_API_KEY: str = ""
+    # Any Groq chat model with tool calling
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
     # ── Razorpay (Phase 2) ───────────────────────────────────────────────────
     RAZORPAY_KEY_ID: str = ""

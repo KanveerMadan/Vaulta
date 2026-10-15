@@ -62,7 +62,7 @@ def test_income_and_savings(ctx):
     inc = a.income_summary(db, uid, *JUN)
     assert inc["total"] == D("81500.00")
     assert [(s["label"], s["total"]) for s in inc["sources"]] == [
-        ("Neft Cr Acme Corp Payroll", D("80000.00")), ("Received from People", D("1500.00"))]
+        ("Other income", D("80000.00")), ("Received from People", D("1500.00"))]
     sr = a.savings_rate(db, uid, *JUN)
     assert (sr["income"], sr["spend"], sr["saved"], sr["rate_pct"]) == (D("81500.00"), D("25599.00"), D("55901.00"), D("68.6"))
     assert a.savings_rate(db, uid, date(2024, 1, 1), date(2024, 1, 31))["rate_pct"] is None

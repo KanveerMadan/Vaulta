@@ -27,6 +27,9 @@ class User(Base):
     sms_connected = Column(Boolean, default=False, nullable=False)
     aa_connected = Column(Boolean, default=False, nullable=False)
 
+    # --- Settings ---
+    ai_chat_enabled = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled
     subscription_status = Column(String, nullable=True, default="trial")

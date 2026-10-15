@@ -43,6 +43,14 @@ COVERED = {
     ("POST", "/api/budgets"),
     ("PATCH", "/api/budgets/{budget_id}"),
     ("DELETE", "/api/budgets/{budget_id}"),
+    # tests/test_chat.py: confirm tokens are bound to their user, history is per user
+    ("POST", "/api/chat"),
+    ("POST", "/api/chat/confirm"),
+    ("GET", "/api/chat/history"),
+    ("DELETE", "/api/chat/history"),
+    # tests/test_chat.py::test_ai_chat_toggle (one user's setting doesn't affect another)
+    ("GET", "/api/settings"),
+    ("PATCH", "/api/settings"),
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.

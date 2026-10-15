@@ -24,6 +24,9 @@ cryptography==48.0.0
 # Statements are parsed in the browser (frontend/src/import/); no route takes
 # multipart uploads, so python-multipart is not needed.
 
+# LLM API calls (Groq, OpenAI-compatible endpoint) and email (Resend)
+httpx==0.28.1
+
 # Payments. razorpay 1.4.2 imports pkg_resources, which setuptools 81 removes.
 razorpay==1.4.2
 setuptools>=69,<81
