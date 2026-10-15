@@ -85,6 +85,7 @@ def test_demo_session_reads_everything(client, demo_headers):
     assert client.get("/api/alerts", headers=demo_headers).json()["items"]
     assert client.get("/api/onboarding", headers=demo_headers).json()["status"] == "done"
     assert client.get("/api/reports", headers=demo_headers).status_code == 200
+    assert client.get("/auth/me", headers=demo_headers).json()["email"] == "demo@vaulta.invalid"
     assert client.get("/api/inbound", headers=demo_headers).json()["address"] is None or not settings.INBOUND_DOMAIN
 
 
@@ -157,7 +158,24 @@ def test_hourly_run_rebuilds_the_demo_daily(client, monkeypatch):
     with SessionLocal() as db:
         assert demo.demo_user(db).id == first_id                          # same day: kept
     monkeypatch.setattr(clock, "today", lambda: TODAY + timedelta(days=1))
+    client.post("/auth/demo")                                           # a visitor never waits for the rebuild
+    with SessionLocal() as db:
+        assert demo.demo_user(db).id == first_id
     assert run()["demo"] == "ready"
     with SessionLocal() as db:
         user = demo.demo_user(db)
         assert user.id != first_id and user.onboarding["demo_seeded"] == "2024-06-29"
+
+
+def test_concurrent_first_visitors_get_one_complete_demo(client):
+    from concurrent.futures import ThreadPoolExecutor
+
+    def visit(_):
+        with SessionLocal() as db:
+            return str(demo.ensure_fresh(db, create=True).id)
+    with ThreadPoolExecutor(3) as pool:
+        ids = set(pool.map(visit, range(3)))
+    assert len(ids) == 1
+    with SessionLocal() as db:
+        assert str(demo.demo_user(db).id) in ids and demo.demo_user(db).onboarding["demo_seeded"] == "2024-06-28"
+    assert _counts()["months"] == 4

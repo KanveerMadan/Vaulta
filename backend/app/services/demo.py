@@ -24,10 +24,12 @@ from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import text
+from contextlib import contextmanager
 from sqlalchemy.orm import Session
 
 from app.core import clock
 from app.core.config import settings
+from app.core.database import engine
 from app.core.demo import DEMO_UID
 from app.models.person import Person
 from app.models.transaction import Transaction
@@ -144,10 +146,24 @@ def _find(db: Session, user: User, needle: str, on: Optional[date] = None) -> Op
     return rows[0] if rows else None
 
 
+@contextmanager
+def _seed_lock():
+    """One seeder at a time, held for the whole rebuild (on its own connection; seeding commits many times)."""
+    with engine.connect() as conn:
+        conn.execute(text("SELECT pg_advisory_lock(:k)"), {"k": LOCK_ID})
+        try:
+            yield
+        finally:
+            conn.execute(text("SELECT pg_advisory_unlock(:k)"), {"k": LOCK_ID})
+
+
 def seed(db: Session, today: Optional[date] = None) -> User:
     """Delete and rebuild the demo user. Returns it."""
-    today = today or clock.today()
-    db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": LOCK_ID})
+    with _seed_lock():
+        return _seed(db, today or clock.today())
+
+
+def _seed(db: Session, today: date) -> User:
     old = db.query(User).filter(User.firebase_uid == DEMO_UID).first()
     if old:
         db.delete(old)
@@ -155,12 +171,12 @@ def seed(db: Session, today: Optional[date] = None) -> User:
     user = User(firebase_uid=DEMO_UID, email="demo@vaulta.invalid", full_name="Demo",
                 email_weekly=False, email_monthly=False, email_annual=False, telegram_weekly=False,
                 onboarding={"status": "done", "step": "finish", "basics_done": True, "banks": ["hdfc", "sbi"],
-                            "upi_apps": ["Google Pay"], "income": "92000", "payday": 1, "demo_seeded": today.isoformat()},
+                            "upi_apps": ["Google Pay"], "income": "92000", "payday": 1},
                 alert_prefs={t: {"telegram": False, "email": False} for t in
                              ("budget_threshold", "duplicate_charge", "failed_upi_unreversed", "renewal_tomorrow",
                               "price_change", "salary_received", "unusual_amount")})
     db.add(user)
-    db.commit()   # releases the lock; the user row now exists, so a second seeder sees it and rebuilds after us
+    db.commit()
 
     for statement in _rows(today):
         if statement:
@@ -200,6 +216,8 @@ def seed(db: Session, today: Optional[date] = None) -> User:
     for k in (3, 2, 1):
         reports.generate(db, user.id, "monthly", add_months(first, -k))
     reports.generate(db, user.id, "weekly", reports.last_complete("weekly", today))
+    user.onboarding = {**user.onboarding, "demo_seeded": today.isoformat()}   # complete: visitors waiting on the lock now see it
+    db.commit()
     logger.info(f"demo: seeded for {today}")
     return user
 
@@ -209,14 +227,20 @@ def demo_user(db: Session) -> Optional[User]:
 
 
 def ensure_fresh(db: Session, today: Optional[date] = None, create: bool = False) -> Optional[User]:
-    """Reseed when the demo was last built on an earlier day (or doesn't exist and create=True)."""
+    """
+    Hourly run (create=False): rebuild when last built on an earlier day; never create it.
+    A visitor (create=True): build it only if it doesn't exist at all — never make a
+    visitor wait for the daily rebuild.
+    """
     today = today or clock.today()
+    fresh = lambda u: u is not None and (u.onboarding or {}).get("demo_seeded") == today.isoformat()
     user = demo_user(db)
-    if user is None:
-        return seed(db, today) if create else None
-    if (user.onboarding or {}).get("demo_seeded") != today.isoformat():
-        return seed(db, today)
-    return user
+    if fresh(user) or (user is None and not create) or (user is not None and create):
+        return user
+    with _seed_lock():
+        db.expire_all()
+        user = demo_user(db)       # another request may have built it while we waited
+        return user if fresh(user) or (user is not None and create) else _seed(db, today)
 
 
 if __name__ == "__main__":

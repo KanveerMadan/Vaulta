@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import api from "../lib/api";
 
 // ─────────────────────────────────────────────
@@ -39,23 +39,20 @@ export default function SubscriptionBanner() {
   const [subscribing, setSubscribing] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      const { data } = await api.get("/api/payments/status");
-      setStatus(data);
-    } catch (err) {
-      // 503 = payments not configured yet — treat as no banner, not an error
-      if (err?.response?.status !== 503) {
-        setError("Couldn't load subscription status.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const fetchStatus = () => setRefreshKey((k) => k + 1);
 
   useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
+    let alive = true;
+    api.get("/api/payments/status")
+      .then(({ data }) => alive && setStatus(data))
+      .catch((err) => {
+        // 503 = payments not configured yet — treat as no banner, not an error
+        if (alive && err?.response?.status !== 503) setError("Couldn't load subscription status.");
+      })
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [refreshKey]);
 
   const handleSubscribe = async () => {
     setSubscribing(true);

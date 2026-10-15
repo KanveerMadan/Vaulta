@@ -71,3 +71,10 @@ def test_dismiss_via_review_persists_and_is_per_user(client):
     assert [x["status"] for x in client.get("/api/anomalies?status=dismissed", headers=USER).json()] == ["dismissed"]
     assert client.patch(f"/api/anomalies/{a['id']}", json={"status": "open"}, headers=USER).json()["status"] == "open"
     assert client.patch(f"/api/anomalies/{a['id']}", json={"status": "gone"}, headers=USER).status_code == 422
+
+
+def test_no_spike_against_months_without_data(client):
+    # Jan–Feb recorded, then nothing for Mar–May (no statements imported), then June
+    rows = [r(f"2024-{m:02d}-10", "SWIGGY", "300.00") for m in (1, 2)] + [r("2024-06-10", "SWIGGY", "3000.00")]
+    _, all_ = load(client, *rows)
+    assert [a for a in all_ if a["type"] == "category_spike"] == []

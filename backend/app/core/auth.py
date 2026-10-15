@@ -3,6 +3,7 @@ import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -75,16 +76,19 @@ def get_current_user(
     email = payload.get("email", "")
     name = payload.get("name", "")
 
-    # Upsert — create user on first login
+    # Upsert — create user on first login. The app fires several requests at once on a first
+    # sign-in, so another request may create the row first: then use that one.
     user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
     if not user:
-        user = User(
-            firebase_uid=firebase_uid,
-            email=email,
-            full_name=name,
-        )
+        user = User(firebase_uid=firebase_uid, email=email, full_name=name)
         db.add(user)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
+            if user is None:
+                raise
         db.refresh(user)
 
     return user

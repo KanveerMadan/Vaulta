@@ -116,8 +116,10 @@ function Preview({ parsed, onConfirm, onBack, sending, progress, onEdit }) {
             {rows.map((r, i) => (
               <tr key={i} className={`border-t border-sage-50 ${excluded.has(i) ? "opacity-40" : ""} ${lowConfidence.has(i) ? "bg-gold/10" : ""}`}>
                 <td className="px-2 py-1" data-label="Include">
-                  <input type="checkbox" checked={!excluded.has(i)} onChange={() => toggle(i)}
-                    aria-label={`Include ${r.description_raw} on ${r.date}`} />
+                  <label className="inline-flex items-center justify-center">
+                    <input type="checkbox" checked={!excluded.has(i)} onChange={() => toggle(i)}
+                      aria-label={`Include ${r.description_raw} on ${r.date}`} />
+                  </label>
                 </td>
                 {lowConfidence.has(i) ? (
                   <>

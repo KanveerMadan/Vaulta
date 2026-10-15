@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     # Any Groq chat model with tool calling
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    # OpenAI-compatible chat completions endpoint (browser tests point this at a local fake)
+    GROQ_API_URL: str = "https://api.groq.com/openai/v1/chat/completions"
 
     # ── Reports by email (Resend) and the internal scheduler ────────────────
     RESEND_API_KEY: str = ""

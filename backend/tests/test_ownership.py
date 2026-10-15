@@ -195,3 +195,11 @@ def test_bob_cannot_touch_alice_budgets(client):
     assert client.post("/api/budgets", json={"category": "Food & Dining", "monthly_limit": "100"}, headers=BOB).status_code == 201
     mine = client.get("/api/budgets", headers=ALICE).json()["items"]
     assert [(b["id"], b["monthly_limit"], b["is_active"]) for b in mine] == [(budget["id"], "5000.00", True)]
+
+
+def test_first_sign_in_requests_in_parallel_make_one_user(client):
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(6) as pool:
+        codes = list(pool.map(lambda _: client.get("/api/home", headers=as_user("newbie")).status_code, range(6)))
+    assert codes == [200] * 6
+    assert client.get("/auth/me", headers=as_user("newbie")).json()["firebase_uid"] == "newbie"

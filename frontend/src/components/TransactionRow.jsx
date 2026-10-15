@@ -21,6 +21,8 @@ export function RuleToast({ rule, onUndo, onClose }) {
 }
 
 export default function TransactionRow({ txn, onChanged, onRuleLearned }) {
+  const atm = txn.cash_flow === "withdrawal";
+  const name = txn.merchant_clean || (atm ? "ATM withdrawal" : txn.merchant_raw);
   const isCredit = txn.direction === "credit";
   const counted = txn.kind === "spend" || txn.kind === "income" || txn.kind === "refund";
   const [editing, setEditing] = useState(false);
@@ -59,11 +61,11 @@ export default function TransactionRow({ txn, onChanged, onRuleLearned }) {
     <div className="py-2.5 border-b border-sage-50 last:border-0">
     <div className="flex items-center gap-3">
       <div className="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center text-ink-500 text-sm shrink-0">
-        {(txn.merchant_clean || txn.merchant_raw || "?")[0].toUpperCase()}
+        {(name || "?")[0].toUpperCase()}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-ink-900 truncate">
-          {txn.merchant_clean || txn.merchant_raw}
+          {name}
         </p>
         <div className="text-xs text-ink-400 flex items-center gap-1">
           {editing ? (
@@ -100,7 +102,7 @@ export default function TransactionRow({ txn, onChanged, onRuleLearned }) {
           ) : (
             <button onClick={() => setEditingKind(true)} title="Change what this transaction is"
               className={`hover:text-forest-600 hover:underline ${counted ? "" : "text-gold"}`}>
-              {KINDS[txn.kind]?.label ?? txn.kind}
+              {atm ? "Cash withdrawal" : KINDS[txn.kind]?.label ?? txn.kind}
             </button>
           )}
           <span>·</span>

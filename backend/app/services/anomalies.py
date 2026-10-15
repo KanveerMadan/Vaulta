@@ -18,7 +18,7 @@ from decimal import Decimal
 from statistics import median
 from typing import Optional
 
-from sqlalchemy import func
+
 from sqlalchemy.orm import Session
 
 from app.core import clock
@@ -93,15 +93,18 @@ def category_spikes(db: Session, user_id: uuid.UUID, periods: list[tuple[date, d
     """
     periods: oldest first; the last is the period checked, the ones before it
     the trailing window (at least SPIKE_TRAILING_PERIODS). Nothing is a spike
-    unless the user's history reaches into the first trailing period —
-    otherwise a new user's first full month "spikes" against empty months.
+    unless every trailing period has some recorded transactions: a month with
+    no records is missing data, not ₹0 of spending (a new user's first month,
+    or a gap between imported statements).
     """
     if len(periods) < SPIKE_TRAILING_PERIODS + 1:
         return []
     *trailing, (start, end) = periods[-(SPIKE_TRAILING_PERIODS + 1):]
-    earliest = db.query(func.min(Transaction.transaction_date)).filter(Transaction.user_id == user_id).scalar()
-    if earliest is None or earliest.date() > trailing[0][1]:
-        return []
+    for s, e in trailing:
+        lo, hi = analytics.bounds(s, e)
+        if db.query(Transaction.id).filter(Transaction.user_id == user_id, Transaction.transaction_date >= lo,
+                                           Transaction.transaction_date <= hi).first() is None:
+            return []
     current = {g["label"]: g["total"] for g in analytics.spend_summary(db, user_id, start, end)["groups"]}
     past = [{g["label"]: g["total"] for g in analytics.spend_summary(db, user_id, s, e)["groups"]} for s, e in trailing]
     found = []

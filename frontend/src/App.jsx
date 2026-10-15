@@ -22,7 +22,7 @@ import Layout from './components/Layout'
 
 function PrivateRoute() {
   const { user, demoToken } = useAuthStore()
-  return user || demoToken ? <Outlet /> : <Navigate to="/login" replace />
+  return user || demoToken ? <Outlet /> : <Navigate to="/welcome" replace />
 }
 
 function Loader() {

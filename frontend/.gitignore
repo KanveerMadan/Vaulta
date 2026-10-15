@@ -25,3 +25,7 @@ dist-ssr
 
 # OCR assets copied from node_modules by scripts/copy-ocr-assets.mjs
 public/ocr/
+dist-e2e
+test-results
+playwright-report
+firebase-debug.log

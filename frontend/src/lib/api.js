@@ -33,7 +33,7 @@ api.interceptors.response.use(
 
 /** Sign in to the shared read-only demo. */
 export async function startDemo() {
-  const { data } = await api.post('/auth/demo')
+  const { data } = await api.post('/auth/demo', null, { timeout: 90000 })   // the very first visit builds the demo
   useAuthStore.getState().startDemo(data.token)
 }
 

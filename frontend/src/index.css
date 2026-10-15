@@ -237,6 +237,8 @@
     min-height: 44px;
   }
   button { min-width: 44px; }
+  /* standalone links (not inside a sentence) are tap targets too */
+  a[href]:not(p a):not(li > span a):not(span a) { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
   label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: 44px; }
   input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; }
 
