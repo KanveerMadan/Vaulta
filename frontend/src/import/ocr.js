@@ -2,8 +2,17 @@
 // never leaves the device. OCR words become the same positioned items
 // pdf.js produces, so table reconstruction and column mapping are reused.
 //
-// tesseract.js fetches its worker, wasm core and English model from its CDN
-// on first use (model/code downloads only; no user data is sent).
+// The worker, wasm core and English model are served from Vaulta's own
+// origin (copied into public/ocr by scripts/copy-ocr-assets.mjs); tesseract
+// is configured to load nothing from anywhere else.
+
+export const OCR_ASSETS = {
+  workerPath: "/ocr/worker.min.js",
+  corePath: "/ocr/core",
+  langPath: "/ocr/lang",
+  workerBlobURL: false,   // load the worker script directly from our origin
+  gzip: true,
+};
 
 // Rows containing a word below this confidence are flagged for the user to
 // check in the preview (listed in the Phase 2 report as a tunable threshold).
@@ -36,9 +45,9 @@ export async function createOcr(createWorker, workerOptions = {}) {
   };
 }
 
-export async function browserOcr() {
-  const { createWorker } = await import("tesseract.js");
-  return createOcr(createWorker);
+export async function browserOcr(createWorker = null) {
+  const create = createWorker || (await import("tesseract.js")).createWorker;
+  return createOcr(create, OCR_ASSETS);
 }
 
 /** Render a pdf.js page to a canvas for OCR (browser only). */

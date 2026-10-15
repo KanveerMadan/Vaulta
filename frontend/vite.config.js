@@ -7,6 +7,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // OCR assets (~7 MB) load on demand; don't precache them for every visitor
+      workbox: { globIgnores: ['ocr/**'] },
       manifest: {
         name: 'Vaulta',
         short_name: 'Vaulta',

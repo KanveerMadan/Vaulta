@@ -4,6 +4,7 @@ People (P2P UPI).
   GET   /api/people        people with totals, tags and lent/borrowed balances
   PATCH /api/people/{id}   rename, tag, default category/kind (re-applied to
                            past and future transactions unless individually corrected)
+  POST  /api/people/{id}/merge  {"source_id": ...} fold another person into this one
 """
 
 import uuid
@@ -19,15 +20,15 @@ from app.models.person import Person
 from app.models.transaction import Transaction, TransactionKind
 from app.models.transaction_source import TransactionDirection
 from app.models.user import User
-from app.schemas.people import PeopleList, PersonResponse, PersonUpdate
+from app.schemas.people import PeopleList, PersonMerge, PersonResponse, PersonUpdate
 from app.services.detection import run_detection
-from app.services.people import balances, set_tag
+from app.services.people import balances, merge_people, resolve, set_tag
 
 router = APIRouter(prefix="/api/people", tags=["people"])
 
 
 def _views(db: Session, user: User, only: uuid.UUID | None = None) -> list[PersonResponse]:
-    people = db.query(Person).filter(Person.user_id == user.id).all()
+    people = db.query(Person).filter(Person.user_id == user.id, Person.merged_into_id.is_(None)).all()
     txns = db.query(Transaction).filter(Transaction.user_id == user.id, Transaction.person_id.isnot(None)).all()
     bal = balances(txns)
     today = clock.today()
@@ -80,3 +81,23 @@ def update_person(
     db.commit()
     run_detection(db, current_user)
     return _views(db, current_user, only=person.id)[0]
+
+
+@router.post("/{person_id}/merge", response_model=PersonResponse)
+def merge_person(
+    person_id: uuid.UUID,
+    payload: PersonMerge,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Merge `source_id` into this person: their transactions, tag and balance move here."""
+    mine = {p.id: p for p in db.query(Person).filter(Person.user_id == current_user.id)}
+    target, source = mine.get(person_id), mine.get(payload.source_id)
+    if target is None or source is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person not found.")
+    if resolve(target, mine).id == resolve(source, mine).id:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="These are already the same person.")
+    merge_people(resolve(source, mine), resolve(target, mine))
+    db.commit()
+    run_detection(db, current_user)
+    return _views(db, current_user, only=resolve(target, mine).id)[0]

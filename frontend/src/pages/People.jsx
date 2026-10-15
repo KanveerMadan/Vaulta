@@ -11,7 +11,7 @@ function balanceText(p) {
   return null;
 }
 
-function PersonRow({ p, onChange }) {
+function PersonRow({ p, others, onChange }) {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(p.name);
   const [error, setError] = useState(null);
@@ -25,6 +25,17 @@ function PersonRow({ p, onChange }) {
     }
   };
   const balance = balanceText(p);
+  const mergeInto = async (targetId) => {
+    if (!targetId) return;
+    const target = others.find((o) => o.id === targetId);
+    if (!window.confirm(`Merge ${p.name} into ${target.name}? Their transactions, tag and balance move to ${target.name}.`)) return;
+    try {
+      await api.post(`/api/people/${targetId}/merge`, { source_id: p.id });
+      onChange();
+    } catch {
+      setError("Couldn't merge.");
+    }
+  };
 
   return (
     <div className="py-3 border-b border-sage-50 last:border-0 space-y-1">
@@ -53,6 +64,13 @@ function PersonRow({ p, onChange }) {
         <span>Paid {rupees(p.paid_total)}</span>
         <span>Received {rupees(p.received_total)}</span>
         <span>{p.transaction_count} transactions · last {shortDay(p.last_date)}</span>
+        {others.length > 0 && (
+          <select value="" onChange={(e) => mergeInto(e.target.value)} aria-label={`Merge ${p.name} into another person`}
+            className="border border-sage-200 rounded px-1 py-0.5 bg-white text-ink-500">
+            <option value="">Same person as…</option>
+            {others.map((o) => <option key={o.id} value={o.id}>{o.name}{o.masked_vpa ? ` (${o.masked_vpa})` : ""}</option>)}
+          </select>
+        )}
         {p.tag && (
           <span className="text-ink-400">
             Applies {p.default_category || "no category"}{p.default_kind ? ` · ${p.default_kind}` : ""} to their transactions
@@ -91,7 +109,7 @@ export default function People() {
         </div>
       )}
       <section className="card p-5">
-        {data.people.length ? data.people.map((p) => <PersonRow key={p.id} p={p} onChange={reload} />)
+        {data.people.length ? data.people.map((p) => <PersonRow key={p.id} p={p} others={data.people.filter((o) => o.id !== p.id)} onChange={reload} />)
           : <p className="text-sm text-ink-400 text-center">No person-to-person payments yet.</p>}
       </section>
     </div>

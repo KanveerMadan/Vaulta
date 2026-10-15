@@ -24,6 +24,9 @@ class Person(Base):
     tag = Column(String(20), nullable=True)               # Rent | Splits | Family | Friend | Lent | Other
     default_category = Column(String, nullable=True)
     default_kind = Column(String(12), nullable=True)
+    # Set when this person was merged into another (auto or by the user); their
+    # transactions then point at the surviving person
+    merged_into_id = Column(UUID(as_uuid=True), ForeignKey("people.id", ondelete="SET NULL"), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=text("now()"), onupdate=datetime.utcnow, nullable=False)

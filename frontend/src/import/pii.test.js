@@ -87,24 +87,38 @@ describe("no fixture PII survives sanitizing", () => {
   });
 });
 
-describe("holder name → SELF", () => {
-  const strip = (text, name = "Rahul Kumar Sharma") => {
-    const { rows } = sanitizeRows([{ date: "2024-01-01", description_raw: text, amount: "1.00", direction: "debit",
-      reference: null, source_type: "bank_csv", source_label: "HDFC Bank", type: "transaction" }], { holderName: name });
-    return rows[0].description_raw;
-  };
-  it.each([
-    ["NEFT-RAHUL KUMAR SHARMA-HDFC SAVINGS", "NEFT-SELF-HDFC SAVINGS"],
-    ["IMPS/SHARMA KUMAR RAHUL/OWN", "IMPS/SELF/OWN"],
-    ["UPI-rahul sharma-R***@okaxis", "UPI-SELF-R***@okaxis"], // first + last tokens collapse to one SELF
-    ["Self transfer to SHARMA", "Self transfer to SELF"],
-    ["MR RAHUL K SHARMA", "MR SELF K SELF"],
-    ["UPI-RAHULRAJ TRADERS", "UPI-RAHULRAJ TRADERS"], // not a whole-word match
-    ["UPI-AMIT KUMAR-A***@oksbi", "UPI-AMIT KUMAR-A***@oksbi"], // middle name isn't matched alone
-  ])("%s", (input, output) => expect(strip(input)).toBe(output));
+describe("holder name → SELF (whole name only)", () => {
+  const strip = (text, name) => sanitizeRows([{ date: "2024-01-01", description_raw: text, amount: "1.00", direction: "debit",
+    reference: null, source_type: "bank_csv", source_label: "HDFC Bank", type: "transaction" }], { holderName: name }).rows[0].description_raw;
 
-  it("no name, no change; counted when replaced", () => {
+  it.each([
+    ["NEFT-KANVEER MADAN-HDFC SAVINGS", "NEFT-SELF-HDFC SAVINGS"],
+    ["IMPS/MADAN KANVEER/OWN", "IMPS/SELF/OWN"],
+    ["UPI-kanveer madan-K***@okaxis", "UPI-SELF-K***@okaxis"],
+    ["NEFT-K MADAN-SAVINGS", "NEFT-SELF-SAVINGS"],
+    ["NEFT-K. MADAN", "NEFT-SELF"],
+    ["TRF MADAN K", "TRF SELF"],
+    ["MR KANVEER S MADAN", "MR SELF"],
+    // never a first or last name alone
+    ["UPI-KANVEER SINGH-K***@oksbi-XXXX", "UPI-KANVEER SINGH-K***@oksbi-XXXX"],   // payee shares only the first name
+    ["UPI-RITU MADAN-R***@ybl", "UPI-RITU MADAN-R***@ybl"],                        // shares only the surname
+    ["Self transfer to MADAN", "Self transfer to MADAN"],
+    ["KMADAN TRADERS", "KMADAN TRADERS"],
+    ["UPI-KANVEERRAJ TRADERS", "UPI-KANVEERRAJ TRADERS"],
+  ])("%s", (input, output) => expect(strip(input, "Kanveer Madan")).toBe(output));
+
+  it("three-part names match full, first+last and initial+last; not the middle name", () => {
+    const name = "Rahul Kumar Sharma";
+    expect(strip("NEFT-RAHUL KUMAR SHARMA", name)).toBe("NEFT-SELF");
+    expect(strip("NEFT-RAHUL SHARMA", name)).toBe("NEFT-SELF");
+    expect(strip("NEFT-R SHARMA", name)).toBe("NEFT-SELF");
+    expect(strip("UPI-AMIT KUMAR-A***@oksbi", name)).toBe("UPI-AMIT KUMAR-A***@oksbi");
+  });
+
+  it("single-word or missing names strip nothing; replacements are counted", () => {
+    expect(sanitizeRows([{ description_raw: "NEFT-RAHUL", amount: "1.00" }], { holderName: "Rahul" }).removed).toEqual({});
     expect(sanitizeRows([{ description_raw: "NEFT-RAHUL", amount: "1.00" }], {}).rows[0].description_raw).toBe("NEFT-RAHUL");
-    expect(sanitizeRows([{ description_raw: "NEFT-RAHUL", amount: "1.00" }], { holderName: "Rahul" }).removed).toEqual({ holder_name: 1 });
+    expect(sanitizeRows([{ description_raw: "NEFT-RAHUL SHARMA", amount: "1.00" }], { holderName: "Rahul Sharma" }).removed)
+      .toEqual({ holder_name: 1 });
   });
 });

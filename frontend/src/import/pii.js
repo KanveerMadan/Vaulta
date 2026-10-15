@@ -9,7 +9,7 @@
 //   - IFSC codes        → removed
 //   - 9+ digit runs     → "XXXX" (account / card / long reference numbers)
 //   - references        → kept only if they look like a transaction id
-//   - the account holder's own name (full, reversed, first or last) → "SELF"
+//   - the account holder's own name, as a whole name only → "SELF"
 //     (display name from Firebase, passed in memory only; never stored)
 //
 // Merchant (business) VPAs are kept, minus long digit runs: the dedup engine
@@ -58,16 +58,29 @@ export function cleanReference(ref) {
 }
 
 /**
- * Regex for the holder's name: full name, reversed (bank narrations often
- * print SURNAME FIRSTNAME), and the first and last token (3+ letters) alone.
- * Tokens are letters only, so they need no escaping.
+ * Regex for the holder's own name, matched only as a whole name, never a
+ * first or last name on its own (a payee who shares your first name is
+ * someone else):
+ *   - first + last, either order, optional middle names/initials between
+ *     ("RAHUL SHARMA", "SHARMA RAHUL", "RAHUL K SHARMA", "RAHUL KUMAR SHARMA")
+ *   - first initial + last, either order ("R SHARMA", "R. SHARMA", "SHARMA R")
+ * Single-word display names match nothing.
  */
 export function holderNamePattern(displayName) {
-  const tokens = String(displayName || "").split(/\s+/).filter((t) => /^\p{L}{3,}$/u.test(t));
-  if (!tokens.length) return null;
-  const alternatives = [...new Set([
-    tokens.join("\\s+"), [...tokens].reverse().join("\\s+"), tokens[0], tokens[tokens.length - 1],
-  ])].sort((x, y) => y.length - x.length);
+  const tokens = String(displayName || "").split(/\s+/).filter((t) => /^\p{L}{2,}$/u.test(t));
+  if (tokens.length < 2) return null;
+  const first = tokens[0];
+  const last = tokens[tokens.length - 1];
+  const initial = first[0];
+  const between = "(?:\\s+\\p{L}+\\.?){0,2}\\s+";   // up to two middle names or initials
+  const alternatives = [
+    `${first}${between}${last}`,
+    `${last}${between}${first}`,
+    `${first}\\s+${last}`,
+    `${last}\\s+${first}`,
+    `${initial}(?:\\.\\s*|\\s+)${last}`,
+    `${last}\\s+${initial}\\.?`,
+  ];
   return new RegExp(`(?<!\\p{L})(?:${alternatives.join("|")})(?!\\p{L})`, "giu");
 }
 

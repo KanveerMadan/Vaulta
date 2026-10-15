@@ -17,7 +17,7 @@ from app.models.person import Person
 from app.models.transaction import KIND_DIRECTIONS, Transaction, TransactionKind
 from app.models.transaction_source import TransactionDirection
 from app.models.user import User
-from app.services.keys import person_identity, person_key
+from app.services.keys import evidence_identities, person_identity, person_key
 
 # What a tag means unless the user says otherwise (used by the People page and review answers)
 TAG_DEFAULTS = {
@@ -30,21 +30,74 @@ TAG_DEFAULTS = {
 }
 
 
+def resolve(person: Person, by_id: dict[uuid.UUID, Person]) -> Person:
+    """Follow merges to the person that absorbed this one."""
+    seen = set()
+    while person.merged_into_id and person.merged_into_id in by_id and person.id not in seen:
+        seen.add(person.id)
+        person = by_id[person.merged_into_id]
+    return person
+
+
+def merge_people(source: Person, target: Person) -> None:
+    """
+    Fold `source` into `target`. Transactions follow on the next detection run
+    (link_people resolves every key to the surviving person), so balances and
+    totals combine. The target keeps its tag; it takes the source's if it has
+    none, and takes a real name over a bare masked UPI ID.
+    """
+    source.merged_into_id = target.id
+    if not target.tag and source.tag:
+        target.tag, target.default_category, target.default_kind = source.tag, source.default_category, source.default_kind
+    if "***" in target.display_name and "***" not in source.display_name:
+        target.display_name = source.display_name
+    if not target.masked_vpa and source.masked_vpa:
+        target.masked_vpa = source.masked_vpa
+
+
+def _new_person(user: User, key: str, identity) -> Person:
+    vpa, name = identity
+    return Person(id=uuid.uuid4(), user_id=user.id, key_hash=key,
+                  display_name=(name.title() if name else vpa)[:100], masked_vpa=vpa)
+
+
 def link_people(db: Session, user: User, txns: list[Transaction]) -> dict[uuid.UUID, Person]:
-    """Set person_id on every P2P transaction, creating people as first seen."""
+    """
+    Set person_id on every P2P transaction, creating people as first seen.
+    Auto-merge: when one transaction (dedup-merged across sources) shows the
+    same name token from two sources (UPI app full name vs bank masked UPI ID
+    + name), those two people are the same person.
+    """
     people = {p.key_hash: p for p in db.query(Person).filter(Person.user_id == user.id)}
-    keys = {}
+    keys: dict = {}
+    same_person: list[tuple[str, str]] = []
     for t in txns:
         identity = person_identity(t)
         keys[t.id] = person_key(identity) if identity else None
-        if identity and keys[t.id] not in people:
-            vpa, name = identity
-            people[keys[t.id]] = Person(id=uuid.uuid4(), user_id=user.id, key_hash=keys[t.id],
-                                        display_name=(name.title() if name else vpa)[:100], masked_vpa=vpa)
-            db.add(people[keys[t.id]])
+        if not identity:
+            continue
+        found = {person_key(identity): identity}
+        for other in evidence_identities(t):
+            found.setdefault(person_key(other), other)
+        for key, ident in found.items():
+            if key not in people:
+                people[key] = _new_person(user, key, ident)
+                db.add(people[key])
+        names = {ident[1] for ident in found.values()}
+        if len(found) > 1 and len(names) == 1 and None not in names:
+            first, *rest = found
+            same_person += [(first, k) for k in rest]
     db.flush()  # people exist before transactions point at them (no ORM relationship to order the flush)
+
+    by_id = {p.id: p for p in people.values()}
+    for a_key, b_key in same_person:
+        a, b = resolve(people[a_key], by_id), resolve(people[b_key], by_id)
+        if a.id != b.id:
+            # the longer-known person survives; brand-new ones have no created_at yet
+            older, newer = sorted((a, b), key=lambda p: (p.created_at is None, p.created_at or 0))
+            merge_people(newer, older)
     for t in txns:
-        t.person_id = people[keys[t.id]].id if keys[t.id] else None
+        t.person_id = resolve(people[keys[t.id]], by_id).id if keys[t.id] else None
     return {p.id: p for p in people.values()}
 
 

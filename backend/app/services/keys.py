@@ -48,18 +48,11 @@ def _name_token(text: str) -> Optional[str]:
     return None
 
 
-def person_identity(txn: Transaction) -> Optional[tuple[Optional[str], Optional[str]]]:
-    """
-    (masked_vpa, name_token) when this transaction is with an individual:
-    UPI-app rows the importer classified as peer payments, bank rows with a
-    masked UPI ID (the browser masks only personal IDs; a remark like "Rent"
-    may still have matched a normalizer pattern), or bank rows with no
-    recognized merchant and a P2A (person-to-account) marker.
-    """
-    text = txn.merchant_raw or ""
+def identity_from_text(text: str, is_peer: bool, merchant_clean: Optional[str]) -> Optional[tuple[Optional[str], Optional[str]]]:
+    """(masked_vpa, name_token) if `text` describes a payment with an individual."""
+    text = text or ""
     vpa_match = MASKED_VPA.search(text)
-    is_peer = txn.transaction_nature in (TransactionNature.peer_payment_sent, TransactionNature.peer_payment_received)
-    bank_peer = vpa_match or (not txn.merchant_clean and re.search(r"\bP2A\b", text))
+    bank_peer = vpa_match or (not merchant_clean and re.search(r"\bP2A\b", text))
     if not is_peer and not bank_peer:
         return None
     vpa = None
@@ -70,6 +63,33 @@ def person_identity(txn: Transaction) -> Optional[tuple[Optional[str], Optional[
     if not vpa and not name:
         return None
     return vpa, name
+
+
+def person_identity(txn: Transaction) -> Optional[tuple[Optional[str], Optional[str]]]:
+    """
+    (masked_vpa, name_token) when this transaction is with an individual:
+    UPI-app rows the importer classified as peer payments, bank rows with a
+    masked UPI ID (the browser masks only personal IDs; a remark like "Rent"
+    may still have matched a normalizer pattern), or bank rows with no
+    recognized merchant and a P2A (person-to-account) marker.
+    """
+    is_peer = txn.transaction_nature in (TransactionNature.peer_payment_sent, TransactionNature.peer_payment_received)
+    return identity_from_text(txn.merchant_raw, is_peer, txn.merchant_clean)
+
+
+def evidence_identities(txn: Transaction) -> list[tuple[Optional[str], Optional[str]]]:
+    """
+    The person as each source saw them, for a transaction already known to be
+    with a person. A payment imported from both Google Pay ("Rahul Sharma")
+    and the bank ("UPI-RAHUL SHARMA-R***@okaxis") yields both identities.
+    """
+    out = []
+    for r in txn.source_records:
+        is_upi_app = (r.source.value if hasattr(r.source, "value") else r.source).startswith("upi_")
+        identity = identity_from_text(r.counterparty_raw, is_upi_app, None)
+        if identity:
+            out.append(identity)
+    return out
 
 
 def person_key(identity: tuple[Optional[str], Optional[str]]) -> str:

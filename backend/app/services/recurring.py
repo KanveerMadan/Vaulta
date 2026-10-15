@@ -146,11 +146,12 @@ def _status(last: date, next_expected: date, cadence: str, today: date) -> str:
 
 
 def series_key(txn: Transaction) -> tuple[str, str, bool]:
-    """(key, display name, is_person)."""
+    """(key, display name, is_person). People are keyed by their (merge-resolved) person id."""
     identity = person_identity(txn)
     if identity:
         vpa, name = identity
-        return f"person:{person_key(identity)}", (name.title() if name else vpa), True
+        key = f"person:{txn.person_id}" if txn.person_id else f"person:{person_key(identity)}"
+        return key, (name.title() if name else vpa), True
     key = merchant_key(txn)
     return f"merchant:{key}", (txn.merchant_clean or key.title() or "Unknown"), False
 

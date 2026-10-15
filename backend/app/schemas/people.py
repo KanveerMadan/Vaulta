@@ -56,3 +56,9 @@ class PersonUpdate(BaseModel):
         if "display_name" in self.model_fields_set and self.display_name is None:
             raise ValueError("display_name can't be cleared")
         return self
+
+
+class PersonMerge(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: uuid.UUID

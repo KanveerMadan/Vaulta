@@ -3,13 +3,14 @@
 // In the browser a scanned PDF page is rendered to a canvas; here the
 // renderer is injected and returns the same page as a PNG.
 import { Buffer } from "node:buffer";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createWorker } from "tesseract.js";
 import { parseStatement } from "./index.js";
 import { applyMapping, guessMapping } from "./mapping.js";
-import { createOcr, LOW_CONFIDENCE } from "./ocr.js";
+import { browserOcr, createOcr, LOW_CONFIDENCE, OCR_ASSETS } from "./ocr.js";
+import { OCR_FILES } from "../../scripts/copy-ocr-assets.mjs";
 import { ocrPagesResult } from "./pdfExtract.js";
 import { reconstructTable } from "./table.js";
 import { sanitizeRows } from "./pii.js";
@@ -73,5 +74,36 @@ describe("OCR", () => {
     const { rows: wire, lowConfidence } = sanitizeRows(both);
     expect([...lowConfidence]).toEqual([1]);
     expect(Object.keys(wire[1])).not.toContain("low_confidence");
+  });
+});
+
+describe("OCR assets are self-hosted", () => {
+  const offOrigin = (v) => typeof v === "string" && /^(https?:)?\/\//i.test(v);
+
+  it("tesseract is configured with same-origin paths only", async () => {
+    let seen;
+    await browserOcr(async (lang, oem, options) => {
+      seen = { lang, oem, options };
+      return { recognize: async () => ({ data: { blocks: [] } }), terminate: async () => {} };
+    });
+    expect(seen.options).toEqual(OCR_ASSETS);
+    for (const key of ["workerPath", "corePath", "langPath"]) {
+      expect(seen.options[key].startsWith("/")).toBe(true);
+      expect(offOrigin(seen.options[key])).toBe(false);
+    }
+    expect(seen.options.workerBlobURL).toBe(false);
+    expect(Object.values(seen.options).some(offOrigin)).toBe(false);
+  });
+
+  it("every asset tesseract will request is copied into public/ocr", () => {
+    const served = Object.keys(OCR_FILES).map((f) => `/ocr/${f}`);
+    expect(served).toContain(OCR_ASSETS.workerPath);
+    expect(served).toContain(`${OCR_ASSETS.langPath}/eng.traineddata.gz`);
+    // OEM 1 (LSTM) → the worker picks one of these two by SIMD support
+    expect(served).toContain(`${OCR_ASSETS.corePath}/tesseract-core-lstm.wasm.js`);
+    expect(served).toContain(`${OCR_ASSETS.corePath}/tesseract-core-simd-lstm.wasm.js`);
+    for (const src of Object.values(OCR_FILES)) {
+      expect(existsSync(new URL(`../../node_modules/${src}`, import.meta.url))).toBe(true);
+    }
   });
 });

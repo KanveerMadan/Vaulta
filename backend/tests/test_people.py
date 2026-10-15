@@ -12,8 +12,8 @@ def days_ago(n):
     return (date.today() - timedelta(days=n)).isoformat()
 
 
-def p2p(d, desc, amount, direction="debit", **kw):
-    return row(date=d, description_raw=desc, amount=amount, direction=direction, reference=None, **kw)
+def p2p(d, desc, amount, direction="debit", reference=None, **kw):
+    return row(date=d, description_raw=desc, amount=amount, direction=direction, reference=reference, **kw)
 
 
 def load(client, *rows):
@@ -95,3 +95,58 @@ def test_person_validation_and_isolation(client):
     assert client.get("/api/people", headers=BOB).json() == {"people": []}
     assert client.patch(f"/api/people/{pid}", json={"tag": "Rent"}, headers=BOB).status_code == 404
     assert load(client)[0]["Rahul Sharma"]["tag"] is None
+
+
+def test_auto_merge_when_one_payment_shows_both_identities(client):
+    load(client,
+         p2p(days_ago(30), "UPI-RAHUL SHARMA-R***@okaxis-XXXX", "700.00", reference="612400000001"),   # bank, both sources
+         p2p(days_ago(20), "UPI-RAHUL SHARMA-R***@okaxis-XXXX", "300.00"))                             # bank only
+    people, _ = load(client,
+                     p2p(days_ago(30), "Rahul Sharma", "700.00", reference="612400000001",
+                         source_type="upi_google_pay", source_label="Google Pay"),                      # same payment (UTR)
+                     p2p(days_ago(5), "Rahul Sharma", "1000.00", reference="612400000002",
+                         source_type="upi_google_pay", source_label="Google Pay"))                      # GPay only
+    assert list(people) == ["Rahul Sharma"]
+    rahul = people["Rahul Sharma"]
+    assert (rahul["transaction_count"], rahul["paid_total"], rahul["masked_vpa"]) == (3, "2000.00", "R***@okaxis")
+
+
+def test_different_names_are_not_merged(client):
+    people, _ = load(client,
+                     p2p(days_ago(9), "UPI-RAHUL SHARMA-R***@okaxis-XXXX", "100.00"),
+                     p2p(days_ago(8), "Rahul Verma", "100.00", source_type="upi_google_pay", source_label="Google Pay"))
+    assert set(people) == {"Rahul Sharma", "Rahul Verma"}
+
+
+def test_manual_merge_moves_transactions_tag_and_balance(client):
+    people, txns = load(client,
+                        p2p(days_ago(40), "Priya Nair", "5000.00", source_type="upi_google_pay", source_label="Google Pay"),
+                        p2p(days_ago(10), "UPI-P NAIR-P***@ybl-XXXX", "2000.00", "credit"))
+    assert set(people) == {"Priya Nair", "P Nair"}
+    lent = next(t for t in txns if t["direction"] == "debit")
+    back = next(t for t in txns if t["direction"] == "credit")
+    client.patch(f"/api/transactions/{lent['id']}", json={"kind": "lent"}, headers=ALICE)
+    client.patch(f"/api/transactions/{back['id']}", json={"kind": "repayment"}, headers=ALICE)
+    client.patch(f"/api/people/{people['P Nair']['id']}", json={"tag": "Friend"}, headers=ALICE)
+
+    res = client.post(f"/api/people/{people['Priya Nair']['id']}/merge", json={"source_id": people["P Nair"]["id"]}, headers=ALICE)
+    assert res.status_code == 200, res.text
+    merged = res.json()
+    assert (merged["name"], merged["tag"], merged["masked_vpa"]) == ("Priya Nair", "Friend", "P***@ybl")
+    assert (merged["transaction_count"], merged["owed_to_you"], merged["balance"]) == (2, "3000.00", "3000.00")
+    people, txns = load(client)
+    assert list(people) == ["Priya Nair"]
+    assert {t["person_id"] for t in txns} == {merged["id"]}
+    # merged people stay merged as new transactions arrive
+    people, _ = load(client, p2p(days_ago(1), "UPI-P NAIR-P***@ybl-XXXX", "100.00", "credit"))
+    assert list(people) == ["Priya Nair"]
+
+
+def test_merge_validation_and_isolation(client):
+    people, _ = load(client, p2p(days_ago(2), "Priya Nair", "50.00", source_type="upi_google_pay", source_label="Google Pay"),
+                     p2p(days_ago(1), "UPI-P NAIR-P***@ybl-XXXX", "60.00"))
+    a, b = people["Priya Nair"]["id"], people["P Nair"]["id"]
+    assert client.post(f"/api/people/{a}/merge", json={"source_id": a}, headers=ALICE).status_code == 422
+    assert client.post(f"/api/people/{a}/merge", json={"source_id": b}, headers=BOB).status_code == 404
+    assert client.post(f"/api/people/{a}/merge", json={"source_id": b, "x": 1}, headers=ALICE).status_code == 422
+    assert set(load(client)[0]) == {"Priya Nair", "P Nair"}

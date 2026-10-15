@@ -32,6 +32,7 @@ COVERED = {
     ("POST", "/api/recurring/refresh"),
     ("GET", "/api/people"),            # tests/test_people.py::test_person_validation_and_isolation
     ("PATCH", "/api/people/{person_id}"),
+    ("POST", "/api/people/{person_id}/merge"),   # tests/test_people.py::test_merge_validation_and_isolation
     ("GET", "/api/rules"),             # tests/test_rules.py::test_rules_are_per_user
     ("POST", "/api/rules"),
     ("PATCH", "/api/rules/{rule_id}"),
