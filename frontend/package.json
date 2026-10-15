@@ -22,6 +22,7 @@
     "axios": "^1.17.0",
     "clsx": "^2.1.1",
     "firebase": "^12.14.0",
+    "motion": "13.4.4",
     "papaparse": "^5.4.1",
     "pdfjs-dist": "^4.10.38",
     "react": "^19.2.6",

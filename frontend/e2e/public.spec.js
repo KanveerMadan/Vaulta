@@ -7,7 +7,7 @@ test('landing → demo → home renders every card', async ({ page }, testInfo) 
   await expect(page.getByText('Raw alert emails are never stored.')).toBeVisible()
   await checkLayout(page, testInfo)
 
-  await page.getByRole('button', { name: 'Try the demo' }).click()
+  await page.getByRole('button', { name: 'Try the demo' }).first().click()
   await expect(page.getByText("You're viewing a demo with sample data.")).toBeVisible()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 30_000 })
   await expect(page.getByTestId('outlook')).toContainText('On pace for')
@@ -23,7 +23,7 @@ test('landing → demo → home renders every card', async ({ page }, testInfo) 
 test('demo is read-only', async ({ page, guard }, testInfo) => {
   guard.allow(/status of 403/)
   await page.goto('/welcome')
-  await page.getByRole('button', { name: 'Try the demo' }).click()
+  await page.getByRole('button', { name: 'Try the demo' }).first().click()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 30_000 })
   await page.getByLabel('Quick add a transaction').fill('150 auto cash')
   await page.getByRole('button', { name: 'Add', exact: true }).click()
@@ -57,7 +57,7 @@ test('installable: manifest, icons, service worker caches static files only', as
   expect(manifest.display).toBe('standalone')
   for (const icon of manifest.icons) expect((await page.request.get(icon.src)).ok()).toBeTruthy()
   await page.waitForFunction(async () => (await navigator.serviceWorker.getRegistration())?.active, null, { timeout: 30_000 })
-  await page.getByRole('button', { name: 'Try the demo' }).click()
+  await page.getByRole('button', { name: 'Try the demo' }).first().click()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 30_000 })
   const cached = await page.evaluate(async () => {
     const urls = []
@@ -70,7 +70,7 @@ test('installable: manifest, icons, service worker caches static files only', as
 
 test('demo chat: actions show a read-only card', async ({ page }, testInfo) => {
   await page.goto('/welcome')
-  await page.getByRole('button', { name: 'Try the demo' }).click()
+  await page.getByRole('button', { name: 'Try the demo' }).first().click()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 30_000 })
   if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Ask the assistant' }).click()
   const chat = page.getByRole('complementary', { name: 'AI Assistant' })

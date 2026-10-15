@@ -1,9 +1,8 @@
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from './lib/firebase'
 import { useAuthStore } from './store/authStore'
-import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Connect from './pages/Connect'
@@ -20,6 +19,9 @@ import Onboarding from './pages/Onboarding'
 import Security from './pages/Security'
 import Layout from './components/Layout'
 import { Toaster } from './ui/Toast'
+
+// Showpieces load on their own (and bring the animation library with them); the workspace never does
+const Landing = lazy(() => import('./pages/landing/Landing'))
 
 function PrivateRoute() {
   const { user, demoToken } = useAuthStore()
@@ -55,7 +57,7 @@ export default function App() {
     <>
     <Toaster />
     <Routes>
-      <Route path="/welcome" element={<Landing />} />
+      <Route path="/welcome" element={<Suspense fallback={<Loader />}><Landing /></Suspense>} />
       <Route path="/security" element={<Security />} />
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
       <Route element={<PrivateRoute />}>
