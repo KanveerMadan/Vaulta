@@ -17,6 +17,7 @@ import Cash from './pages/Cash'
 import Review from './pages/Review'
 import Goals from './pages/Goals'
 import Onboarding from './pages/Onboarding'
+import Security from './pages/Security'
 import Layout from './components/Layout'
 
 function PrivateRoute() {
@@ -57,6 +58,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/welcome" element={<Landing />} />
+      <Route path="/security" element={<Security />} />
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
       <Route element={<PrivateRoute />}>
         <Route path="/onboarding" element={<Onboarding />} />

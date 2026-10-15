@@ -126,7 +126,7 @@ export default function Login() {
       </div>
 
       <p className="text-center text-xs mt-6 leading-relaxed" style={{ color: '#8FAF98' }}>
-        By continuing you agree to our terms of service.<br />Your data is never sold or shared.
+        By continuing you agree to our terms of service.<br /><a href="/security" className="underline">What happens to your data</a>
       </p>
     </div>
   </div>

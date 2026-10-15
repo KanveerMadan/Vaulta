@@ -81,6 +81,38 @@ function ResumeSetup() {
   );
 }
 
+function DeleteEverything() {
+  const navigate = useNavigate();
+  const [typed, setTyped] = useState("");
+  const [error, setError] = useState(null);
+  const remove = async () => {
+    setError(null);
+    try {
+      await api.delete("/auth/me");
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Couldn't delete your data. Try again.");
+      return;
+    }
+    const { getAuth, signOut } = await import("firebase/auth");
+    try { await getAuth().currentUser?.delete(); } catch { await signOut(getAuth()); }   // needs a recent sign-in
+    navigate("/welcome");
+  };
+  return (
+    <section className="card p-5 space-y-2">
+      <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Delete everything</h2>
+      <p className="text-sm text-ink-600">
+        Permanently deletes your account and all your data from Vaulta: transactions, budgets, goals, reports, alerts, chat
+        history and settings. This can't be undone.
+      </p>
+      <label className="text-sm text-ink-600 block">Type DELETE to confirm
+        <input className="input mt-1" value={typed} onChange={(e) => setTyped(e.target.value)} aria-label="Type DELETE to confirm" />
+      </label>
+      {error && <p className="text-sm text-danger" role="alert">{error}</p>}
+      <button onClick={remove} disabled={typed !== "DELETE"} className="btn-ghost text-danger disabled:opacity-40">Delete my account and data</button>
+    </section>
+  );
+}
+
 export default function Settings() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { data, error } = useApi("/api/settings", refreshKey);
@@ -142,6 +174,8 @@ export default function Settings() {
           </div>
         ))}
       </section>
+
+      <DeleteEverything />
     </div>
   );
 }
