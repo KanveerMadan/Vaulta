@@ -2,6 +2,7 @@ import { useState } from "react";
 import { parseQuickAdd } from "../lib/quickAdd";
 import { addManualTransaction } from "../lib/transactions";
 import ManualEntryModal from "./ManualEntryModal";
+import ReceiptCapture from "./ReceiptCapture";
 
 const fmtDay = (iso) => {
   const d = new Date(`${iso}T00:00:00`);
@@ -39,13 +40,14 @@ export default function QuickAddBar({ onAdded }) {
         <input
           value={text}
           onChange={(e) => { setText(e.target.value); setError(null); }}
-          placeholder='Quick add: "150 auto cash" or "2400 groceries dmart yesterday"'
+          placeholder='Quick add: "150 auto cash", "1.2k groceries dmart yesterday"'
           className="flex-1 border border-sage-200 rounded-lg px-3 py-2 text-sm"
           aria-label="Quick add a transaction"
         />
         <button type="button" onClick={() => setEditing(parsed || {})} className="btn-ghost text-sm px-3">
           {parsed ? "Edit" : "+ Add"}
         </button>
+        <ReceiptCapture onSaved={onAdded} />
       </form>
       {parsed && (
         <div className="flex items-center gap-2 flex-wrap text-xs">

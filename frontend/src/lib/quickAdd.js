@@ -40,6 +40,15 @@ function dayMonth(day, month, today) {
   return d > today ? new Date(today.getFullYear() - 1, month, day) : d;
 }
 
+/** First category whose keywords include one of `words` (lowercase), else null. */
+export function guessCategory(words) {
+  for (const w of words) {
+    const hit = Object.keys(KEYWORDS).find((c) => KEYWORDS[c].includes(w));
+    if (hit) return hit;
+  }
+  return null;
+}
+
 /**
  * Returns {amount, merchant, category, date, payment_method, direction} or
  * null when no amount is found. amount is a decimal string.
@@ -55,12 +64,15 @@ export function parseQuickAdd(text, today = new Date()) {
   take(/\btoday\b/, () => today);
   take(new RegExp(`\\b(?:last\\s+)?(${WEEKDAYS.join("|")})\\b`), (_, w) => daysAgo(today, ((today.getDay() - WEEKDAYS.indexOf(w)) + 7) % 7 || 7));
   take(/\b(\d{1,2})[/-](\d{1,2})\b(?![/-]?\d)/, (_, d, m) => dayMonth(Number(d), Number(m) - 1, today));
-  take(new RegExp(`\\b(\\d{1,2})\\s*(${MONTHS.join("|")})[a-z]*\\b`), (_, d, m) => dayMonth(Number(d), MONTHS.indexOf(m), today));
+  take(new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s*(${MONTHS.join("|")})[a-z]*\\b`), (_, d, m) => dayMonth(Number(d), MONTHS.indexOf(m), today));
+  take(new RegExp(`\\b(${MONTHS.join("|")})[a-z]*\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`), (_, m, d) => dayMonth(Number(d), MONTHS.indexOf(m), today));
 
-  const amountMatch = /(?:₹|rs\.?|inr)?\s*(\d[\d,]*(?:\.\d{1,2})?)\s*(k)?\b/.exec(rest);
+  // Indian formats: 1,200 · 1,20,000 · 1.2k · 2 lakh / 2L / 1.5 lac · 1 cr
+  const amountMatch = /(?:₹|rs\.?|inr)?\s*(\d[\d,]*(?:\.\d+)?)\s*(k|lakhs?|lacs?|l|crores?|cr)?\b/.exec(rest);
   if (!amountMatch) return null;
-  let amount = Number(amountMatch[1].replace(/,/g, ""));
-  if (amountMatch[2]) amount *= 1000;
+  const unit = (amountMatch[2] || "")[0];
+  const multiplier = { k: 1e3, l: 1e5, c: 1e7 }[unit] || 1;
+  const amount = Math.round(Number(amountMatch[1].replace(/,/g, "")) * multiplier * 100) / 100;
   if (!(amount > 0)) return null;
   rest = rest.replace(amountMatch[0], " ");
 
@@ -73,7 +85,7 @@ export function parseQuickAdd(text, today = new Date()) {
   for (const w of words) {
     if (PAYMENT_WORDS[w]) { payment_method = PAYMENT_WORDS[w]; continue; }
     if (INCOME_WORDS.has(w)) direction = "credit";
-    category = category || Object.keys(KEYWORDS).find((c) => KEYWORDS[c].includes(w)) || null;
+    category = category || guessCategory([w]);
     (GENERIC.has(w) || INCOME_WORDS.has(w) ? generic : named).push(w);
   }
   const merchant = titleCase((named.length ? named : generic).join(" ")) || "Cash spend";

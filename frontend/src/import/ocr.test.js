@@ -14,6 +14,7 @@ import { OCR_FILES } from "../../scripts/copy-ocr-assets.mjs";
 import { ocrPagesResult } from "./pdfExtract.js";
 import { reconstructTable } from "./table.js";
 import { sanitizeRows } from "./pii.js";
+import { extractReceipt } from "./receipt.js";
 import { fixtureFile, pdfjs } from "./testUtils.js";
 
 const LANG = fileURLToPath(new URL("../../node_modules/@tesseract.js-data/eng/4.0.0_best_int", import.meta.url));
@@ -51,6 +52,14 @@ describe("OCR", () => {
 
   it("image-only PDF → rendered, OCR'd, same table", async () => {
     expectBankTable(await parseStatement(fixtureFile("bank_hdfc_scanned.pdf"), { pdfjs, ocr: engine }));
+  }, 60000);
+
+  it("receipt photo → amount, merchant, date (web quick capture)", async () => {
+    const photo = readFileSync(new URL("../../../fixtures/statements/receipt_photo.png", import.meta.url));
+    const { lineTexts } = ocrPagesResult([await engine.recognize(photo)]);
+    expect(extractReceipt(lineTexts)).toEqual({
+      amount: "280.36", merchant: "Reliance Fresh", date: "2024-03-14", payment_method: "online", category: "Groceries",
+    });
   }, 60000);
 
   it("text PDFs never touch OCR", async () => {

@@ -1,0 +1,278 @@
+{
+ "_about": "Shared quick-add parser cases (today = 2024-03-15, a Friday). Run by frontend/src/lib/quickAdd.test.js and backend/tests/test_quick_add.py (Telegram uses the server port).",
+ "today": "2024-03-15",
+ "cases": [
+  [
+   "150 auto cash",
+   {
+    "amount": "150",
+    "merchant": "Auto",
+    "category": "Transport",
+    "date": "2024-03-15",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "2400 groceries dmart yesterday",
+   {
+    "amount": "2400",
+    "merchant": "Dmart",
+    "category": "Groceries",
+    "date": "2024-03-14",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "₹1,250.50 swiggy dinner upi",
+   {
+    "amount": "1250.50",
+    "merchant": "Swiggy",
+    "category": "Food & Dining",
+    "date": "2024-03-15",
+    "payment_method": "online",
+    "direction": "debit"
+   }
+  ],
+  [
+   "2.4k rent",
+   {
+    "amount": "2400",
+    "merchant": "Rent",
+    "category": "Rent & Housing",
+    "date": "2024-03-15",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "received 2000 from mom",
+   {
+    "amount": "2000",
+    "merchant": "Mom",
+    "category": null,
+    "date": "2024-03-15",
+    "payment_method": "cash",
+    "direction": "credit"
+   }
+  ],
+  [
+   "salary 85000 credited",
+   {
+    "amount": "85000",
+    "merchant": "Salary Credited",
+    "category": null,
+    "date": "2024-03-15",
+    "payment_method": "cash",
+    "direction": "credit"
+   }
+  ],
+  [
+   "60 chai day before yesterday",
+   {
+    "amount": "60",
+    "merchant": "Chai",
+    "category": "Food & Dining",
+    "date": "2024-03-13",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "300 medicine monday",
+   {
+    "amount": "300",
+    "merchant": "Medicine",
+    "category": "Health",
+    "date": "2024-03-11",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "500 petrol 12/3 card",
+   {
+    "amount": "500",
+    "merchant": "Petrol",
+    "category": "Transport",
+    "date": "2024-03-12",
+    "payment_method": "online",
+    "direction": "debit"
+   }
+  ],
+  [
+   "899 shoes 2 mar",
+   {
+    "amount": "899",
+    "merchant": "Shoes",
+    "category": "Shopping",
+    "date": "2024-03-02",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "99 something 20 dec",
+   {
+    "amount": "99",
+    "merchant": "Something",
+    "category": null,
+    "date": "2023-12-20",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "40",
+   {
+    "amount": "40",
+    "merchant": "Cash spend",
+    "category": null,
+    "date": "2024-03-15",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "2 lakh rent",
+   {
+    "amount": "200000",
+    "merchant": "Rent",
+    "category": "Rent & Housing",
+    "date": "2024-03-15",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "1.25 lakh car service",
+   {
+    "amount": "125000",
+    "merchant": "Car Service",
+    "category": null,
+    "date": "2024-03-15",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "2L gold",
+   {
+    "amount": "200000",
+    "merchant": "Gold",
+    "category": null,
+    "date": "2024-03-15",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "1.2k swiggy",
+   {
+    "amount": "1200",
+    "merchant": "Swiggy",
+    "category": "Food & Dining",
+    "date": "2024-03-15",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "₹1,20,000 laptop card",
+   {
+    "amount": "120000",
+    "merchant": "Laptop",
+    "category": null,
+    "date": "2024-03-15",
+    "payment_method": "online",
+    "direction": "debit"
+   }
+  ],
+  [
+   "500 dinner 12th oct",
+   {
+    "amount": "500",
+    "merchant": "Dinner",
+    "category": "Food & Dining",
+    "date": "2023-10-12",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "300 auto oct 9",
+   {
+    "amount": "300",
+    "merchant": "Auto",
+    "category": "Transport",
+    "date": "2023-10-09",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "650 groceries on 2 mar",
+   {
+    "amount": "650",
+    "merchant": "Groceries",
+    "category": "Groceries",
+    "date": "2024-03-02",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "40 chai last friday",
+   {
+    "amount": "40",
+    "merchant": "Chai",
+    "category": "Food & Dining",
+    "date": "2024-03-08",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "1 cr flat",
+   {
+    "amount": "10000000",
+    "merchant": "Flat",
+    "category": null,
+    "date": "2024-03-15",
+    "payment_method": "cash",
+    "direction": "debit"
+   }
+  ],
+  [
+   "got 500 cash from rahul",
+   {
+    "amount": "500",
+    "merchant": "Rahul",
+    "category": null,
+    "date": "2024-03-15",
+    "payment_method": "cash",
+    "direction": "credit"
+   }
+  ],
+  [
+   "rs 75 tea upi today",
+   {
+    "amount": "75",
+    "merchant": "Tea",
+    "category": "Food & Dining",
+    "date": "2024-03-15",
+    "payment_method": "online",
+    "direction": "debit"
+   }
+  ],
+  [
+   "auto yesterday",
+   null
+  ],
+  [
+   "0 auto",
+   null
+  ]
+ ]
+}

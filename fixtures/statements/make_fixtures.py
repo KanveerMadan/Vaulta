@@ -219,6 +219,26 @@ def make_scans():
     doc.save(HERE / "bank_hdfc_scanned.pdf", garbage=4, deflate=True)
 
 
+# ── A shop receipt photographed (for the web capture OCR test) ───────────────
+RECEIPT_LINES = [
+    "RELIANCE FRESH", "Koramangala, Bengaluru", "GSTIN 29ABCDE1234F1Z5", "TAX INVOICE",
+    "Date: 14/03/2024 18:42", "Bill No: 4471",
+    "Toned Milk 1L        2 x 66.00     132.00", "Bread Brown            1 x 45.00      45.00",
+    "Eggs 12                1 x 90.00      90.00", "Sub Total                         267.00",
+    "CGST 2.5%                           6.68", "SGST 2.5%                           6.68",
+    "Grand Total                       280.36", "Paid by UPI", "Thank you, visit again",
+]
+
+
+def make_receipt():
+    doc = pymupdf.open()
+    page = doc.new_page(width=300, height=420)
+    page.insert_font(fontname="F0", fontfile=FONT)
+    for i, line in enumerate(RECEIPT_LINES):
+        page.insert_text((16, 30 + i * 24), line, fontname="F0", fontsize=10)
+    page.get_pixmap(dpi=200).save(HERE / "receipt_photo.png")
+
+
 def golden():
     out = {}
     for bank in ("hdfc", "icici", "sbi", "axis", "kotak"):
@@ -248,5 +268,6 @@ if __name__ == "__main__":
     make_bank_pdf()
     make_cards()
     make_scans()
+    make_receipt()
     result = golden()
     print({k: len(v) for k, v in result.items()})
