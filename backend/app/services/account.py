@@ -1,4 +1,4 @@
-"""Account-level actions on the Firebase login (Admin SDK): signing out everywhere."""
+"""Account-level actions on the Firebase login (Admin SDK): signing out everywhere, passwords, password resets."""
 
 from __future__ import annotations
 
@@ -20,3 +20,68 @@ def sign_out_everywhere(db: Session, user, reason: str = "requested") -> None:
     valid_after_ms = firebase_auth.get_user(user.firebase_uid).tokens_valid_after_timestamp
     user.tokens_revoked_at = datetime.fromtimestamp(valid_after_ms / 1000, tz=timezone.utc)
     activity.record(db, user, "signed_out_everywhere", {"reason": reason})
+
+
+# ── Passwords ─────────────────────────────────────────────────────────────────
+
+MIN_PASSWORD, MAX_PASSWORD = 10, 128
+
+
+class PasswordRejected(ValueError):
+    pass
+
+
+def check_password(password: str) -> None:
+    if len(password) < MIN_PASSWORD:
+        raise PasswordRejected(f"Use at least {MIN_PASSWORD} characters.")
+    if len(password) > MAX_PASSWORD:
+        raise PasswordRejected(f"Use at most {MAX_PASSWORD} characters.")
+    if not password.strip():
+        raise PasswordRejected("The password can't be only spaces.")
+
+
+def set_password(db: Session, user, password: str) -> str:
+    """
+    Change the password, or add one to a Google-only account. Every other session is signed out (the caller's own
+    browser signs in again with the new password). Returns "password_changed" or "method_linked". Caller commits.
+    """
+    check_password(password)
+    had_password = "password" in providers(user)
+    firebase_auth.update_user(user.firebase_uid, password=password)
+    kind = "password_changed" if had_password else "method_linked"
+    activity.record(db, user, kind, None if had_password else {"method": "password"})
+    sign_out_everywhere(db, user, reason=kind)
+    return kind
+
+
+def providers(user) -> list[str]:
+    return [p.provider_id for p in firebase_auth.get_user(user.firebase_uid).provider_data]
+
+
+# ── Password reset (the email itself is sent by Firebase from the browser) ────
+
+def note_reset_requested(db: Session, email: str) -> None:
+    """Remember a reset request for this address's account, if there is one. Says nothing either way."""
+    from app.core.scope import find_user, unbind
+    user = find_user(db, "email", email.strip())
+    if user is None:
+        return
+    user.password_reset_requested_at = datetime.now(timezone.utc)
+    activity.record(db, user, "password_reset_requested")
+    db.commit()
+    unbind(db)
+
+
+def note_reset_completed(db: Session, user) -> None:
+    """
+    At a new sign-in after a reset was requested: Firebase revokes every session when a password is reset, so a
+    revocation after the request means the reset was completed. Log it, and refuse the old sessions here too.
+    """
+    requested = user.password_reset_requested_at
+    if requested is None:
+        return
+    valid_after_ms = firebase_auth.get_user(user.firebase_uid).tokens_valid_after_timestamp or 0
+    if valid_after_ms / 1000 >= requested.timestamp():
+        user.tokens_revoked_at = datetime.fromtimestamp(valid_after_ms / 1000, tz=timezone.utc)
+        activity.record(db, user, "password_reset_completed")
+    user.password_reset_requested_at = None

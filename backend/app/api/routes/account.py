@@ -10,10 +10,10 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user, get_recent_user, get_sensitive_user
+from app.core.auth import CodedError, get_current_user, get_recent_user, get_sensitive_user
 from app.core.database import get_db
 from app.core.ratelimit import per_user
 from app.models.user import User
@@ -56,4 +56,18 @@ def reauth_failed(current_user: User = Depends(get_current_user), db: Session = 
 def sign_out_everywhere(current_user: User = Depends(get_sensitive_user), db: Session = Depends(get_db)):
     """Signs out every device, this one included. Telegram and demo sessions are unaffected."""
     account.sign_out_everywhere(db, current_user)
+    db.commit()
+
+
+class NewPassword(BaseModel):
+    password: str = Field(max_length=512)
+
+
+@router.post("/account/password", status_code=204, dependencies=[Depends(per_user("password", 10, 3600, get_recent_user))])
+def change_password(payload: NewPassword, current_user: User = Depends(get_recent_user), db: Session = Depends(get_db)):
+    """Change the password (or add one to a Google account). Signs out every other session; needs a recent sign-in."""
+    try:
+        account.set_password(db, current_user, payload.password)
+    except account.PasswordRejected as e:
+        raise CodedError(422, "weak_password", str(e))
     db.commit()

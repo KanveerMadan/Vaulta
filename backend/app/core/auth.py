@@ -54,6 +54,7 @@ class TokenInfo:
 UNVERIFIED_WRITES_ALLOWED = {
     ("PATCH", "/auth/me"), ("DELETE", "/auth/me"), ("PATCH", "/api/onboarding"), ("PATCH", "/api/settings"),
     ("POST", "/api/account/reauth-failed"), ("POST", "/api/account/sign-out-everywhere"),
+    ("POST", "/api/account/password"),
 }
 UNVERIFIED_READS_BLOCKED = {("GET", "/api/inbound")}   # shows (and creates) the forwarding address
 EMAIL_UNVERIFIED = "Verify your email address first: open the link we sent you, then try again."
@@ -232,3 +233,6 @@ def _note_sign_in(db: Session, user: User, token: TokenInfo) -> None:
     if user.last_sign_in_at is None or signed_in > user.last_sign_in_at:
         user.last_sign_in_at = signed_in
         record(db, user, "sign_in", {"method": token.provider})
+        if user.password_reset_requested_at is not None:
+            from app.services.account import note_reset_completed
+            note_reset_completed(db, user)

@@ -13,3 +13,6 @@ export function secondsToWait() {
   return Math.max(0, Math.ceil(RESEND_AFTER - (Date.now() - sent) / 1000))
 }
 
+
+// Password policy: also checked by the API when changing a password (backend services/account.py)
+export const MIN_PASSWORD = 10

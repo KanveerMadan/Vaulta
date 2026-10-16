@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # The alembic revision this code expects (GET /health/ready); tests/test_health.py keeps it equal to the real head
-MIGRATION_HEAD = "c1d7e3f5a6b8"
+MIGRATION_HEAD = "d2e8f4a6b7c9"
 
 engine = create_engine(
     settings.DATABASE_URL,

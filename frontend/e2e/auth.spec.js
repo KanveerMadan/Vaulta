@@ -103,3 +103,50 @@ test('sign out of all devices ends a second browser\'s session too', async ({ pa
   await other.close()
   await third.close()
 })
+
+test('forgot password: same answer for any address, and the reset works', async ({ page, request, guard }, testInfo) => {
+  guard.allow(/status of 400/)       // the emulator says EMAIL_NOT_FOUND (production has enumeration protection on)
+  const account = await newAccount(request)
+  await callApi(request, account, 'GET', '/auth/me')
+  const answer = async (email) => {
+    await page.goto('/login')
+    await page.getByRole('button', { name: 'Forgot password?' }).click()
+    await page.getByLabel('Email').fill(email)
+    await page.getByRole('button', { name: 'Send reset link' }).click()
+    const message = page.getByText(/^If there's an account/)
+    await expect(message).toBeVisible()
+    return message.innerText()
+  }
+  const unknown = await answer(uniqueEmail('nobody'))
+  const known = await answer(account.email)
+  expect(known).toBe(unknown)
+  expect(known).toContain("If there's an account for that email")
+  await checkLayout(page, testInfo)
+
+  const [reset] = (await emulatorEmails(request, account.email)).filter((c) => c.requestType === 'PASSWORD_RESET')
+  const done = await request.post('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=e2e-fake-key',
+    { data: { oobCode: reset.oobCode, newPassword: STRONG } })
+  expect(done.ok()).toBe(true)
+  await signIn(page, { ...account, password: STRONG })
+  const kinds = (await callApi(request, { token: await signInToken(request, account.email, STRONG) }, 'GET', '/api/activity')).map((e) => e.kind)
+  expect(kinds).toEqual(expect.arrayContaining(['password_reset_requested', 'password_reset_completed']))
+})
+
+test('change password in Settings', async ({ page, request, guard }) => {
+  guard.allow(/status of 400/)       // the old session's token refresh, refused, before the browser signs back in
+  const account = await signedInWithData(page, request)
+  await page.goto('/settings')
+  await page.getByLabel('New password').fill('short')
+  await page.getByLabel('Type it again').fill('short')
+  await page.getByRole('button', { name: 'Change password' }).click()
+  await expect(page.getByRole('alert')).toHaveText('Use at least 10 characters.')
+  await page.getByLabel('New password').fill(STRONG)
+  await page.getByLabel('Type it again').fill(STRONG)
+  await page.getByRole('button', { name: 'Change password' }).click()
+  await expect(page.getByText('Password changed. Your other devices were signed out.')).toBeVisible()
+  await page.goto('/budgets')                                    // this browser stays signed in
+  await expect(page.getByRole('heading', { name: 'Budgets' })).toBeVisible()
+  const old = await request.post('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=e2e-fake-key',
+    { data: { email: account.email, password: account.password, returnSecureToken: true } })
+  expect(old.ok()).toBe(false)
+})

@@ -145,3 +145,58 @@ def test_sign_out_everywhere_leaves_telegram_and_demo_alone(client, monkeypatch)
         assert user.telegram_chat_id == 4242
     demo = client.post("/auth/demo").json()["token"]
     assert client.get("/api/home", headers={"Authorization": f"Bearer {demo}"}).status_code == 200
+
+
+# ── Passwords (step 2) ────────────────────────────────────────────────────────
+
+def test_change_password_needs_recent_login_policy_and_signs_out_other_sessions(client, monkeypatch):
+    import time
+    fake = FakeFirebase(monkeypatch)
+    updates = []
+    monkeypatch.setattr(auth.firebase_auth, "update_user", lambda uid, **kw: updates.append((uid, kw)))
+    client.get("/auth/me", headers=USER)
+    assert client.post("/api/account/password", json={"password": "short"}, headers=USER).json()["code"] == "weak_password"
+    assert updates == []
+    signed_in_as(monkeypatch, auth_time=int(time.time()) - 3600)
+    assert client.post("/api/account/password", json={"password": "a-long-new-password"}, headers=USER).json()["code"] == "reauth_required"
+    signed_in_as(monkeypatch)
+    assert client.post("/api/account/password", json={"password": "a-long-new-password"}, headers=USER).status_code == 204
+    assert updates == [("alice", {"password": "a-long-new-password"})] and ("revoke", "alice") in fake.calls
+    signed_in_as(monkeypatch, iat=int(time.time()) + 5)                                   # this browser signed in again
+    kinds = [e["kind"] for e in client.get("/api/activity", headers=USER).json()]
+    assert set(kinds[:2]) == {"signed_out_everywhere", "password_changed"}          # same moment, either order
+
+
+def test_a_google_account_can_add_a_password(client, monkeypatch):
+    import time
+    fake = FakeFirebase(monkeypatch)
+    fake.users["alice"] = ["google.com"]
+    monkeypatch.setattr(auth.firebase_auth, "update_user", lambda uid, **kw: None)
+    signed_in_as(monkeypatch, firebase={"sign_in_provider": "google.com"})
+    assert client.post("/api/account/password", json={"password": "a-long-new-password"}, headers=USER).status_code == 204
+    signed_in_as(monkeypatch, firebase={"sign_in_provider": "google.com"}, iat=int(time.time()) + 5)
+    events = client.get("/api/activity", headers=USER).json()
+    assert {"kind": "method_linked", "detail": {"method": "password"}} in [{k: e[k] for k in ("kind", "detail")} for e in events]
+
+
+def test_reset_requests_answer_the_same_for_any_address_and_log_for_the_owner(client, monkeypatch):
+    client.get("/auth/me", headers=USER)
+    known = client.post("/auth/password-reset-requested", json={"email": "ALICE@test.local"})
+    unknown = client.post("/auth/password-reset-requested", json={"email": "nobody@test.local"})
+    assert (known.status_code, known.content) == (unknown.status_code, unknown.content) == (204, b"")
+    kinds = [e["kind"] for e in client.get("/api/activity", headers=USER).json()]
+    assert kinds[0] == "password_reset_requested"
+
+
+def test_a_completed_reset_is_noticed_at_the_next_sign_in(client, monkeypatch):
+    import time
+    fake = FakeFirebase(monkeypatch)
+    signed_in_as(monkeypatch, auth_time=int(time.time()) - 100, iat=int(time.time()) - 100)
+    client.get("/auth/me", headers=USER)
+    client.post("/auth/password-reset-requested", json={"email": "alice@test.local"})
+    fake.valid_after = (int(time.time()) + 1) * 1000                                  # Firebase: password was reset
+    signed_in_as(monkeypatch, auth_time=int(time.time()) + 2, iat=int(time.time()) + 2)   # signs in with the new one
+    kinds = [e["kind"] for e in client.get("/api/activity", headers=USER).json()]
+    assert set(kinds[:2]) == {"password_reset_completed", "sign_in"}
+    signed_in_as(monkeypatch, auth_time=int(time.time()) - 100, iat=int(time.time()) - 100)
+    assert client.get("/api/transactions", headers=USER).status_code == 401          # sessions from before are refused

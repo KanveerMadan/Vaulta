@@ -63,6 +63,7 @@ COVERED = {
     ("GET", "/api/activity"),
     ("POST", "/api/account/reauth-failed"),   # writes only to the caller's own activity log
     ("POST", "/api/account/sign-out-everywhere"),   # acts on the caller's own Firebase login (test_auth_hardening.py)
+    ("POST", "/api/account/password"),              # the caller's own login (test_auth_hardening.py)
     # tests/test_inbound.py::test_addresses_are_per_user
     ("GET", "/api/inbound"),
     ("POST", "/api/inbound/regenerate"),
@@ -108,6 +109,7 @@ EXEMPT = {
     ("GET", "/unsubscribe"), ("POST", "/unsubscribe"),
     ("GET", "/.well-known/security.txt"),   # public, no data (tests/test_app_security.py)
     ("GET", "/health/ready"),               # public status only (tests/test_health.py)
+    ("POST", "/auth/password-reset-requested"),   # no user; same answer for any address (test_auth_hardening.py)
 }
 
 

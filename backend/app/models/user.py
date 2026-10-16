@@ -67,6 +67,8 @@ class User(Base):
     last_sign_in_at = Column(DateTime(timezone=True), nullable=True)
     # --- Sign out everywhere: ID tokens issued before this are refused (app/core/auth.py, services/account.py) ---
     tokens_revoked_at = Column(DateTime(timezone=True), nullable=True)
+    # --- A password reset email was asked for; completion is detected at the next sign-in (services/account.py) ---
+    password_reset_requested_at = Column(DateTime(timezone=True), nullable=True)
 
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled

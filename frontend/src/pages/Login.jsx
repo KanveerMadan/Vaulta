@@ -1,15 +1,21 @@
 import { useState } from 'react'
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth'
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth'
 import { auth, signInWithGoogle } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Wordmark from '../ui/Wordmark'
-import { noteVerificationSent } from '../lib/verification'
+import { MIN_PASSWORD, noteVerificationSent } from '../lib/verification'
+import api from '../lib/api'
 
+const RESET_SENT = "If there's an account for that email, we've sent it a link to reset the password. It can take a minute; check spam too."
+
+// Wrong password and unknown email read the same, so the form never reveals which addresses have accounts
 const ERROR_MAP = {
   'auth/invalid-credential':    'Incorrect email or password.',
-  'auth/email-already-in-use':  'An account with this email already exists.',
-  'auth/weak-password':         'Password must be at least 6 characters.',
+  'auth/user-not-found':        'Incorrect email or password.',
+  'auth/wrong-password':        'Incorrect email or password.',
+  'auth/weak-password':         `Use at least ${MIN_PASSWORD} characters.`,
+  'auth/password-does-not-meet-requirements': `Use at least ${MIN_PASSWORD} characters.`,
   'auth/invalid-email':         'Please enter a valid email address.',
   'auth/too-many-requests':     'Too many attempts. Try again in a few minutes.',
   'auth/popup-closed-by-user':  null,
@@ -21,6 +27,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [notice, setNotice] = useState('')
   const { setUser, endDemo, signedOutNotice, setSignedOutNotice } = useAuthStore()
   const navigate = useNavigate()
   const { state } = useLocation()
@@ -39,8 +46,25 @@ export default function Login() {
     } finally { setLoading(false) }
   }
 
+  const handleReset = async (e) => {
+    e.preventDefault(); setError(''); setNotice(''); setLoading(true)
+    try {
+      await sendPasswordResetEmail(auth, email)
+    } catch (err) {
+      if (err.code === 'auth/invalid-email') { setError(ERROR_MAP['auth/invalid-email']); setLoading(false); return }
+      if (err.code === 'auth/too-many-requests') { setError(ERROR_MAP['auth/too-many-requests']); setLoading(false); return }
+      // any other answer (including "no such user") gets the same message as success
+    }
+    api.post('/auth/password-reset-requested', { email }).catch(() => {})   // for the account's activity log
+    setNotice(RESET_SENT)
+    setLoading(false)
+  }
+
   const handleEmail = async (e) => {
     e.preventDefault(); setError(''); setLoading(true)
+    if (mode === 'signup' && password.length < MIN_PASSWORD) {
+      setError(`Use at least ${MIN_PASSWORD} characters.`); setLoading(false); return
+    }
     try {
       if (mode === 'login') {
         onSuccess((await signInWithEmailAndPassword(auth, email, password)).user)
@@ -80,10 +104,10 @@ export default function Login() {
       <section className="flex items-center justify-center p-6">
         <div className="w-full max-w-sm animate-rise">
           <div className="lg:hidden mb-10"><Wordmark to="/welcome" size="text-2xl" /></div>
-          <h1 className="font-display text-display-s text-ink">{mode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
+          <h1 className="font-display text-display-s text-ink">{{ login: 'Welcome back', signup: 'Create your account', reset: 'Reset your password' }[mode]}</h1>
           <p className="text-sm mt-2 text-muted">
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-            <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
+            <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setNotice('') }}
               className="font-medium text-accent-text underline underline-offset-2">
               {mode === 'login' ? 'Sign up' : 'Log in'}
             </button>
@@ -99,23 +123,43 @@ export default function Login() {
             <div className="flex items-center gap-3 text-micro text-muted" aria-hidden>
               <span className="flex-1 h-px bg-line" />or<span className="flex-1 h-px bg-line" />
             </div>
+            {mode === 'reset' ? (
+              <form onSubmit={handleReset} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="reset-email" className="label">Email</label>
+                  <input id="reset-email" type="email" value={email} onChange={e => setEmail(e.target.value)} spellCheck={false}
+                    placeholder="you@example.com" required className="input" autoComplete="email" name="email" />
+                </div>
+                {error && <p role="alert" className="text-sm text-danger bg-danger-tint rounded-sm px-3 py-2">{error}</p>}
+                {notice && <p role="status" className="text-sm text-ink bg-sunken rounded-sm px-3 py-2">{notice}</p>}
+                <button type="submit" disabled={loading || !email} className="btn-primary w-full h-11">{loading ? 'Please wait…' : 'Send reset link'}</button>
+                <button type="button" onClick={() => { setMode('login'); setError(''); setNotice('') }} className="btn-quiet w-full h-11">Back to log in</button>
+              </form>
+            ) : (
             <form onSubmit={handleEmail} className="space-y-4">
-              <div className="space-y-1.5">
-                <label htmlFor="login-email" className="label">Email</label>
-                <input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)} spellCheck={false}
-                  placeholder="you@example.com" required className="input" autoComplete="email" name="email" />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="login-password" className="label">Password</label>
-                <input id="login-password" type="password" value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••" required className="input" name="password"
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
-              </div>
-              {error && <p role="alert" className="text-sm text-danger bg-danger-tint rounded-sm px-3 py-2">{error}</p>}
-              <button type="submit" disabled={loading || !email || !password} className="btn-primary w-full h-11">
-                {loading ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Create account'}
-              </button>
-            </form>
+                <div className="space-y-1.5">
+                  <label htmlFor="login-email" className="label">Email</label>
+                  <input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)} spellCheck={false}
+                    placeholder="you@example.com" required className="input" autoComplete="email" name="email" />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="login-password" className="label">Password</label>
+                  <input id="login-password" type="password" value={password} onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••" required className="input" name="password"
+                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'} aria-describedby={mode === 'signup' ? 'password-hint' : undefined} />
+                  {mode === 'signup' && <p id="password-hint" className="text-xs text-muted">At least {MIN_PASSWORD} characters. A short phrase is easiest to remember.</p>}
+                  {mode === 'login' && (
+                    <button type="button" onClick={() => { setMode('reset'); setError('') }} className="text-sm text-accent-text underline underline-offset-2">
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                {error && <p role="alert" className="text-sm text-danger bg-danger-tint rounded-sm px-3 py-2">{error}</p>}
+                <button type="submit" disabled={loading || !email || !password} className="btn-primary w-full h-11">
+                  {loading ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Create account'}
+                </button>
+              </form>
+            )}
           </div>
           <p className="text-xs mt-8 text-muted">
             By continuing you agree to our terms of service. <Link to="/security" className="underline">What happens to your data</Link>

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from app.core.auth import get_current_user, get_recent_user, get_sensitive_user
 from app.core.ratelimit import per_ip, per_user
@@ -6,7 +7,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.user import UserResponse, UserUpdate
-from app.services import activity, demo
+from app.services import account, activity, demo
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -51,3 +52,16 @@ def delete_me(
     """Hard delete — user requests full account deletion."""
     db.delete(current_user)
     db.commit()
+
+
+class ResetRequest(BaseModel):
+    email: str = Field(max_length=320)
+
+
+@router.post("/password-reset-requested", status_code=204, dependencies=[Depends(per_ip("password-reset", 10, 3600))])
+def password_reset_requested(payload: ResetRequest, db: Session = Depends(get_db)):
+    """
+    The web app reports that a reset email was asked for (Firebase sends it). For the account's activity log only;
+    the answer is the same 204 whether or not the address has an account.
+    """
+    account.note_reset_requested(db, payload.email)

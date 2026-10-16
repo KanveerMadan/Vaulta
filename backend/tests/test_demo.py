@@ -27,6 +27,7 @@ TODAY = date(2024, 6, 28)
 NO_SESSION = {
     ("POST", "/auth/demo"), ("POST", "/api/payments/webhook"), ("POST", "/internal/run-reports"),
     ("POST", "/internal/inbound-email"), ("POST", "/internal/telegram"), ("POST", "/unsubscribe"),
+    ("POST", "/auth/password-reset-requested"),
 }
 
 

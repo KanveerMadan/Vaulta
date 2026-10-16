@@ -122,7 +122,7 @@ def _one_user_per_flush(session, flush_context, instances):
 # Row-level security hides every user until one is bound, so lookups go through SECURITY DEFINER functions that
 # return an id only (alembic a7c3e9f1d2b4); the row itself is then read as that user.
 
-LOOKUP_FIELDS = ("id", "firebase_uid", "inbound_token_hash", "telegram_chat_id", "razorpay_subscription_id")
+LOOKUP_FIELDS = ("id", "firebase_uid", "inbound_token_hash", "telegram_chat_id", "razorpay_subscription_id", "email")
 
 
 def find_user(db: Session, field: str, value):
