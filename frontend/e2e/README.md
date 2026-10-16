@@ -43,3 +43,27 @@ docker run -d --name pw-server -p 3000:3000 --init --ipc=host mcr.microsoft.com/
 PW_WS_ENDPOINT=ws://127.0.0.1:3000/ PW_BROWSER_OS=linux npx playwright test e2e/visual.spec.js --update-snapshots
 docker rm -f pw-server
 ```
+
+**Engines and devices** (`playwright.config.js`):
+
+| Project | What runs | Engine |
+|---|---|---|
+| `desktop`, `mobile` (360 px), `reduced-motion` | the whole suite, plus `visual.spec.js` | Chromium |
+| `firefox` | the whole suite (service workers blocked: Playwright's Firefox closes a page that reloads under one) | Firefox |
+| `webkit`, `webkit-iphone` (iPhone 15 Pro) | the whole suite | WebKit |
+| `iphone-se`, `iphone-15-pro`, `ipad-mini`, `ipad-mini-landscape`, `ipad-pro-11` | `devices.spec.js` | WebKit |
+| `pixel-7`, `galaxy-s24`, `laptop-1366`, `monitor-2560` | `devices.spec.js` | Chromium |
+
+`devices.spec.js` covers each device in turn:
+- landing, home, transactions, import preview, chat and Money Wrapped, each with a screenshot;
+- no sideways scrolling and 44 px tap targets on touch devices;
+- the landing page with WebGL unavailable;
+- the sticky header while scrolling;
+- a focused field staying in view;
+- what the installed (standalone) app relies on.
+
+Install the engines once with `npx playwright install chromium firefox webkit`, then run one project with
+`--project=<name>`.
+
+Real iOS keyboards, notches and installed-app mode can't be emulated. `src/lib/keyboard.js` (unit-tested) and the
+safe-area CSS in `src/index.css` handle them, but they still need checking on a real device.

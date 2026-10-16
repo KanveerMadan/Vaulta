@@ -99,7 +99,9 @@ test('sign out of all devices ends a second browser\'s session too', async ({ pa
   guard.allow(/status of 400/)
   await p3.reload()
   await expect(p3).toHaveURL(/\/login$/)
-  await signIn(p3, account)
+  await p3.getByPlaceholder('you@example.com').fill(account.email)                 // right here, not a fresh /login
+  await p3.getByPlaceholder('••••••••').fill(account.password)
+  await p3.getByRole('button', { name: 'Log in' }).click()
   await expect(p3).toHaveURL(/\/goals$/)
   await other.close()
   await third.close()

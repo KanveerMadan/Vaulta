@@ -87,7 +87,7 @@ jobs:
       - run: npm test
 
   e2e:
-    name: Browser tests (Playwright, Firebase Auth emulator, fake LLM)
+    name: Browser tests (Chromium, Firefox, WebKit, devices; Firebase Auth emulator, fake LLM)
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -110,9 +110,10 @@ jobs:
       - run: pip install -r backend/requirements.txt
       - run: npm ci
         working-directory: frontend
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium firefox webkit
         working-directory: frontend
-      - run: npx playwright test
+      - name: Playwright, every project (Chromium, Firefox, WebKit, iPhone WebKit, and the device profiles)
+        run: npx playwright test
         working-directory: frontend
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

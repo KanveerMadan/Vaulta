@@ -48,7 +48,7 @@ export default function AlertsBell() {
         )}
       </button>
       {open && (
-        <div role="dialog" aria-label="Alerts" className="fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 top-16 sm:top-12 sm:w-96 z-50 card max-h-[70vh] overflow-y-auto">
+        <div role="dialog" aria-label="Alerts" className="fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 top-16 sm:top-12 sm:w-96 z-50 card max-h-[70dvh] overflow-y-auto">
           <p className="px-4 pt-3 pb-2 text-xs font-semibold text-ink-400 uppercase tracking-widest">Alerts</p>
           {current?.items?.length ? (
             <ul className="divide-y divide-sage-50">

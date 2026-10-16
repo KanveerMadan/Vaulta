@@ -96,7 +96,7 @@ export default function SubscriptionBanner() {
   // Trial — informational, not urgent
   if (status.subscription_status === "trial") {
     return (
-      <div className="flex items-center justify-between gap-3 bg-forest-50 border border-forest-200 rounded-xl px-4 py-3">
+      <div className="flex flex-col items-stretch sm:flex-row sm:items-center justify-between gap-3 bg-forest-50 border border-forest-200 rounded-xl px-4 py-3">
         <div className="flex items-center gap-3">
           <svg className="w-4 h-4 text-forest-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -123,7 +123,7 @@ export default function SubscriptionBanner() {
     const expired = remaining === "expired";
     return (
       <div className={`
-        flex items-center justify-between gap-3 rounded-xl px-4 py-3 border
+        flex flex-col items-stretch sm:flex-row sm:items-center justify-between gap-3 rounded-xl px-4 py-3 border
         ${expired ? "bg-danger/5 border-danger/20" : "bg-gold/10 border-gold/30"}
       `}>
         <div className="flex items-center gap-3">
@@ -151,7 +151,7 @@ export default function SubscriptionBanner() {
   // Cancelled
   if (status.subscription_status === "cancelled") {
     return (
-      <div className="flex items-center justify-between gap-3 bg-danger/5 border border-danger/20 rounded-xl px-4 py-3">
+      <div className="flex flex-col items-stretch sm:flex-row sm:items-center justify-between gap-3 bg-danger/5 border border-danger/20 rounded-xl px-4 py-3">
         <div className="flex items-center gap-3">
           <svg className="w-4 h-4 text-danger shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

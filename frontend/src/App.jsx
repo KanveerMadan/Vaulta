@@ -28,7 +28,8 @@ const Review = lazy(() => import('./pages/Review'))
 const Goals = lazy(() => import('./pages/Goals'))
 
 // The app shell and home download while Firebase restores the session, not after it
-const loadShell = () => Promise.all([import('./components/Layout'), import('./pages/Dashboard')])
+// A prefetch: if it fails (offline, or cancelled by leaving the page) the routes load the chunks themselves
+const loadShell = () => Promise.all([import('./components/Layout'), import('./pages/Dashboard')]).catch(() => {})
 
 // Pages an unconfirmed email/password account may open (the API refuses everything else with email_unverified)
 const UNVERIFIED_PAGES = ['/onboarding', '/settings']

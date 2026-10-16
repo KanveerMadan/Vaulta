@@ -26,7 +26,7 @@ function Item({ t }) {
 export function Toaster() {
   const items = useToasts((s) => s.items)
   return (
-    <div role="status" aria-live="polite" className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-[70] w-[min(28rem,calc(100vw-2rem))] flex flex-col gap-2 pointer-events-none">
+    <div role="status" aria-live="polite" className="fixed bottom-safe-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-[70] w-[min(28rem,calc(100vw-2rem))] flex flex-col gap-2 pointer-events-none">
       {items.map((t) => <Item key={t.id} t={t} />)}
     </div>
   )

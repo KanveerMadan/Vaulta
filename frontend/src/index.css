@@ -126,8 +126,8 @@
   .skeleton { animation: none; }
 }
 
-/* Phones: comfortable tap targets (44px) and tables as stacked rows */
-@media (max-width: 639px) {
+/* Phones and every touch screen (tablets too): comfortable tap targets (44px) */
+@media (max-width: 639px), (pointer: coarse) {
   button, select, summary, [role="button"],
   input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea {
     min-height: 44px;
@@ -138,6 +138,10 @@
   a[href]:not(p a):not(li > span a):not(span a) { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
   label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: 44px; }
   input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; }
+}
+
+/* Phones: tables as stacked rows */
+@media (max-width: 639px) {
 
   .stack-table thead { display: none; }
   .stack-table, .stack-table tbody, .stack-table tr { display: block; width: 100%; }
@@ -210,3 +214,25 @@ dialog.palette {
 }
 dialog.palette[open] { animation: sheet-up var(--dur) var(--ease-out); }
 dialog.palette::backdrop { background: rgb(var(--inverse) / .3); }
+
+/* Touch screens (and iOS Safari in particular):
+   - inputs at 16px, or iOS zooms the page when one is focused;
+   - native <select>s ignore padding in WebKit and render ~23px tall: draw them ourselves at a 44px tap height. */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px !important; }   /* beats text-sm utilities: the zoom happens below 16px */
+  select {
+    -webkit-appearance: none; appearance: none; min-height: 44px; padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right .6rem center;
+  }
+}
+
+/* Safe areas (index.html has viewport-fit=cover): fixed things clear the home indicator and the notch */
+.bottom-safe-4 { bottom: calc(1rem + env(safe-area-inset-bottom)); }
+.bottom-safe-20 { bottom: calc(5rem + env(safe-area-inset-bottom)); }
+@media (min-width: 1024px) { .lg\:bottom-6 { bottom: 1.5rem; } }
+.pb-safe-3 { padding-bottom: calc(.75rem + env(safe-area-inset-bottom)); }
+html { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }   /* landscape notch */
+dialog.sheet > div { padding-bottom: env(safe-area-inset-bottom); }                               /* phone bottom sheets */
+/* Installed app (standalone): no browser bar above, so the sticky header clears the status bar itself */
+@media (display-mode: standalone) { .standalone-safe-top { padding-top: env(safe-area-inset-top); } }

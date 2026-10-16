@@ -1,4 +1,4 @@
-import { test, expect, checkLayout } from './fixtures'
+import { test, expect, checkLayout, openMenu, openChatPanel } from './fixtures'
 
 test('landing → demo → home renders every card', async ({ page }, testInfo) => {
   await page.goto('/')
@@ -37,7 +37,7 @@ test('demo is read-only', async ({ page, guard }, testInfo) => {
   await page.reload()
   await expect(page.getByLabel('Let me ask questions in chat')).toBeChecked()   // nothing changed
 
-  if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Menu' }).click()
+  await openMenu(page)
   await page.getByRole('button', { name: 'Exit demo' }).click()
   await expect(page).toHaveURL(/\/welcome$/)
 })
@@ -95,7 +95,8 @@ test('privacy policy and security.txt', async ({ page, request }, testInfo) => {
   expect(txt).toMatch(/^Contact: mailto:security@vaulta\.test\nExpires: \d{4}-\d\d-\d\dT/)
 })
 
-test('installable: manifest, icons, service worker caches static files only', async ({ page }) => {
+test('installable: manifest, icons, service worker caches static files only', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.use.serviceWorkers === 'block', 'service workers are blocked in this project (playwright.config.js)')
   await page.goto('/welcome')
   const manifest = await (await page.request.get('/manifest.webmanifest')).json()
   expect(manifest.display).toBe('standalone')
@@ -116,7 +117,7 @@ test('demo chat: actions show a read-only card', async ({ page }, testInfo) => {
   await page.goto('/welcome')
   await page.getByRole('button', { name: 'Try the demo' }).first().click()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 30_000 })
-  if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Ask the assistant' }).click()
+  await openChatPanel(page)
   const chat = page.getByRole('complementary', { name: 'AI Assistant' })
   await chat.getByLabel('Ask the assistant').fill('Set my food budget to 9000')
   await chat.getByRole('button', { name: 'Send' }).click()

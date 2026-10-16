@@ -51,7 +51,9 @@ export async function signInToken(request, email, password) {
 export async function newAccount(request, { verified = true } = {}) {
   const email = `e2e-${Date.now()}-${process.pid}-${counter++}@vaulta.test`
   const password = 'e2e-password-123'
-  const res = await request.post(`${IDT}/accounts:signUp?key=e2e-fake-key`, { data: { email, password, returnSecureToken: true } })
+  // the emulator occasionally drops a connection under load (ECONNRESET): one retry
+  const signUp = () => request.post(`${IDT}/accounts:signUp?key=e2e-fake-key`, { data: { email, password, returnSecureToken: true } })
+  const res = await signUp().catch(signUp)
   expect(res.ok()).toBeTruthy()
   const { idToken, localId } = await res.json()
   if (!verified) return { email, password, token: idToken, uid: localId }
@@ -135,9 +137,25 @@ export async function signedInWithData(page, request, options) {
   return account
 }
 
-/** On phones: no horizontal scrolling and every visible control at least 44px tall and wide. */
+// The layout decides with CSS breakpoints (src/components/Layout.jsx), and engines differ at the edges (WebKit's
+// scrollbar takes width), so act on what is actually on screen: open the menu / chat if their buttons show
+export const openMenu = async (page) => {
+  const button = page.getByRole('button', { name: 'Menu' })
+  const nav = page.getByRole('navigation', { name: 'Main' })
+  await expect(button.or(nav).first()).toBeVisible()          // the shell has rendered, one way or the other
+  if (await button.isVisible() && !(await nav.isVisible())) await button.click()
+}
+export const openChatPanel = async (page) => {
+  const button = page.getByRole('button', { name: 'Ask the assistant' })
+  const input = page.getByRole('complementary', { name: 'AI Assistant' }).getByLabel('Ask the assistant')
+  await expect(button.or(input).first()).toBeVisible()
+  if (await button.isVisible()) await button.click()
+}
+export const isTouch = (testInfo) => !!testInfo.project.use.hasTouch
+
+/** On touch devices: no horizontal scrolling and every visible control at least 44px tall and wide. */
 export async function checkLayout(page, testInfo) {
-  if (testInfo.project.name !== 'mobile') return
+  if (!isTouch(testInfo)) return
   await page.waitForTimeout(150)
   // Compare with the device width, not innerWidth: on a phone the browser widens the layout
   // viewport to fit overflowing content, so innerWidth would grow along with the bug.

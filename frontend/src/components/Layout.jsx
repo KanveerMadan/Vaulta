@@ -90,13 +90,13 @@ export default function Layout() {
         </div>
       )}
       {readOnly && (
-        <div role="alert" className="fixed bottom-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-[75] bg-inverse text-on-inverse text-sm rounded-md shadow-3 px-4 py-3 max-w-[calc(100vw-2rem)] animate-rise">
+        <div role="alert" className="fixed bottom-safe-20 lg:bottom-6 left-1/2 -translate-x-1/2 z-[75] bg-inverse text-on-inverse text-sm rounded-md shadow-3 px-4 py-3 max-w-[calc(100vw-2rem)] animate-rise">
           {readOnly}
         </div>
       )}
 
       {/* Phones and tablets: top bar with a menu */}
-      {!desktop && <header className="lg:hidden sticky top-0 z-30 bg-surface/95 backdrop-blur border-b border-line">
+      {!desktop && <header className="lg:hidden sticky top-0 z-30 bg-surface/95 backdrop-blur border-b border-line standalone-safe-top">
         <div className="h-14 px-3 flex items-center gap-1">
           <button onClick={() => setMenuOpen((v) => !v)} aria-expanded={menuOpen} aria-controls="main-nav"
             className="w-11 h-11 flex items-center justify-center rounded-sm text-ink hover:bg-sunken" aria-label="Menu">
@@ -108,7 +108,7 @@ export default function Layout() {
             <AlertsBell />
           </div>
         </div>
-        <nav id="main-nav" aria-label="Main" className={`${menuOpen ? 'block' : 'hidden'} border-t border-line px-3 py-3 max-h-[calc(100dvh-3.5rem)] overflow-y-auto`}>
+        <nav id="main-nav" aria-label="Main" className={`${menuOpen ? 'block' : 'hidden'} border-t border-line px-3 pt-3 pb-safe-3 max-h-[calc(100dvh-3.5rem)] overflow-y-auto`}>
           {navList}
           <div className="mt-3 pt-3 border-t border-line flex items-center justify-between gap-2">
             <ThemeSwitch compact />
@@ -145,9 +145,10 @@ export default function Layout() {
         <ChatPanel />
       </div>
       <CommandPalette />
-      {!chatOpen && (
+      {/* hidden while the phone menu is open: on tall phones it would sit over the menu's last items */}
+      {!chatOpen && !menuOpen && (
         <button onClick={() => setChatOpen(true)} aria-label="Ask the assistant"
-          className="xl:hidden fixed bottom-4 right-4 z-40 btn-primary rounded-full shadow-3 h-12 px-5">
+          className="xl:hidden fixed bottom-safe-4 right-4 z-40 btn-primary rounded-full shadow-3 h-12 px-5">
           <ChatCircleText size={18} aria-hidden /> Ask
         </button>
       )}
