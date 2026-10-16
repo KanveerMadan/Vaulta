@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import { MIN_PASSWORD } from '../lib/verification'
 import { useAuthStore } from '../store/authStore'
+import SignInMethods from './SignInMethods'
 
 function PasswordForm({ hasPassword }) {
   const { user } = useAuthStore()
@@ -69,6 +70,7 @@ export default function SecuritySettings() {
   return (
     <section className="card p-5 space-y-3" aria-labelledby="security-title">
       <h2 id="security-title" className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Security</h2>
+      {user && <SignInMethods />}
       {user && <PasswordForm hasPassword={providers.includes('password')} />}
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-ink-900">Sign out of all devices</h3>

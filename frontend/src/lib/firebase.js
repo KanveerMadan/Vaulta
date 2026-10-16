@@ -20,5 +20,15 @@ if (import.meta.env.VITE_FIREBASE_AUTH_EMULATOR) {
   connectAuthEmulator(auth, import.meta.env.VITE_FIREBASE_AUTH_EMULATOR, { disableWarnings: true })
 }
 
+// Browser tests only (vite --mode e2e; the block is removed from every other build): sign in with a Google
+// credential the emulator accepts, because its popup never reports back inside Playwright's browser
+if (import.meta.env.MODE === 'e2e') {
+  window.__e2eGoogleSignIn = async (email) => {
+    const { GoogleAuthProvider, signInWithCredential } = await import('firebase/auth')
+    const idToken = JSON.stringify({ sub: `google-${email}`, email, email_verified: true })
+    return (await signInWithCredential(auth, GoogleAuthProvider.credential(idToken))).user.uid
+  }
+}
+
 /** Google sign-in popup: the only place Google's own sign-in scripts are loaded. */
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider, browserPopupRedirectResolver)

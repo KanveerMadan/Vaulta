@@ -200,3 +200,48 @@ def test_a_completed_reset_is_noticed_at_the_next_sign_in(client, monkeypatch):
     assert set(kinds[:2]) == {"password_reset_completed", "sign_in"}
     signed_in_as(monkeypatch, auth_time=int(time.time()) - 100, iat=int(time.time()) - 100)
     assert client.get("/api/transactions", headers=USER).status_code == 401          # sessions from before are refused
+
+
+# ── Sign-in methods (step 3) ──────────────────────────────────────────────────
+
+def test_a_linked_account_resolves_to_the_same_data(client, monkeypatch):
+    signed_in_as(monkeypatch)                                                    # signed up with email + password
+    client.post("/api/budgets", json={"category": "Travel", "monthly_limit": "100"}, headers=USER)
+    signed_in_as(monkeypatch, firebase={"sign_in_provider": "google.com"})       # later, Google: same Firebase uid
+    budgets = client.get("/api/budgets", headers=USER).json()["items"]
+    assert [b["category"] for b in budgets] == ["Travel"]
+    from tests.conftest import owner_engine
+    from sqlalchemy import text
+    with owner_engine.connect() as conn:
+        assert conn.execute(text("SELECT count(*) FROM users")).scalar() == 1
+
+
+def test_unlinking_never_removes_the_last_method_and_signs_out(client, monkeypatch):
+    import time
+    fake = FakeFirebase(monkeypatch)
+    deleted = []
+    monkeypatch.setattr(auth.firebase_auth, "update_user", lambda uid, **kw: deleted.append(kw.get("providers_to_delete")))
+    fake.users["alice"] = ["password", "google.com"]
+    signed_in_as(monkeypatch)
+    assert client.get("/api/account/sign-in-methods", headers=USER).json() == {"methods": ["password", "google.com"]}
+    signed_in_as(monkeypatch, auth_time=int(time.time()) - 3600)
+    assert client.delete("/api/account/sign-in-methods/google.com", headers=USER).json()["code"] == "reauth_required"
+    signed_in_as(monkeypatch)
+    assert client.delete("/api/account/sign-in-methods/google.com", headers=USER).status_code == 204
+    assert deleted == [["google.com"]] and ("revoke", "alice") in fake.calls
+    fake.users["alice"] = ["password"]
+    signed_in_as(monkeypatch, iat=int(time.time()) + 5)
+    res = client.delete("/api/account/sign-in-methods/password", headers=USER)
+    assert res.status_code == 409 and res.json()["code"] == "last_method" and deleted == [["google.com"]]
+    events = {e["kind"]: e["detail"] for e in client.get("/api/activity", headers=USER).json()}
+    assert events["method_unlinked"] == {"method": "google.com"} and "signed_out_everywhere" in events
+
+
+def test_linking_is_logged_only_when_firebase_confirms_it(client, monkeypatch):
+    fake = FakeFirebase(monkeypatch)
+    signed_in_as(monkeypatch)
+    assert client.post("/api/account/sign-in-methods/linked", json={"method": "google.com"}, headers=USER).json()["code"] == "not_linked"
+    fake.users["alice"] = ["password", "google.com"]
+    assert client.post("/api/account/sign-in-methods/linked", json={"method": "google.com"}, headers=USER).status_code == 204
+    assert client.get("/api/activity", headers=USER).json()[0] == {"kind": "method_linked", "detail": {"method": "google.com"},
+                                                                   "at": client.get("/api/activity", headers=USER).json()[0]["at"]}

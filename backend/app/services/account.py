@@ -85,3 +85,32 @@ def note_reset_completed(db: Session, user) -> None:
         user.tokens_revoked_at = datetime.fromtimestamp(valid_after_ms / 1000, tz=timezone.utc)
         activity.record(db, user, "password_reset_completed")
     user.password_reset_requested_at = None
+
+
+# ── Sign-in methods (Google, password) on the one Firebase account ────────────
+
+METHODS = ("password", "google.com")
+
+
+class LastMethod(ValueError):
+    pass
+
+
+def unlink_method(db: Session, user, provider: str) -> None:
+    """Remove a sign-in method; never the last one. Signs out every session. Caller commits."""
+    current = providers(user)
+    if provider not in current:
+        raise KeyError(provider)
+    if len(current) <= 1:
+        raise LastMethod("That's the only way to sign in to this account. Add another method first.")
+    firebase_auth.update_user(user.firebase_uid, providers_to_delete=[provider])
+    activity.record(db, user, "method_unlinked", {"method": provider})
+    sign_out_everywhere(db, user, reason="method_unlinked")
+
+
+def note_linked(db: Session, user, provider: str) -> bool:
+    """The web app linked a method in Firebase (Google popup): log it once Firebase confirms it's there."""
+    if provider not in providers(user):
+        return False
+    activity.record(db, user, "method_linked", {"method": provider})
+    return True

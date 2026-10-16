@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth'
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, GoogleAuthProvider, linkWithCredential } from 'firebase/auth'
 import { auth, signInWithGoogle } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -28,6 +28,9 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState('')
+  // Google sign-in for an address that already has a password account (Firebase: account-exists-with-different-
+  // credential): sign in with the password once, then Google is linked to that same account
+  const [linking, setLinking] = useState(null)        // {email, credential}
   const { setUser, endDemo, signedOutNotice, setSignedOutNotice } = useAuthStore()
   const navigate = useNavigate()
   const { state } = useLocation()
@@ -41,6 +44,11 @@ export default function Login() {
       const r = await signInWithGoogle()
       onSuccess(r.user)
     } catch (e) {
+      if (e.code === 'auth/account-exists-with-different-credential') {
+        setLinking({ email: e.customData?.email || '', credential: GoogleAuthProvider.credentialFromError(e) })
+        setEmail(e.customData?.email || ''); setMode('login'); setError('')
+        return
+      }
       const msg = ERROR_MAP[e.code]
       if (msg !== null) setError(msg || 'Google sign-in failed. Please try again.')
     } finally { setLoading(false) }
@@ -67,7 +75,13 @@ export default function Login() {
     }
     try {
       if (mode === 'login') {
-        onSuccess((await signInWithEmailAndPassword(auth, email, password)).user)
+        const { user } = await signInWithEmailAndPassword(auth, email, password)
+        if (linking?.credential) {
+          await linkWithCredential(user, linking.credential)
+          await api.post('/api/account/sign-in-methods/linked', { method: 'google.com' }).catch(() => {})
+          setLinking(null)
+        }
+        onSuccess(user)
         return
       }
       const r = await createUserWithEmailAndPassword(auth, email, password)
@@ -113,6 +127,12 @@ export default function Login() {
             </button>
           </p>
 
+          {linking && (
+            <p role="status" className="mt-6 text-sm text-ink bg-sunken rounded-sm px-3 py-2">
+              You already have a Vaulta account for {linking.email || 'this email'} with a password. Log in with it once and
+              Google will be added to the same account.
+            </p>
+          )}
           {(state?.notice || signedOutNotice) && (
             <p role="status" className="mt-6 text-sm text-ink bg-sunken rounded-sm px-3 py-2">{state?.notice || signedOutNotice}</p>
           )}

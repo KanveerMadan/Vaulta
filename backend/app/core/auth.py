@@ -54,7 +54,8 @@ class TokenInfo:
 UNVERIFIED_WRITES_ALLOWED = {
     ("PATCH", "/auth/me"), ("DELETE", "/auth/me"), ("PATCH", "/api/onboarding"), ("PATCH", "/api/settings"),
     ("POST", "/api/account/reauth-failed"), ("POST", "/api/account/sign-out-everywhere"),
-    ("POST", "/api/account/password"),
+    ("POST", "/api/account/password"), ("POST", "/api/account/sign-in-methods/linked"),
+    ("DELETE", "/api/account/sign-in-methods/{provider}"),
 }
 UNVERIFIED_READS_BLOCKED = {("GET", "/api/inbound")}   # shows (and creates) the forwarding address
 EMAIL_UNVERIFIED = "Verify your email address first: open the link we sent you, then try again."

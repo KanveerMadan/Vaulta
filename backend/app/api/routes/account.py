@@ -71,3 +71,37 @@ def change_password(payload: NewPassword, current_user: User = Depends(get_recen
     except account.PasswordRejected as e:
         raise CodedError(422, "weak_password", str(e))
     db.commit()
+
+
+class Method(BaseModel):
+    method: str = Field(max_length=40)
+
+
+@router.get("/account/sign-in-methods")
+def sign_in_methods(current_user: User = Depends(get_current_user)):
+    """The ways this account can sign in, from Firebase."""
+    return {"methods": [m for m in account.providers(current_user) if m in account.METHODS]}
+
+
+@router.post("/account/sign-in-methods/linked", status_code=204,
+             dependencies=[Depends(per_user("methods", 20, 3600, get_recent_user))])
+def method_linked(payload: Method, current_user: User = Depends(get_recent_user), db: Session = Depends(get_db)):
+    """After the web app links Google to this account: confirm with Firebase and log it."""
+    if payload.method not in account.METHODS or not account.note_linked(db, current_user, payload.method):
+        raise CodedError(409, "not_linked", "That sign-in method isn't linked to this account.")
+    db.commit()
+
+
+@router.delete("/account/sign-in-methods/{provider}", status_code=204,
+               dependencies=[Depends(per_user("methods", 20, 3600, get_recent_user))])
+def unlink_method(provider: str, current_user: User = Depends(get_recent_user), db: Session = Depends(get_db)):
+    """Remove a sign-in method (never the last). Signs out every session, this one included."""
+    if provider not in account.METHODS:
+        raise CodedError(404, "unknown_method", "Unknown sign-in method.")
+    try:
+        account.unlink_method(db, current_user, provider)
+    except KeyError:
+        raise CodedError(404, "not_linked", "That sign-in method isn't linked to this account.")
+    except account.LastMethod as e:
+        raise CodedError(409, "last_method", str(e))
+    db.commit()

@@ -150,3 +150,38 @@ test('change password in Settings', async ({ page, request, guard }) => {
     { data: { email: account.email, password: account.password, returnSecureToken: true } })
   expect(old.ok()).toBe(false)
 })
+
+/** Sign in with Google as `email`: the e2e build's hook (src/lib/firebase.js); the emulator's popup can't complete here. */
+async function googleSignIn(page, email) {
+  await page.goto('/login')
+  await page.waitForFunction(() => typeof window.__e2eGoogleSignIn === 'function')
+  return page.evaluate((e) => window.__e2eGoogleSignIn(e), email)
+}
+
+test('Google and a password sign in to one account', async ({ page, request }, testInfo) => {
+  const account = await newAccount(request)
+  await callApi(request, account, 'GET', '/auth/me')
+  await callApi(request, account, 'POST', '/api/budgets', { category: 'Travel', monthly_limit: '4321' })
+  await callApi(request, account, 'PATCH', '/api/onboarding', { status: 'done', step: 'finish' })
+
+  expect(await googleSignIn(page, account.email)).toBe(account.uid)              // Firebase links: same account
+  await page.waitForURL((u) => !u.pathname.startsWith('/login'))
+  await page.goto('/budgets')
+  await expect(page.getByText('Travel').first()).toBeVisible()                 // the password account's data
+
+  await page.goto('/settings')
+  const methods = page.getByRole('list', { name: 'Sign-in methods' })
+  await expect(methods.getByRole('listitem')).toHaveText([/Email and password/, /Google/])
+  await checkLayout(page, testInfo)
+
+  page.once('dialog', (d) => d.accept())
+  await methods.getByRole('button', { name: 'Remove Google' }).click()
+  await expect(page).toHaveURL(/\/login$/)
+  await expect(page.getByText('Google was removed and every device was signed out')).toBeVisible()
+  await signIn(page, account)
+  await page.goto('/settings')
+  await expect(page.getByRole('list', { name: 'Sign-in methods' }).getByRole('listitem')).toHaveText([/Email and password/])
+  await expect(page.getByRole('button', { name: /^Remove/ })).toHaveCount(0)    // never the last method
+  const kinds = (await callApi(request, { token: await signInToken(request, account.email, account.password) }, 'GET', '/api/activity')).map((e) => e.kind)
+  expect(kinds).toEqual(expect.arrayContaining(['method_unlinked', 'signed_out_everywhere']))
+})

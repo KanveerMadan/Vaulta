@@ -11,6 +11,7 @@ export const test = base.extend({
   guard: [async ({ page }, use) => {
     const problems = []
     const allowed = []   // console messages a test expects (e.g. the 403 a demo write produces)
+    const origins = new Set(ALLOWED_ORIGINS)   // + origins a test opts into (guard.allowOrigin), each documented there
     page.on('console', (msg) => {
       if (msg.type() === 'error' && !allowed.some((re) => re.test(msg.text()))) problems.push(`console: ${msg.text()}`)
     })
@@ -18,13 +19,13 @@ export const test = base.extend({
     page.on('request', (req) => {
       const url = new URL(req.url())
       if (['data:', 'blob:'].includes(url.protocol)) return
-      if (!ALLOWED_ORIGINS.has(url.origin)) problems.push(`off-origin request: ${req.method()} ${req.url()}`)
+      if (!origins.has(url.origin)) problems.push(`off-origin request: ${req.method()} ${req.url()}`)
       const type = req.headers()['content-type'] || ''
       const body = req.postDataBuffer()
       if (/multipart\/form-data|application\/octet-stream|application\/pdf|^image\/|text\/csv/.test(type)) problems.push(`file upload: ${req.url()} (${type})`)
       if (body && (body.subarray(0, 4).toString() === '%PDF' || body.includes('Closing Balance'))) problems.push(`file content sent: ${req.url()}`)
     })
-    await use({ allow: (re) => allowed.push(re) })
+    await use({ allow: (re) => allowed.push(re), allowOrigin: (origin) => origins.add(origin) })
     expect(problems, problems.join('\n')).toEqual([])
   }, { auto: true }],
 })
