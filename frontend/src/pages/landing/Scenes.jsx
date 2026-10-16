@@ -14,6 +14,20 @@ function Offline() {
   return <p className="text-sm text-muted">The demo account isn't reachable right now. Try the demo in a minute to see live numbers.</p>
 }
 
+/** Everything below the story: the live product and the three feature scenes. */
+export default function Scenes() {
+  return (
+    <>
+      <LivePreview />
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 grid gap-20">
+        <CaptureScene />
+        <AskScene />
+        <ReportScene />
+      </section>
+    </>
+  )
+}
+
 /** The story ends here: the real home screen, rendered from the demo account. */
 export function LivePreview() {
   const ref = useRef(null)

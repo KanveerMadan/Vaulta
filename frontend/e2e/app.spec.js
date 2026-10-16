@@ -292,3 +292,18 @@ test('command palette: jump, search and quick add', async ({ page, request }, te
   await palette.getByRole('combobox').press('Enter')
   await expect(page.getByRole('status').filter({ hasText: 'Added' })).toBeVisible()
 })
+
+test('the workspace never loads the animation library', async ({ page, request }) => {
+  const { readdirSync, readFileSync } = await import('node:fs')
+  const dir = new URL('../dist-e2e/assets/', import.meta.url)
+  const motionChunks = readdirSync(dir).filter((f) => f.endsWith('.js') && readFileSync(new URL(f, dir), 'utf8').includes('MotionValue'))
+  expect(motionChunks.length).toBeGreaterThan(0)
+  const scripts = []
+  page.on('request', (r) => { if (r.resourceType() === 'script') scripts.push(r.url()) })
+  await signedInWithData(page, request)
+  for (const path of ['/transactions', '/budgets', '/goals', '/cash', '/reports', '/settings']) {
+    await page.goto(path)
+    await page.waitForLoadState('networkidle')
+  }
+  expect(scripts.filter((u) => motionChunks.some((c) => u.endsWith(c)))).toEqual([])
+})

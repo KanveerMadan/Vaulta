@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { connectAuthEmulator, getAuth, GoogleAuthProvider } from 'firebase/auth'
+import { browserLocalPersistence, browserPopupRedirectResolver, connectAuthEmulator, indexedDBLocalPersistence, initializeAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,9 +11,14 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
-export const auth = getAuth(app)
+// Without a popup resolver here, Auth doesn't load Google's sign-in helper (apis.google.com) for
+// every visitor; it's passed only when someone actually signs in with Google.
+export const auth = initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] })
 export const googleProvider = new GoogleAuthProvider()
 // Browser tests sign in against the local Firebase Auth emulator (e2e/README.md)
 if (import.meta.env.VITE_FIREBASE_AUTH_EMULATOR) {
   connectAuthEmulator(auth, import.meta.env.VITE_FIREBASE_AUTH_EMULATOR, { disableWarnings: true })
 }
+
+/** Google sign-in popup: the only place Google's own sign-in scripts are loaded. */
+export const signInWithGoogle = () => signInWithPopup(auth, googleProvider, browserPopupRedirectResolver)

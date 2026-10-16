@@ -1,14 +1,15 @@
-import { useRef, useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion, useMotionValueEvent, useReducedMotion, useScroll } from 'motion/react'
 import { ArrowRight, Check } from '@phosphor-icons/react'
-import { startDemo } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { TRUST } from '../../lib/trust'
 import Wordmark from '../../ui/Wordmark'
-import StatementStage from './StatementStage'
 import StaticStory from './StaticStory'
-import { LivePreview, CaptureScene, AskScene, ReportScene } from './Scenes'
+import { useMedia } from '../../lib/useMedia'
+
+// The hero paints from the main bundle; the animation library arrives with these two afterwards.
+const StageDriver = lazy(() => import('./StageDriver'))
+const Scenes = lazy(() => import('./Scenes'))
 import { CAPTIONS } from './story'
 
 function Ctas({ busy, onDemo, onGoogle, error }) {
@@ -31,10 +32,7 @@ function Ctas({ busy, onDemo, onGoogle, error }) {
 function Story({ ctas }) {
   const ref = useRef(null)
   const captions = useRef(null)
-  // the stage follows the captions: each caption crossing the middle of the screen is one step
-  const { scrollYProgress } = useScroll({ target: captions, offset: ['start 60%', 'end 60%'] })
   const [step, setStep] = useState(0)
-  useMotionValueEvent(scrollYProgress, 'change', (p) => setStep(Math.min(CAPTIONS.length - 1, Math.floor(p * CAPTIONS.length))))
 
   return (
     <section ref={ref} className="relative grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-10 max-w-6xl mx-auto px-4 sm:px-6" aria-label="How Vaulta handles your statement">
@@ -47,14 +45,14 @@ function Story({ ctas }) {
       </div>
 
       <div className="lg:col-start-2 lg:row-start-1 lg:row-span-2 sticky top-0 h-[62dvh] lg:h-[100dvh] z-10 bg-canvas lg:bg-transparent py-3 lg:py-10 overflow-hidden">
-        <StatementStage progress={scrollYProgress} />
+        <Suspense fallback={null}><StageDriver captions={captions} onStep={setStep} /></Suspense>
       </div>
 
       <ol ref={captions} className="lg:col-start-1 lg:row-start-2 relative pb-[30dvh]">
         {CAPTIONS.map((c, i) => (
           <li key={c.title} className="min-h-[70dvh] lg:min-h-[78dvh] flex items-end pb-[4dvh] lg:pb-0 lg:items-center">
             {/* phones: the caption rests in the band under the pinned statement */}
-            <div className={`transition-opacity duration-slow ${step === i ? 'opacity-100' : 'opacity-35'}`}>
+            <div className={`transition-colors duration-slow ${step === i ? '' : '[&_*]:!text-muted'}`}>
               <h2 className="font-display text-2xl lg:text-[2rem] leading-tight text-ink">{c.title}</h2>
               <p className="mt-2 text-ink-2 max-w-[38ch]">{c.body}</p>
             </div>
@@ -82,18 +80,18 @@ export default function Landing() {
   const { setUser, endDemo } = useAuthStore()
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
-  const reduce = useReducedMotion()
+  const reduce = useMedia('(prefers-reduced-motion: reduce)')
 
   const demo = async () => {
     setBusy('demo'); setError(null)
-    try { await startDemo(); navigate('/') } catch { setError("The demo isn't available right now. Try again in a minute.") }
+    try { const { startDemo } = await import('../../lib/api'); await startDemo(); navigate('/') } catch { setError("The demo isn't available right now. Try again in a minute.") }
     setBusy(null)
   }
   const google = async () => {
     setBusy('google'); setError(null)
     try {
-      const [{ signInWithPopup }, { auth, googleProvider }] = await Promise.all([import('firebase/auth'), import('../../lib/firebase')])
-      const r = await signInWithPopup(auth, googleProvider)
+      const { signInWithGoogle } = await import('../../lib/firebase')
+      const r = await signInWithGoogle()
       endDemo(); setUser(r.user); navigate('/')
     } catch (e) {
       if (e?.code !== 'auth/popup-closed-by-user') setError('Google sign-in failed. Please try again.')
@@ -115,13 +113,7 @@ export default function Landing() {
       <main>
         {reduce ? <><ReducedHero ctas={ctas} /><StaticStory /></> : <Story ctas={ctas} />}
 
-        <LivePreview />
-
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 py-24 grid gap-20">
-          <CaptureScene />
-          <AskScene />
-          <ReportScene />
-        </section>
+        <Suspense fallback={<div className="min-h-[200dvh]" />}><Scenes /></Suspense>
 
         <section aria-labelledby="trust" className="border-t border-line bg-surface">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 grid lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] gap-10">
@@ -145,14 +137,13 @@ export default function Landing() {
         </section>
 
         <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20">
-          <motion.div initial={reduce ? false : { opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }} className="rounded-lg border border-line bg-surface p-8 sm:p-12 grid gap-6 lg:grid-cols-[1fr_auto] items-center">
+          <div className="rounded-lg border border-line bg-surface p-8 sm:p-12 grid gap-6 lg:grid-cols-[1fr_auto] items-center">
             <div>
               <h2 className="font-display text-display-s text-ink">See it with four months of sample data.</h2>
               <p className="mt-2 text-ink-2">No sign-in, nothing to install. Every number in the demo is computed the same way yours would be.</p>
             </div>
             {ctas}
-          </motion.div>
+          </div>
         </section>
       </main>
 

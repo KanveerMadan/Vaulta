@@ -134,7 +134,7 @@ export default function Transactions() {
           {search || category ? "Try another merchant name or category." : "Import a statement, forward bank alerts or add one by hand."}
         </Empty>
       ) : (
-        <div ref={measureList} role="list" aria-label="Transactions" aria-rowcount={total}>
+        <div ref={measureList} role="list" aria-label="Transactions">
           <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
             {virtual.map((v) => {
               const t = items[v.index];

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useApi } from '../lib/format'
 import { signOut } from 'firebase/auth'
@@ -136,7 +136,9 @@ export default function Layout() {
         </aside>}
 
         <main id="main" tabIndex={-1} className="min-w-0 px-4 sm:px-6 py-6 outline-none">
-          <Outlet />
+          <Suspense fallback={<div className="space-y-4 max-w-5xl mx-auto" aria-label="Loading"><div className="skeleton h-10 w-56" /><div className="skeleton h-4 w-full" /><div className="skeleton h-4 w-4/5" /></div>}>
+            <Outlet />
+          </Suspense>
         </main>
         <ChatPanel />
       </div>

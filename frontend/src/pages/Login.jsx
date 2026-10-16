@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
-import { auth, googleProvider } from '../lib/firebase'
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
+import { auth, signInWithGoogle } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
 import { Link, useNavigate } from 'react-router-dom'
 import Wordmark from '../ui/Wordmark'
@@ -28,7 +28,7 @@ export default function Login() {
   const handleGoogle = async () => {
     setError(''); setLoading(true)
     try {
-      const r = await signInWithPopup(auth, googleProvider)
+      const r = await signInWithGoogle()
       onSuccess(r.user)
     } catch (e) {
       const msg = ERROR_MAP[e.code]

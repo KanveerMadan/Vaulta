@@ -8,6 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'script-defer',   // never render-blocking
       includeAssets: ['favicon.svg'],
       // The service worker precaches the built static files only. No runtime caching at all:
       // API responses and financial data are never stored by it. OCR assets (~7 MB) load on demand.

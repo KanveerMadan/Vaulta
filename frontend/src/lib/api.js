@@ -7,9 +7,8 @@ const api = axios.create({
 })
 
 api.interceptors.request.use(async (config) => {
-  const { getAuth } = await import('firebase/auth')
-  const user = getAuth().currentUser
   const demo = useAuthStore.getState().demoToken
+  const user = demo ? null : (await import('./firebase')).auth.currentUser
   if (user) config.headers.Authorization = `Bearer ${await user.getIdToken()}`
   else if (demo) config.headers.Authorization = `Bearer ${demo}`
   return config
