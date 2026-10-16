@@ -34,7 +34,7 @@ const loadShell = () => Promise.all([import('./components/Layout'), import('./pa
 const UNVERIFIED_PAGES = ['/onboarding', '/settings']
 
 function PrivateRoute() {
-  const { user, verified, demoToken, loading } = useAuthStore()
+  const { user, verified, demoToken, loading, leaving } = useAuthStore()
   const { pathname } = useLocation()
   useEffect(() => { loadShell() }, [])
   if (user && !verified && !demoToken && !UNVERIFIED_PAGES.includes(pathname)) {
@@ -43,7 +43,7 @@ function PrivateRoute() {
   if (demoToken || user) return <Outlet />
   if (loading) return <Loader />
   // Signed out on a page inside the app: log in and come back to it. The bare root is the landing page.
-  return pathname === '/' ? <Navigate to="/welcome" replace /> : <Navigate to="/login" replace state={{ next: pathname }} />
+  return pathname === '/' || leaving ? <Navigate to="/welcome" replace /> : <Navigate to="/login" replace state={{ next: pathname }} />
 }
 
 // Signed in on /login: go where the user was heading (state.next), else home

@@ -12,7 +12,10 @@ export const useAuthStore = create((set) => ({
   loading: true,
   // Server-issued token for the shared read-only demo (no Firebase sign-in); kept for this tab only
   demoToken: readDemo(),
-  setUser: (user) => set({ user, verified: isVerified(user), loading: false }),
+  setUser: (user) => set((s) => ({ user, verified: isVerified(user), loading: false, leaving: user ? false : s.leaving })),
+  // Signing out or exiting the demo on purpose: PrivateRoute sends the user to the landing page, not to /login
+  leaving: false,
+  setLeaving: (leaving) => set({ leaving }),
   // after user.reload(): Firebase updates the same object, so re-read the flag
   refreshVerified: () => set((s) => ({ verified: isVerified(s.user) })),
   setLoading: (loading) => set({ loading }),
@@ -22,7 +25,7 @@ export const useAuthStore = create((set) => ({
   setSignedOutNotice: (signedOutNotice) => set({ signedOutNotice }),
   startDemo: (token) => {
     try { sessionStorage.setItem(DEMO_KEY, token) } catch { /* private mode: demo lasts until reload */ }
-    set({ demoToken: token })
+    set({ demoToken: token, leaving: false })
   },
   endDemo: () => {
     try { sessionStorage.removeItem(DEMO_KEY) } catch { /* private mode */ }

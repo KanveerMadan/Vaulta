@@ -46,15 +46,13 @@ export default function Layout() {
     return () => clearTimeout(t)
   }, [readOnly])
 
-  // To the landing page first, and end the session only once that navigation has committed: otherwise
-  // PrivateRoute sees a signed-out user on this page and sends them to /login instead
-  const handleLogout = () => {
+  // On purpose: PrivateRoute sends a leaving user to the landing page (an ended session would go to /login)
+  const handleLogout = async () => {
+    useAuthStore.getState().setLeaving(true)
     navigate('/welcome')
-    setTimeout(async () => {
-      if (demoToken) endDemo()
-      else await signOut(auth)
-      logout()
-    }, 0)
+    if (demoToken) endDemo()
+    else await signOut(auth)
+    logout()
   }
   const signUp = () => { endDemo(); navigate('/login') }
 

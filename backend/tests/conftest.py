@@ -98,7 +98,9 @@ def clean_tables():
 
 @pytest.fixture
 def client(monkeypatch):
-    monkeypatch.setattr(auth, "verify_firebase_token", lambda token, check_revoked=False: token_payload(token))
+    signed_in = int(time.time())       # one sign-in per test: a request in a later second isn't a new sign-in
+    monkeypatch.setattr(auth, "verify_firebase_token",
+                        lambda token, check_revoked=False: token_payload(token, auth_time=signed_in, iat=signed_in))
     with TestClient(api) as c:
         yield c
 

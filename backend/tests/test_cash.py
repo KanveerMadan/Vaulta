@@ -2,7 +2,8 @@
 
 import json
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -13,7 +14,7 @@ from tests.conftest import as_user, user_session, reset_rate_limits
 from tests.test_import_batch import row
 
 ALICE, BOB = as_user("alice"), as_user("bob")
-TODAY = date.today()
+TODAY = datetime.now(ZoneInfo("Asia/Kolkata")).date()   # the user's today (their timezone), not the machine's
 MONTH = f"/api/transactions/summary?period=month&year={TODAY.year}&month={TODAY.month}"
 
 
