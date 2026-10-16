@@ -9,7 +9,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 // are swapped for the local servers. A production build fails if the API it calls isn't allowed by the CSP.
 const vercel = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8'))
 const headers = Object.fromEntries(vercel.headers[0].headers.map((h) => [h.key, h.value]))
-export const PROD_API = 'https://vaulta-f6t8.onrender.com'
+const connectSrc = headers['Content-Security-Policy'].split(';').find((d) => d.trim().startsWith('connect-src')).trim().split(/\s+/)
+// The API's origin: the one https connect-src entry that isn't Firebase Auth
+export const PROD_API = connectSrc.find((o) => o.startsWith('https://') && !o.endsWith('.googleapis.com'))
 
 function localHeaders(env) {
   const csp = headers['Content-Security-Policy']
@@ -27,8 +29,7 @@ function cspCoversApi(env, mode) {
     buildStart() {
       if (mode !== 'production' || !env.VITE_API_BASE_URL) return
       const origin = new URL(env.VITE_API_BASE_URL).origin
-      const connect = headers['Content-Security-Policy'].split(';').find((d) => d.trim().startsWith('connect-src'))
-      if (!connect.split(/\s+/).includes(origin)) {
+      if (!connectSrc.includes(origin)) {
         this.error(`VITE_API_BASE_URL (${origin}) isn't in vercel.json's connect-src: the app couldn't reach its API. Update vercel.json.`)
       }
     },
