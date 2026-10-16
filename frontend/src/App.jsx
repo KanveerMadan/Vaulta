@@ -15,13 +15,13 @@ import Settings from './pages/Settings'
 import Cash from './pages/Cash'
 import Review from './pages/Review'
 import Goals from './pages/Goals'
-import Onboarding from './pages/Onboarding'
 import Security from './pages/Security'
 import Layout from './components/Layout'
 import { Toaster } from './ui/Toast'
 
 // Showpieces load on their own (and bring the animation library with them); the workspace never does
 const Landing = lazy(() => import('./pages/landing/Landing'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
 
 function PrivateRoute() {
   const { user, demoToken } = useAuthStore()
@@ -61,7 +61,7 @@ export default function App() {
       <Route path="/security" element={<Security />} />
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
       <Route element={<PrivateRoute />}>
-        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/onboarding" element={<Suspense fallback={<Loader />}><Onboarding /></Suspense>} />
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/connect" element={<Connect />} />

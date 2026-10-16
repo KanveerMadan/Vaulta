@@ -4,7 +4,8 @@ import api from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { parseStatement, ImportError } from "../import";
 import { applyMapping, guessMapping } from "../import/mapping";
-import { sanitizeRows, NEVER_READ, REMOVED_LABELS } from "../import/pii";
+import { sanitizeRows } from "../import/pii";
+import RemovedPanel from "./RemovedPanel";
 import { sendRows, loadTemplate, saveTemplate } from "../import/submit";
 import ColumnMapping from "./ColumnMapping";
 
@@ -57,11 +58,10 @@ function EditCell({ value, field, onEdit, label }) {
   );
 }
 
-function Preview({ parsed, onConfirm, onBack, sending, progress, onEdit }) {
+function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit }) {
   const { rows, removed, lowConfidence } = parsed;
   const invalid = [...lowConfidence].some((i) => Object.entries(VALID).some(([f, re]) => !re.test(rows[i][f])));
   const [excluded, setExcluded] = useState(() => new Set());
-  const [showRemoved, setShowRemoved] = useState(false);
   const toggle = (i) => setExcluded((s) => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; });
   const included = rows.filter((_, i) => !excluded.has(i));
   const dates = rows.map((r) => r.date).sort();
@@ -72,11 +72,8 @@ function Preview({ parsed, onConfirm, onBack, sending, progress, onEdit }) {
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <p className="text-sm text-ink-700">
           <span className="font-semibold text-ink-900">{rows.length}</span> transactions from {parsed.source_label},{" "}
-          {fmtDate(dates[0])} – {fmtDate(dates[dates.length - 1])}
+          {fmtDate(dates[0])} to {fmtDate(dates[dates.length - 1])}
         </p>
-        <button onClick={() => setShowRemoved((v) => !v)} className="text-xs font-medium text-forest-600 hover:underline">
-          {showRemoved ? "Hide" : "Show"} what was removed
-        </button>
       </div>
 
       {lowConfidence.size > 0 && (
@@ -86,20 +83,7 @@ function Preview({ parsed, onConfirm, onBack, sending, progress, onEdit }) {
         </div>
       )}
 
-      {showRemoved && (
-        <div className="bg-sage-50 rounded-xl px-4 py-3 text-xs text-ink-600 space-y-1">
-          <p className="font-medium text-ink-800">Never read from your file</p>
-          <ul className="list-disc pl-4">{NEVER_READ.map((l) => <li key={l}>{l}</li>)}</ul>
-          {Object.keys(removed).length > 0 && (
-            <>
-              <p className="font-medium text-ink-800 pt-1">Masked or removed in the rows below</p>
-              <ul className="list-disc pl-4">
-                {Object.entries(removed).map(([k, n]) => <li key={k}>{REMOVED_LABELS[k]}: {n}</li>)}
-              </ul>
-            </>
-          )}
-        </div>
-      )}
+      <RemovedPanel rawRows={rawRows} cleanRows={rows} removed={removed} />
 
       <div className="max-h-80 overflow-auto border border-sage-100 rounded-xl">
         <table className="w-full text-xs stack-table">
@@ -138,7 +122,7 @@ function Preview({ parsed, onConfirm, onBack, sending, progress, onEdit }) {
                 <td data-label="Type" className={`px-2 py-1 whitespace-nowrap ${r.direction === "credit" ? "text-safe" : "text-ink-600"}`}>
                   {r.type === "transfer" ? "Transfer" : r.direction === "credit" ? "Credit" : "Debit"}
                 </td>
-                <td className="px-2 py-1 font-mono text-ink-400 whitespace-nowrap" data-label="Reference">{r.reference || "—"}</td>
+                <td className="px-2 py-1 font-mono text-ink-400 whitespace-nowrap" data-label="Reference">{r.reference || <span className="sr-only">none</span>}</td>
               </tr>
             ))}
           </tbody>
@@ -375,7 +359,7 @@ export default function StatementUpload({ onSuccess, onClose }) {
           )}
 
           {step === "preview" && preview && (
-            <Preview parsed={preview} onConfirm={confirm} onBack={reset} sending={busy} progress={progress}
+            <Preview parsed={preview} rawRows={rawResult.rows} onConfirm={confirm} onBack={reset} sending={busy} progress={progress}
               onEdit={(i, field, value) => setRawResult((r) => ({
                 ...r, rows: r.rows.map((row, j) => (j === i ? { ...row, [field]: value } : row)),
               }))} />

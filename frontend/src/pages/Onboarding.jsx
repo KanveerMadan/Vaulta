@@ -6,6 +6,8 @@ import InboundCard from "../components/InboundCard";
 import TelegramLink from "../components/TelegramLink";
 import StatementUpload from "../components/StatementUpload";
 import ReviewFlow from "../components/ReviewFlow";
+import { Ring, CoverageParts } from "../components/CoverageRing";
+import Wordmark from "../ui/Wordmark";
 
 const STEP_TITLES = { basics: "Basics", connect: "Connect", import: "Import history", review: "First review", finish: "Done" };
 const ZONES = ["Asia/Kolkata", "Asia/Dubai", "Asia/Singapore", "Europe/London", "America/New_York", "America/Los_Angeles", "Australia/Sydney"];
@@ -26,11 +28,11 @@ function Chips({ choices, selected, onChange, label }) {
   const toggle = (v) => onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
   return (
     <fieldset>
-      <legend className="text-sm text-ink-600 mb-2">{label}</legend>
+      <legend className="label mb-2">{label}</legend>
       <div className="flex flex-wrap gap-2">
         {choices.map(({ value, name }) => (
           <button type="button" key={value} onClick={() => toggle(value)} aria-pressed={selected.includes(value)}
-            className={`text-sm px-3 py-2 rounded-full border ${selected.includes(value) ? "bg-forest-400 text-white border-forest-400" : "bg-surface text-ink-700 border-sage-200"}`}>
+            className={`text-sm px-3.5 py-2 rounded-full border transition-colors duration-fast ${selected.includes(value) ? "bg-accent text-on-accent border-accent" : "bg-surface text-ink-2 border-line-strong hover:border-muted"}`}>
             {name}
           </button>
         ))}
@@ -51,11 +53,11 @@ function Basics({ state, save }) {
   return (
     <form onSubmit={submit} className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <label className="text-sm text-ink-600 space-y-1 block">Monthly take-home income (optional)
+        <label className="label space-y-1.5 block">Monthly take-home income (optional)
           <input className="input" inputMode="decimal" pattern="\d+(\.\d{1,2})?" value={form.income} placeholder="85000"
             onChange={(e) => setForm({ ...form, income: e.target.value })} />
         </label>
-        <label className="text-sm text-ink-600 space-y-1 block">Payday
+        <label className="label space-y-1.5 block">Payday
           <select className="input" value={form.payday} onChange={(e) => setForm({ ...form, payday: e.target.value })}>
             <option value="">Not sure</option>
             {Array.from({ length: 31 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
@@ -66,7 +68,7 @@ function Basics({ state, save }) {
         choices={state.bank_choices.map((b) => ({ value: b.key, name: b.name }))} />
       <Chips label="UPI apps you use" selected={form.upi_apps} onChange={(upi_apps) => setForm({ ...form, upi_apps })}
         choices={state.upi_choices.map((n) => ({ value: n, name: n }))} />
-      <label className="text-sm text-ink-600 space-y-1 block">Time zone
+      <label className="label space-y-1.5 block">Time zone
         <select className="input" value={form.timezone} onChange={(e) => setForm({ ...form, timezone: e.target.value })}>
           {(ZONES.includes(form.timezone) ? ZONES : [form.timezone, ...ZONES]).map((z) => <option key={z}>{z}</option>)}
         </select>
@@ -155,24 +157,35 @@ function Finish({ state, done }) {
     s.telegram.active && "Telegram",
     state.banks.length > 0 && `${state.banks.length} bank${state.banks.length === 1 ? "" : "s"} and cards noted`,
   ].filter(Boolean);
+  const automatic = [
+    (s.email.connected || state.test_received) && ["Every forwarded bank alert", "becomes a transaction within seconds."],
+    ["Every morning", "a fresh safe-to-spend figure and the month's forecast."],
+    ["When something needs you", "an alert: a budget at 80%, a duplicate charge, a failed payment, a renewal tomorrow."],
+    ["Every week and month", "a short report, by email if you want it."],
+    ["When Vaulta isn't sure", "one quick question, answered in a tap."],
+  ].filter(Boolean);
   return (
-    <div className="space-y-5">
-      <div className="card p-5">
-        <h3 className="font-medium text-ink-900 mb-2">Set up</h3>
-        {setUp.length ? <ul className="list-disc pl-5 text-sm text-ink-700 space-y-1">{setUp.map((x) => <li key={x}>{x}</li>)}</ul>
-          : <p className="text-sm text-ink-500">Nothing yet — you can add sources any time from Connect.</p>}
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <p className="text-ink-2">{setUp.length ? "Set up:" : "Nothing is connected yet. You can add sources any time from Connect."}</p>
+        {setUp.length > 0 && (
+          <ul className="flex flex-wrap gap-2">
+            {setUp.map((x) => <li key={x} className="tag-positive text-sm px-3 py-1">{x}</li>)}
+          </ul>
+        )}
       </div>
-      <div className="card p-5">
-        <h3 className="font-medium text-ink-900 mb-2">What Vaulta does from here</h3>
-        <ul className="list-disc pl-5 text-sm text-ink-700 space-y-1">
-          {(s.email.connected || state.test_received) && <li>Adds each forwarded bank alert as a transaction.</li>}
-          <li>Works out what's safe to spend each day and how the month is going.</li>
-          <li>Alerts you about budgets nearing their limit, duplicate charges, failed payments and renewals.</li>
-          <li>Sends a weekly and a monthly report (change this in Settings).</li>
-          <li>Asks you a quick question when it isn't sure about something.</li>
-        </ul>
-      </div>
-      <button onClick={done} className="btn-primary">Go to home</button>
+      <section aria-labelledby="automatic">
+        <h2 id="automatic" className="font-display text-2xl text-ink">What Vaulta does from here</h2>
+        <ol className="mt-4 border-t border-line">
+          {automatic.map(([when, what], i) => (
+            <li key={when} className="finish-row border-b border-line py-4 grid sm:grid-cols-[13rem_1fr] gap-1 sm:gap-4" style={{ "--i": i }}>
+              <span className="font-semibold text-ink">{when}</span>
+              <span className="text-ink-2">{what}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+      <button onClick={done} className="btn-primary h-12 px-6">Go to home</button>
     </div>
   );
 }
@@ -203,42 +216,56 @@ export default function Onboarding() {
   const pct = state.coverage.percent;
 
   return (
-    <div className="min-h-dvh bg-sage-50">
-      <header className="bg-surface border-b border-sage-200">
-        <div className="max-w-2xl mx-auto px-4 py-3 space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <span className="font-display text-lg text-ink-900">Vaulta</span>
-            {state.step !== "finish" && <button onClick={() => leave("skipped")} className="text-sm text-ink-400 hover:text-ink-700 px-2 py-2">Skip setup</button>}
-          </div>
-          <div>
-            <div className="flex justify-between text-xs text-ink-500 mb-1">
-              <span>Tracking coverage {pct}%</span>
-              <span>Step {Math.min(index + 1, 4)} of 4 · {STEP_TITLES[state.step]}</span>
-            </div>
-            <div className="h-2 bg-sage-100 rounded-full overflow-hidden" role="progressbar" aria-label="Tracking coverage"
-              aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-              <div className="h-full bg-forest-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
-            </div>
+    <div className="min-h-dvh bg-canvas">
+      <header className="border-b border-line bg-surface">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <Wordmark to="/onboarding" />
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted hidden sm:inline">Step {Math.min(index + 1, 4)} of 4</span>
+            {state.step !== "finish" && <button onClick={() => leave("skipped")} className="btn-quiet text-sm">Skip setup</button>}
           </div>
         </div>
       </header>
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-        <h1 className="font-display text-2xl text-ink-900">{STEP_TITLES[state.step]}</h1>
-        {saveError && <p className="text-sm text-danger" role="alert">{saveError}</p>}
-        {state.step === "basics" && <Basics state={state} save={save} />}
-        {state.step === "connect" && <Connect state={state} save={save} reload={reload} />}
-        {state.step === "import" && <ImportHistory state={state} save={save} />}
-        {state.step === "review" && (
-          <>
-            <p className="text-sm text-ink-600">A few quick questions about people, recurring payments, transfers and budgets. Each answer fixes your numbers.</p>
-            <ReviewFlow onDone={() => save({ step: "finish" })} doneLabel="Continue" />
-          </>
-        )}
-        {state.step === "finish" && <Finish state={state} done={() => leave("done")} />}
-        {index > 0 && state.step !== "finish" && (
-          <button onClick={() => save({ step: state.steps[index - 1] })} className="text-sm text-ink-400 hover:text-ink-700">← Back</button>
-        )}
-      </main>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 lg:py-12 grid lg:grid-cols-[17rem_minmax(0,1fr)] gap-8 lg:gap-14">
+        {/* the meter: central on desktop, compact on phones */}
+        <aside className="lg:sticky lg:top-8 self-start">
+          <div className="flex lg:flex-col items-center lg:items-start gap-5">
+            <div className="hidden lg:block"><Ring percent={pct} /></div>
+            <div className="lg:hidden"><Ring percent={pct} size={84} stroke={7} /></div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-ink" aria-live="polite">Tracking coverage {pct}%</p>
+              <p className="text-micro text-muted mt-0.5 mb-3 hidden lg:block">How much of your money Vaulta can see. Each source you add fills it in.</p>
+              <div className="hidden lg:block"><CoverageParts parts={state.coverage.parts} max={state.coverage.max} /></div>
+            </div>
+          </div>
+          <ol className="mt-4 lg:mt-8 flex lg:flex-col gap-2 text-sm" aria-label="Steps">
+            {state.steps.slice(0, 4).map((st, i) => (
+              <li key={st} aria-current={st === state.step ? "step" : undefined}
+                className={`flex items-center gap-2 ${st === state.step ? "text-ink font-semibold" : i < index ? "text-accent-text" : "text-muted"}`}>
+                <span className={`h-1 lg:h-auto lg:w-1 rounded-full ${st === state.step ? "bg-accent" : i < index ? "bg-accent-line" : "bg-line"} w-8 lg:self-stretch`} />
+                <span className="hidden lg:inline">{STEP_TITLES[st]}</span>
+              </li>
+            ))}
+          </ol>
+        </aside>
+        <main className="min-w-0 space-y-6">
+          <h1 className="font-display text-display-s text-ink">{state.step === "finish" ? "You're set up." : STEP_TITLES[state.step]}</h1>
+          {saveError && <p className="text-sm text-danger" role="alert">{saveError}</p>}
+          {state.step === "basics" && <Basics state={state} save={save} />}
+          {state.step === "connect" && <Connect state={state} save={save} reload={reload} />}
+          {state.step === "import" && <ImportHistory state={state} save={save} />}
+          {state.step === "review" && (
+            <>
+              <p className="text-ink-2">A few quick questions about people, recurring payments, transfers and budgets. Each answer fixes your numbers.</p>
+              <ReviewFlow onDone={() => save({ step: "finish" })} doneLabel="Continue" />
+            </>
+          )}
+          {state.step === "finish" && <Finish state={state} done={() => leave("done")} />}
+          {index > 0 && state.step !== "finish" && (
+            <button onClick={() => save({ step: state.steps[index - 1] })} className="btn-quiet text-muted">← Back</button>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

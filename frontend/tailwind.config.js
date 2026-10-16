@@ -65,5 +65,11 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // keyboard hints only where there's a mouse; swipe hints only on touch
+    ({ addVariant }) => {
+      addVariant('pointer-fine', '@media (pointer: fine)')
+      addVariant('pointer-coarse', '@media (pointer: coarse)')
+    },
+  ],
 }

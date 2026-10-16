@@ -62,7 +62,7 @@ test('sign up → onboarding, all four steps', async ({ page, request }, testInf
   await page.getByRole('button', { name: 'Continue' }).click()
 
   // Finish
-  await expect(page.getByRole('heading', { name: 'Done' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: "You're set up." })).toBeVisible()
   await expect(page.getByText('What Vaulta does from here')).toBeVisible()
   await page.getByRole('button', { name: 'Go to home' }).click()
   await expect(page.getByText('Safe to spend today')).toBeVisible()
