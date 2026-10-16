@@ -41,7 +41,16 @@ function PrivateRoute() {
     return <Navigate to="/verify-email" replace state={{ next: pathname }} />
   }
   if (demoToken || user) return <Outlet />
-  return loading ? <Loader /> : <Navigate to="/welcome" replace />
+  if (loading) return <Loader />
+  // Signed out on a page inside the app: log in and come back to it. The bare root is the landing page.
+  return pathname === '/' ? <Navigate to="/welcome" replace /> : <Navigate to="/login" replace state={{ next: pathname }} />
+}
+
+// Signed in on /login: go where the user was heading (state.next), else home
+function AfterLogin() {
+  const { state } = useLocation()
+  const next = typeof state?.next === 'string' && state.next.startsWith('/') && !state.next.startsWith('//') ? state.next : '/'
+  return <Navigate to={next} replace />
 }
 
 function Loader() {
@@ -87,7 +96,7 @@ export default function App() {
       <Route path="/security" element={page(<Security />)} />
       <Route path="/privacy" element={page(<Privacy />)} />
       <Route path="/verify-email" element={loading ? <Loader /> : page(<VerifyEmail />)} />
-      <Route path="/login" element={loading ? <Loader /> : !user ? page(<Login />) : <Navigate to="/" replace />} />
+      <Route path="/login" element={loading ? <Loader /> : !user ? page(<Login />) : <AfterLogin />} />
       <Route element={<PrivateRoute />}>
         <Route path="/onboarding" element={page(<Onboarding />)} />
         <Route path="/reports/:id/wrapped" element={page(<Wrapped />)} />

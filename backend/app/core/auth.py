@@ -53,7 +53,7 @@ class TokenInfo:
 # itself, but nothing that creates data or reaches outside (imports, forwarding address, Telegram, chat).
 UNVERIFIED_WRITES_ALLOWED = {
     ("PATCH", "/auth/me"), ("DELETE", "/auth/me"), ("PATCH", "/api/onboarding"), ("PATCH", "/api/settings"),
-    ("POST", "/api/account/reauth-failed"),
+    ("POST", "/api/account/reauth-failed"), ("POST", "/api/account/sign-out-everywhere"),
 }
 UNVERIFIED_READS_BLOCKED = {("GET", "/api/inbound")}   # shows (and creates) the forwarding address
 EMAIL_UNVERIFIED = "Verify your email address first: open the link we sent you, then try again."
@@ -202,11 +202,25 @@ def _user_for_token(request: Request, token: str, db: Session, check_revoked: bo
 
     bind_user(db, user)
     user.token = token_info
+    if issued_before_revocation(user, token_info):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=SIGNED_OUT)
     _note_sign_in(db, user, token_info)
     if db.is_modified(user) or db.new:  # a data key was just created, or a sign-in recorded
         db.commit()
     require_verified(request, token_info)
     return user
+
+
+def issued_before_revocation(user: User, token: TokenInfo) -> bool:
+    """
+    Signed out everywhere: Firebase stops refreshing the old sessions, but their ID tokens stay valid for up to an
+    hour. The revocation time is kept on the user row (already loaded for every request), so every request refuses
+    those tokens at no extra cost: no call to Firebase per request. Revocations made outside Vaulta (a password reset
+    by email, the Firebase console) are caught by check_revoked on sensitive routes and when the token expires.
+    """
+    if user.tokens_revoked_at is None or not isinstance(token.issued_at, (int, float)):
+        return False
+    return token.issued_at < int(user.tokens_revoked_at.timestamp())
 
 
 def _note_sign_in(db: Session, user: User, token: TokenInfo) -> None:

@@ -17,6 +17,9 @@ export const useAuthStore = create((set) => ({
   refreshVerified: () => set((s) => ({ verified: isVerified(s.user) })),
   setLoading: (loading) => set({ loading }),
   logout: () => set({ user: null, verified: false }),
+  // Why the session ended (shown once on the login page): revoked, expired, disabled
+  signedOutNotice: null,
+  setSignedOutNotice: (signedOutNotice) => set({ signedOutNotice }),
   startDemo: (token) => {
     try { sessionStorage.setItem(DEMO_KEY, token) } catch { /* private mode: demo lasts until reload */ }
     set({ demoToken: token })

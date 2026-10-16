@@ -62,6 +62,7 @@ COVERED = {
     ("GET", "/api/export"),
     ("GET", "/api/activity"),
     ("POST", "/api/account/reauth-failed"),   # writes only to the caller's own activity log
+    ("POST", "/api/account/sign-out-everywhere"),   # acts on the caller's own Firebase login (test_auth_hardening.py)
     # tests/test_inbound.py::test_addresses_are_per_user
     ("GET", "/api/inbound"),
     ("POST", "/api/inbound/regenerate"),

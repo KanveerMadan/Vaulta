@@ -1,6 +1,6 @@
 // Phase 6.5 sign-in flows against the Firebase Auth emulator: email verification, password reset, linking Google
 // and a password to one account, re-authentication for sensitive actions, signing out everywhere, deleting the login.
-import { test, expect, API, checkLayout, newAccount, signInToken, signedInWithData, emulatorEmails, callApi } from './fixtures'
+import { test, expect, API, checkLayout, newAccount, signIn, signInToken, signedInWithData, emulatorEmails, callApi } from './fixtures'
 
 const uniqueEmail = (tag) => `${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@vaulta.test`
 const STRONG = 'correct-horse-battery'
@@ -65,4 +65,41 @@ test('a stale session must sign in again before exporting', async ({ page, reque
   const kinds = (await callApi(request, { token: await signInToken(request, account.email, account.password) }, 'GET', '/api/activity')).map((e) => e.kind)
   expect(kinds).toContain('reauth_failed')
   expect(kinds).toContain('export')
+})
+
+test('sign out of all devices ends a second browser\'s session too', async ({ page, request, browser, guard }, testInfo) => {
+  const account = await signedInWithData(page, request)
+  const other = await browser.newContext({ viewport: page.viewportSize() })
+  const second = await other.newPage()
+  second.on('console', (m) => { if (m.type() === 'error' && !/status of (400|401)/.test(m.text())) throw new Error(m.text()) })
+  await signIn(second, account)
+  await expect(second.getByText('Safe to spend today')).toBeVisible()
+  const third = await browser.newContext({ viewport: page.viewportSize() })
+  const p3 = await third.newPage()
+  await signIn(p3, account)
+  await p3.goto('/goals')
+
+  await page.goto('/settings')
+  await page.getByRole('button', { name: 'Sign out of all devices' }).click()
+  await expect(page).toHaveURL(/\/login$/)
+  await expect(page.getByText('You were signed out on all your devices')).toBeVisible()
+  await checkLayout(page, testInfo)
+
+  // the second browser, still open on the app: its ID token is within its hour, but the API refuses it
+  await second.evaluate(() => { window.history.pushState({}, '', '/transactions'); window.dispatchEvent(new PopStateEvent('popstate')) })
+  await expect(second).toHaveURL(/\/login$/)
+  await expect(second.getByText('Your session was signed out. Sign in again.')).toBeVisible()
+  await second.getByPlaceholder('you@example.com').fill(account.email)            // and it returns to /transactions
+  await second.getByPlaceholder('••••••••').fill(account.password)
+  await second.getByRole('button', { name: 'Log in' }).click()
+  await expect(second).toHaveURL(/\/transactions$/)
+
+  // a third, reloaded afterwards: Firebase itself sees the revoked session, signs it out, login brings it back
+  guard.allow(/status of 400/)
+  await p3.reload()
+  await expect(p3).toHaveURL(/\/login$/)
+  await signIn(p3, account)
+  await expect(p3).toHaveURL(/\/goals$/)
+  await other.close()
+  await third.close()
 })

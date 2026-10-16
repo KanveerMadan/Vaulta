@@ -65,6 +65,8 @@ class User(Base):
 
     # --- Last sign-in (Firebase auth_time); a newer one is logged in the activity log ---
     last_sign_in_at = Column(DateTime(timezone=True), nullable=True)
+    # --- Sign out everywhere: ID tokens issued before this are refused (app/core/auth.py, services/account.py) ---
+    tokens_revoked_at = Column(DateTime(timezone=True), nullable=True)
 
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled

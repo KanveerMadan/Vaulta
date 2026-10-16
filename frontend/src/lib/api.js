@@ -31,8 +31,12 @@ api.interceptors.response.use(
     }
     const demo = useAuthStore.getState().demoToken
     if (status === 401) {
-      if (demo) useAuthStore.getState().endDemo()
-      window.location.href = demo ? '/welcome' : '/login'
+      if (demo) {
+        useAuthStore.getState().endDemo()
+        window.location.href = '/welcome'
+      } else {
+        await signOutLocally(err.response.data?.detail)
+      }
     } else if (status === 403 && err.response.data?.code === 'email_unverified') {
       window.dispatchEvent(new CustomEvent('vaulta:unverified'))
     } else if (status === 403 && demo) {
@@ -42,6 +46,21 @@ api.interceptors.response.use(
     return Promise.reject(err)
   }
 )
+
+let signingOut = null
+/**
+ * The session ended (expired, revoked by "sign out of all devices", account disabled): forget it in this browser
+ * once, however many requests failed. PrivateRoute then sends the user to the login page and back here afterwards.
+ */
+function signOutLocally(detail) {
+  signingOut ??= (async () => {
+    const [{ signOut }, { auth }] = await Promise.all([import('firebase/auth'), import('./firebase')])
+    // The login page shows why; App's routes send the signed-out user there and back to this page afterwards
+    useAuthStore.getState().setSignedOutNotice(detail || 'Your session ended. Sign in again.')
+    await signOut(auth).catch(() => {})
+  })().finally(() => { signingOut = null })
+  return signingOut
+}
 
 /** Sign in to the shared read-only demo. */
 export async function startDemo() {

@@ -13,11 +13,11 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user, get_recent_user
+from app.core.auth import get_current_user, get_recent_user, get_sensitive_user
 from app.core.database import get_db
 from app.core.ratelimit import per_user
 from app.models.user import User
-from app.services import activity, export
+from app.services import account, activity, export
 
 router = APIRouter(prefix="/api", tags=["account"])
 
@@ -48,4 +48,12 @@ def get_activity(current_user: User = Depends(get_current_user), db: Session = D
 def reauth_failed(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """The web app reports a failed "sign in again" (wrong password, closed popup), for the activity log."""
     activity.record(db, current_user, "reauth_failed")
+    db.commit()
+
+
+@router.post("/account/sign-out-everywhere", status_code=204,
+             dependencies=[Depends(per_user("sign-out-everywhere", 10, 3600, get_sensitive_user))])
+def sign_out_everywhere(current_user: User = Depends(get_sensitive_user), db: Session = Depends(get_db)):
+    """Signs out every device, this one included. Telegram and demo sessions are unaffected."""
+    account.sign_out_everywhere(db, current_user)
     db.commit()

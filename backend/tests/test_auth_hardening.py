@@ -89,3 +89,59 @@ def test_routes_marked_recent_really_are(client):
 def test_a_failed_reauthentication_is_logged(client):
     assert client.post("/api/account/reauth-failed", headers=USER).status_code == 204
     assert [e["kind"] for e in client.get("/api/activity", headers=USER).json()][0] == "reauth_failed"
+
+
+# ── Sign out everywhere (step 7) ──────────────────────────────────────────────
+
+class FakeFirebase:
+    """The Admin SDK calls Vaulta makes on a user's login, recorded."""
+
+    def __init__(self, monkeypatch):
+        import time
+        self.calls = []
+        self.valid_after = 0
+        self.users = {}
+        fb = auth.firebase_auth
+
+        def revoke(uid):
+            self.calls.append(("revoke", uid))
+            self.valid_after = int(time.time()) * 1000
+
+        class Record:
+            def __init__(rec, uid):
+                rec.uid = uid
+                rec.tokens_valid_after_timestamp = self.valid_after
+                rec.provider_data = [type("P", (), {"provider_id": p})() for p in self.users.get(uid, ["password"])]
+        monkeypatch.setattr(fb, "revoke_refresh_tokens", revoke)
+        monkeypatch.setattr(fb, "get_user", lambda uid: Record(uid))
+
+
+def test_sign_out_everywhere_refuses_older_tokens_on_every_request(client, monkeypatch):
+    import time
+    fake = FakeFirebase(monkeypatch)
+    old = int(time.time()) - 600
+    signed_in_as(monkeypatch, iat=old, auth_time=old)
+    assert client.get("/api/transactions", headers=USER).status_code == 200
+    assert client.post("/api/account/sign-out-everywhere", headers=USER).status_code == 204
+    assert fake.calls == [("revoke", "alice")]
+    for path in ("/api/transactions", "/api/home", "/auth/me"):                    # every route, not just sensitive ones
+        res = client.get(path, headers=USER)
+        assert res.status_code == 401 and res.json()["detail"] == auth.SIGNED_OUT, path
+    signed_in_as(monkeypatch)                                                          # a token from a new sign-in
+    assert client.get("/api/transactions", headers=USER).status_code == 200
+    kinds = [e["kind"] for e in client.get("/api/activity", headers=USER).json()]
+    assert "signed_out_everywhere" in kinds
+
+
+def test_sign_out_everywhere_leaves_telegram_and_demo_alone(client, monkeypatch):
+    FakeFirebase(monkeypatch)
+    from tests.conftest import user_session
+    client.get("/auth/me", headers=USER)
+    with user_session("alice") as (db, user):
+        user.telegram_chat_id = 4242
+        db.commit()
+    assert client.post("/api/account/sign-out-everywhere", headers=USER).status_code == 204
+    with user_session("alice") as (db, user):
+        assert user.telegram_chat_id == 4242
+    demo = client.post("/auth/demo").json()["token"]
+    assert client.get("/api/home", headers={"Authorization": f"Bearer {demo}"}).status_code == 200
