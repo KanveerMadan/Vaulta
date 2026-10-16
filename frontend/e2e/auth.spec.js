@@ -197,3 +197,19 @@ test('App Check: the API refuses bot-target routes without a token from the app'
   expect((await request.post(`${API}/auth/demo`)).status()).toBe(401)
   await callApi(request, account, 'POST', '/api/import/batch', body)               // the app's token: accepted
 })
+
+test('logging in: a wrong password and an unknown email read exactly the same', async ({ page, request, guard }) => {
+  guard.allow(/status of 400/)                              // the emulator's own answers (production hides even those)
+  const account = await newAccount(request)
+  const attempt = async (email, password) => {
+    await page.goto('/login')
+    await page.getByPlaceholder('you@example.com').fill(email)
+    await page.getByPlaceholder('••••••••').fill(password)
+    await page.getByRole('button', { name: 'Log in' }).click()
+    return page.getByRole('alert').innerText()
+  }
+  const wrongPassword = await attempt(account.email, 'not-the-password')
+  const unknownEmail = await attempt(uniqueEmail('nobody'), 'not-the-password')
+  expect(wrongPassword).toBe('Incorrect email or password.')
+  expect(unknownEmail).toBe(wrongPassword)
+})

@@ -78,7 +78,7 @@ backend/venv/bin/python -m alembic upgrade head
 backend/venv/bin/python -m alembic current
 ```
 **Checks:**
-- `alembic current` prints `b9e5f1a3c4d6 (head)`.
+- `alembic current` prints `e3f9a5b7c8d0 (head)`.
 - `psql "$OWNER_URL" -Atc "select 'users', count(*) from users union all select 'transactions', count(*) from transactions"`
   matches `/tmp/vaulta-counts-before.txt`.
 - `psql "$OWNER_URL" -Atc "select count(*) from transactions where kind is null"` prints `0`.
@@ -138,6 +138,67 @@ It must print `{"status":"ready","database":"ok","migrations":"at head","rls":"e
 curl -sI https://$DOMAIN/ | grep -iE "content-security-policy|strict-transport|x-frame"
 ```
 It must show the CSP, HSTS and `DENY`, and `curl -s https://$DOMAIN/.well-known/security.txt` must start with `Contact:`.
+
+## 3a. Firebase console: sign-in settings and App Check (required)
+
+Open the Firebase console for `vaulta-a3d7a`. Every setting below is required: the app's security claims depend on
+them.
+
+**3a.1 Email enumeration protection: on.**
+- **Where:** Authentication → Settings → User actions → **Email enumeration protection**: turn it on. It is on by
+  default for projects created since September 2023, but check.
+- **Check:** this prints `INVALID_LOGIN_CREDENTIALS`, not `EMAIL_NOT_FOUND`:
+  ```sh
+  curl -s "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=<VITE_FIREBASE_API_KEY>" \
+    -H 'content-type: application/json' -d '{"email":"nobody-'$RANDOM'@example.com","password":"x","returnSecureToken":true}' | grep -o '"message": "[A-Z_]*'
+  ```
+- **Note:** Firebase's own sign-up endpoint still answers `EMAIL_EXISTS` for an address in use. Firebase can't hide
+  that; Vaulta's screens show the same "Check your inbox" page either way.
+
+**3a.2 One account per email address: on.**
+- **Where:** Authentication → Settings → User account linking → **Link accounts that use the same email**. This is
+  the default.
+- **Check:** in the app, sign in with Google using the address of an email/password account. Settings → Security
+  lists both methods.
+
+**3a.3 Password policy: at least 10 characters, enforced.**
+- **Where:** Authentication → Settings → **Password policy** → enforcement **Require**, minimum length **10**. This
+  setting needs Firebase Authentication with Identity Platform.
+- **If you don't upgrade:** the 10-character minimum is still enforced by the app on sign-up and by the API on every
+  password change, but a sign-up made directly against Firebase's API could set a shorter one.
+- **Check:** `curl` an `accounts:signUp` with a 6-character password. It fails with `PASSWORD_DOES_NOT_MEET_REQUIREMENTS`.
+
+**3a.4 Authorized domains.**
+- **Where:** Authentication → Settings → **Authorized domains**: add `$DOMAIN` (and `www.$DOMAIN`).
+- **Check:** after step 9, Google sign-in works on `https://$DOMAIN`.
+
+**3a.5 App Check with reCAPTCHA Enterprise.**
+1. **Create the key.** Google Cloud console (same project) → Security → reCAPTCHA Enterprise → **Create key**:
+   - type **Website**;
+   - domains `$DOMAIN` and `www.$DOMAIN`;
+   - "Use checkbox challenge" off.
+
+   Copy the key id.
+2. **Register the web app.** Firebase console → App Check → Apps → the web app → **reCAPTCHA Enterprise** → paste the
+   key id → token TTL 1 hour → Save.
+3. **Set the site key.** On Vercel, set `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY=<key id>` (Production and Preview), then
+   redeploy.
+4. **Watch before enforcing.** Leave `APP_CHECK_ENFORCE` unset on Render for a day. The API logs `app check: missing
+   or invalid token` lines without refusing anything. They should only appear for bots.
+5. **Enforce.** Set `APP_CHECK_ENFORCE=true` on Render and redeploy.
+6. **Also enforce in Firebase (recommended).** Firebase console → App Check → APIs → **Identity Platform /
+   Authentication** → Enforce, so bots can't call Firebase's own sign-up API directly either.
+
+Never set `APP_CHECK_DEBUG_TOKEN` on Render: production refuses to start with it.
+
+**Check:**
+- The app works normally.
+- `curl -s -X POST https://api.$DOMAIN/auth/demo` (no App Check header) answers `401` with `"code":"app_check_failed"`.
+
+**3a.6 Email templates (optional).**
+- **Where:** Authentication → Templates.
+- **What:** set the sender name to "Vaulta" for the verification and password-reset emails. The action links can
+  stay on Firebase's hosted page.
 
 ## 4. Domain and DNS (Cloudflare)
 
@@ -254,7 +315,12 @@ Do this in a private window, on your phone and on a laptop.
   right.
 - [ ] Chat: "how much did I spend this month?" gets an answer with figures. Settings → turn AI chat off → chat
   refuses.
-- [ ] Settings → Activity lists your sign-in.
+- [ ] Settings → Activity lists your sign-up and sign-in (with the method).
+- [ ] Sign up with email and password: "Check your inbox". Importing is refused until you click the link; after it,
+  it works.
+- [ ] "Forgot password?" says the same for your address and a made-up one; the reset email arrives and works.
+- [ ] Settings → Security: sign out of all devices signs out a second browser too.
+- [ ] Wait 5 minutes after signing in, then Export: you're asked to sign in again first.
 - [ ] Settings → Export my data downloads a zip with `data.json`; Activity lists the export.
 - [ ] Connect: the forwarding address works (step 6 check).
 - [ ] Telegram: link, send `150 auto cash`, tap ✓ Save; `/undo` removes it.
@@ -276,6 +342,7 @@ Do this in a private window, on your phone and on a laptop.
 | 1.5 migrations | Fastest and complete: Neon → restore `$NEON_PROD_BRANCH` from `pre-phase6-…` (`npx neonctl@7.0.4 branches restore $NEON_PROD_BRANCH pre-phase6-… --project-id $NEON_PROJECT`), then resume the old API. Data written after the migration is lost. To keep the data: `alembic downgrade a5c1e7f9b0d3` (decrypts, drops RLS) with the same keys in the environment. |
 | 2 Render | Suspend or delete `vaulta-api` and `vaulta-report-run`. Resume the old service only after restoring the database. |
 | 3 Vercel | Vercel → Deployments → the last old production deployment → **Promote to Production**. Revert the env vars. |
+| 3a Firebase / App Check | Unset `APP_CHECK_ENFORCE` on Render (back to monitor mode) and remove the App Check enforcement in the Firebase console. The other settings are safe to keep. |
 | 4 DNS | Delete the records added. Point `$DOMAIN` back where it was, and disable Email Routing for `in.$DOMAIN`. |
 | 5 Resend | Remove the domain and its records. Emails then stop (the app keeps working: email is optional). |
 | 6 Worker | `npx wrangler delete` and remove the routing rule. Alert forwarding stops; nothing else is affected. |

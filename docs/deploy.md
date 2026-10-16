@@ -50,6 +50,9 @@ data can't be read back, and a database backup can't replace them.
 | `API_BASE_URL` | yes | the API's https URL (unsubscribe links) |
 | `SECURITY_CONTACT_EMAIL` | yes | the address published at the API's `/.well-known/security.txt` |
 | `DEMO_SESSIONS_PER_IP` | optional | default 30 per 10 minutes |
+| `RECENT_LOGIN_SECONDS` | optional | how recent a sign-in sensitive actions need; default 300, production accepts 60–600 |
+| `APP_CHECK_ENFORCE` | after go-live step 3a | `true` refuses requests without a valid App Check token; unset = monitor mode (logs only) |
+| `APP_CHECK_DEBUG_TOKEN` | never in production | local runs and browser tests only; production refuses to start with it |
 | `GROQ_API_KEY` | for chat and report summaries | console.groq.com → API keys |
 | `GROQ_MODEL` | optional | default `llama-3.3-70b-versatile` |
 | `RESEND_API_KEY` | for emails | resend.com → API keys (sending access, one domain) |
@@ -78,6 +81,7 @@ All `VITE_*` values are compiled into the public JavaScript, so none of them is 
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` | Firebase console → Project settings → Your apps → Web app config. If `VITE_FIREBASE_AUTH_DOMAIN` changes, update `frame-src` in `vercel.json`. |
 | `VITE_SECURITY_CONTACT` | security contact email; becomes `/.well-known/security.txt` and is shown on `/security`. Required: the build fails without it. |
 | `VITE_PRIVACY_CONTACT` | privacy and grievance contact email shown on `/privacy`. Required. |
+| `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` | the reCAPTCHA Enterprise key id for App Check (go-live step 3a). Without it the app sends no App Check token, so leave `APP_CHECK_ENFORCE` off. |
 
 ### Cloudflare: email worker (`infra/email-worker`)
 
