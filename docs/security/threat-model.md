@@ -63,6 +63,11 @@ Each row: the threat, then what stops it and where that is enforced or tested.
 |---|---|
 | Calling user routes without a session | Every `/api/*` route depends on `get_current_user` (`app/core/auth.py`); Firebase ID tokens are verified with the Admin SDK. `tests/test_ownership.py::test_every_route_is_covered` fails when a route is added without an isolation case. |
 | A stolen but revoked token (user signed out everywhere, password changed, account disabled) | Sensitive routes (delete, export, unlink, address regeneration, settings) verify with `check_revoked=True` (`app/core/auth.py::get_sensitive_user`). Other routes accept the token until it expires (at most 1 hour). |
+| Someone else's stolen session used for account takeover actions | Export, delete everything, password and sign-in method changes, forwarding-address regeneration and Telegram unlink need a sign-in from the last 5 minutes by the token's `auth_time` (`get_recent_user`); the app asks for the password or Google again. `tests/test_auth_hardening.py`. |
+| Sessions that should be dead: "sign out of all devices", password change or reset, a removed sign-in method | Refresh tokens are revoked (Admin SDK) and the revocation time is kept on the user row; every request refuses ID tokens issued before it (`issued_before_revocation`). |
+| Accounts made with someone else's email address | Email/password sign-ups must confirm the address before creating any data or reaching outside (403 `email_unverified`, enforced on every write); Google sign-ins count as verified, and Firebase links them to an existing account on the same address (one account per email). |
+| Bots creating accounts and demo sessions, flooding imports and chat | Firebase App Check (reCAPTCHA Enterprise) on account creation, demo sessions, reset requests, imports and chat (`app/core/appcheck.py`), on top of the rate limits. |
+| Discovering which emails have accounts | Login, sign-up and reset read the same for existing and unknown addresses; Firebase's email enumeration protection is a required go-live setting. |
 | Brute force or flooding: demo sessions, chat (LLM spend), imports, Telegram, auth-sensitive routes | Postgres-backed fixed-window limits (`app/core/ratelimit.py`, table `rate_limits`), shared by every API worker. `tests/test_ratelimit.py`. |
 | Oversized bodies, huge imports, long strings | Request body cap in middleware (`MAX_BODY_BYTES`), per-field Pydantic limits, at most 500 rows per import batch, 256 KB per inbound email. |
 | Learning internals from errors | Production returns a generic `{"detail": "Something went wrong.", "request_id": …}` for unhandled errors, no stack traces; `/docs` and `/redoc` are off. `tests/test_app_security.py`. |
@@ -130,3 +135,6 @@ across the end-to-end fixture and searches them for every one of those.
 - Firebase ID tokens are accepted until expiry (≤ 1 hour) on non-sensitive routes after revocation.
 - Inbound DKIM trust relies on Cloudflare's `Authentication-Results` header (unverified against real bank mail).
 - No TOTP MFA (see `docs/security/mfa.md`).
+- Revocations made outside Vaulta (the Firebase console) are caught on sensitive routes at once and everywhere
+  else when the ID token expires (≤ 1 hour).
+- Firebase's own sign-up endpoint still reveals whether an address is in use (Firebase can't hide it).
