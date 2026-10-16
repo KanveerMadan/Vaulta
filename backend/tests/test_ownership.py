@@ -105,6 +105,7 @@ EXEMPT = {
     # no user session: signed per-user token (tests/test_delivery.py::test_unsubscribe)
     ("GET", "/unsubscribe"), ("POST", "/unsubscribe"),
     ("GET", "/.well-known/security.txt"),   # public, no data (tests/test_app_security.py)
+    ("GET", "/health/ready"),               # public status only (tests/test_health.py)
 }
 
 

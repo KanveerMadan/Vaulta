@@ -138,7 +138,7 @@ except Exception as e:
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 
 @app.get("/.well-known/security.txt", include_in_schema=False)
@@ -152,4 +152,28 @@ def security_txt():
 # ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/health", tags=["ops"])
 def health():
+    """Liveness: the process is up (the database may still be connecting)."""
     return {"status": "ok", "env": settings.APP_ENV, "database": "ok" if db_ready.is_set() else "connecting"}
+
+
+@app.get("/health/ready", tags=["ops"])
+def health_ready():
+    """
+    Readiness (Render's health check): the database answers, its schema is at this code's migration head, and the
+    API's database role can't bypass row-level security. 503 with the failing checks otherwise.
+    """
+    from sqlalchemy import text as sql
+    from app.core.database import MIGRATION_HEAD, check_role, engine
+    checks = {"database": "unreachable", "migrations": "unknown", "rls": "unknown"}
+    try:
+        with engine.connect() as conn:
+            conn.execute(sql("SELECT 1"))
+            checks["database"] = "ok"
+            version = conn.execute(sql("SELECT version_num FROM alembic_version")).scalar()
+            checks["migrations"] = "at head" if version == MIGRATION_HEAD else f"at {version}, expected {MIGRATION_HEAD}"
+            checks["rls"] = "enforced" if check_role(conn) is None else "bypassed"
+    except Exception as e:
+        logger.warning(f"readiness check failed: {e.__class__.__name__}")
+    ready = checks["database"] == "ok" and checks["migrations"] == "at head" and (
+        checks["rls"] == "enforced" or settings.APP_ENV != "production")
+    return JSONResponse(status_code=200 if ready else 503, content={"status": "ready" if ready else "not ready", **checks})

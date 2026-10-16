@@ -127,7 +127,30 @@ class Settings(BaseSettings):
                         f"{name} must be set to a random value of at least {MIN_SECRET_LENGTH} characters in production "
                         f"(generate one with: python -c \"import secrets; print(secrets.token_urlsafe(48))\")."
                     )
+            self._check_production_settings()
         return self
+
+    def _check_production_settings(self) -> None:
+        """Everything else production needs, so a misconfigured deploy fails at startup instead of at the first user."""
+        problems = []
+        for origin in self.cors_origins():
+            if not origin.startswith("https://") or "localhost" in origin or "127.0.0.1" in origin or "*" in origin:
+                problems.append(f"BACKEND_CORS_ORIGINS has {origin!r}: production origins must be https and not local")
+        if self.BACKEND_CORS_ORIGIN_REGEX:
+            if not (self.BACKEND_CORS_ORIGIN_REGEX.startswith("^https://") and self.BACKEND_CORS_ORIGIN_REGEX.endswith("$")):
+                problems.append("BACKEND_CORS_ORIGIN_REGEX must start with ^https:// and end with $")
+        for name in ("APP_BASE_URL", "API_BASE_URL"):
+            url = getattr(self, name)
+            if not url.startswith("https://") or "localhost" in url or "127.0.0.1" in url:
+                problems.append(f"{name} must be the public https URL in production")
+        if "@" not in self.SECURITY_CONTACT_EMAIL:
+            problems.append("SECURITY_CONTACT_EMAIL must be set (it is published in /.well-known/security.txt)")
+        if self.TELEGRAM_BOT_TOKEN and len(self.TELEGRAM_WEBHOOK_SECRET) < MIN_SECRET_LENGTH:
+            problems.append(f"TELEGRAM_WEBHOOK_SECRET must be at least {MIN_SECRET_LENGTH} characters when the bot is configured")
+        if self.MASTER_KEY_PREVIOUS and self.MASTER_KEY_PREVIOUS == self.MASTER_KEY:
+            problems.append("MASTER_KEY_PREVIOUS must differ from MASTER_KEY (remove it when no rotation is running)")
+        if problems:
+            raise ValueError("production configuration: " + "; ".join(problems))
 
     def require(self, *field_names: str) -> None:
         """

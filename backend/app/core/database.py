@@ -10,6 +10,9 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+# The alembic revision this code expects (GET /health/ready); tests/test_health.py keeps it equal to the real head
+MIGRATION_HEAD = "b9e5f1a3c4d6"
+
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,       # drops dead connections automatically

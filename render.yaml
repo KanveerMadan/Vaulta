@@ -1,18 +1,85 @@
-# Render Blueprint: the hourly report run.
-#
-# The API (web service) and frontend are configured in the Render / Vercel
-# dashboards. This cron job calls the API's internal endpoint every hour;
-# the endpoint works out per user (in their timezone) which weekly / monthly
-# / annual reports are due, builds missing ones and emails unsent ones.
-# Re-running is safe: nothing is built or sent twice.
-#
-# Set in the Render dashboard for this job:
-#   API_URL          the API's public base URL, e.g. https://vaulta-api.onrender.com
-#   INTERNAL_SECRET  the same value as the API service's INTERNAL_SECRET
+# Render Blueprint: the API web service and the hourly report run, in Singapore (Render's region nearest India).
+# Values are never in this file: every variable marked `sync: false` is entered in the Render dashboard (or asked
+# for when the Blueprint is first applied). docs/deploy.md lists each one, where it's set and how to generate it.
+# Migrations are not run here: they need the database owner's URL, which the API never gets (docs/go-live.md).
 services:
+  - type: web
+    name: vaulta-api
+    runtime: python
+    region: singapore
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # 2 workers fit Starter's 512 MB. --proxy-headers so rate limits see the client's IP behind Render's proxy;
+    # no access log (it would carry query strings; app/core/logs.py logs each request instead).
+    startCommand: >-
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-2}
+      --proxy-headers --forwarded-allow-ips='*' --no-access-log
+    healthCheckPath: /health/ready      # database up, migrations at head, row-level security enforced
+    autoDeploy: true                    # from the branch the service is connected to (main)
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: ENVIRONMENT
+        value: production
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: DATABASE_URL               # the vaulta_app role (not the owner), pooled host
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: INTERNAL_SECRET
+        sync: false
+      - key: MASTER_KEY
+        sync: false
+      - key: BLIND_INDEX_KEY
+        sync: false
+      - key: MASTER_KEY_PREVIOUS        # only while a MASTER_KEY rotation runs; otherwise leave unset
+        sync: false
+      - key: BACKEND_CORS_ORIGINS
+        sync: false
+      - key: BACKEND_CORS_ORIGIN_REGEX
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+      - key: API_BASE_URL
+        sync: false
+      - key: SECURITY_CONTACT_EMAIL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: INBOUND_DOMAIN
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: RAZORPAY_PLAN_ID
+        sync: false
+
+  # The hourly report run: calls the API's internal endpoint, which works out per user (in their timezone) which
+  # weekly / monthly / annual reports are due, builds missing ones, emails unsent ones, sends held alerts, purges
+  # 30-day-old chat and expired rate-limit counters, and rebuilds the demo once a day. Re-running is safe.
   - type: cron
     name: vaulta-report-run
     runtime: python
+    region: singapore
     schedule: "0 * * * *"
     buildCommand: "echo no build needed"
     startCommand: >-
@@ -23,7 +90,7 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
-      - key: API_URL
+      - key: API_URL                    # the API's public base URL
         sync: false
-      - key: INTERNAL_SECRET
+      - key: INTERNAL_SECRET            # the same value as the API's INTERNAL_SECRET
         sync: false

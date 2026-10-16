@@ -7,8 +7,12 @@ from pydantic import ValidationError
 
 from app.core.config import Settings
 
-BASE = {"DATABASE_URL": "postgresql://x@localhost/x", "FIREBASE_SERVICE_ACCOUNT_JSON": "{}", "ENCRYPTION_KEY": "k"}
+BASE = {"DATABASE_URL": "postgresql://x@localhost/x", "FIREBASE_SERVICE_ACCOUNT_JSON": "{}",
+        "MASTER_KEY": secrets.token_urlsafe(48), "BLIND_INDEX_KEY": secrets.token_urlsafe(48)}
 GOOD = secrets.token_urlsafe(48)
+PROD = {"ENVIRONMENT": "production", "SECRET_KEY": GOOD, "INTERNAL_SECRET": secrets.token_urlsafe(48),
+        "BACKEND_CORS_ORIGINS": "https://vaulta.example", "APP_BASE_URL": "https://vaulta.example",
+        "API_BASE_URL": "https://api.vaulta.example", "SECURITY_CONTACT_EMAIL": "security@vaulta.example"}
 
 
 def make(**overrides):
@@ -25,12 +29,33 @@ def make(**overrides):
 ])
 def test_production_refuses_weak_secrets(secret_key, internal):
     with pytest.raises(ValidationError, match="production"):
-        make(ENVIRONMENT="production", SECRET_KEY=secret_key, INTERNAL_SECRET=internal)
+        make(**{**PROD, "SECRET_KEY": secret_key, "INTERNAL_SECRET": internal})
 
 
 def test_production_starts_with_real_secrets():
-    s = make(ENVIRONMENT="production", SECRET_KEY=GOOD, INTERNAL_SECRET=secrets.token_urlsafe(48))
+    s = make(**PROD)
     assert s.ENVIRONMENT == "production"
+
+
+@pytest.mark.parametrize("override, message", [
+    ({"BACKEND_CORS_ORIGINS": "http://localhost:5173"}, "BACKEND_CORS_ORIGINS"),
+    ({"BACKEND_CORS_ORIGINS": "https://vaulta.example,*"}, "BACKEND_CORS_ORIGINS"),
+    ({"BACKEND_CORS_ORIGIN_REGEX": ".*"}, "BACKEND_CORS_ORIGIN_REGEX"),
+    ({"APP_BASE_URL": "http://localhost:5173"}, "APP_BASE_URL"),
+    ({"API_BASE_URL": "http://vaulta.example"}, "API_BASE_URL"),
+    ({"SECURITY_CONTACT_EMAIL": ""}, "SECURITY_CONTACT_EMAIL"),
+    ({"TELEGRAM_BOT_TOKEN": "123:abc", "TELEGRAM_WEBHOOK_SECRET": "short"}, "TELEGRAM_WEBHOOK_SECRET"),
+    ({"MASTER_KEY": "x" * 40, "BLIND_INDEX_KEY": "y" * 40, "MASTER_KEY_PREVIOUS": "x" * 40}, "MASTER_KEY_PREVIOUS"),
+])
+def test_production_checks_urls_contacts_and_secrets(override, message):
+    with pytest.raises(ValidationError, match=message):
+        make(**{**PROD, **override})
+
+
+@pytest.mark.parametrize("override", [{"MASTER_KEY": ""}, {"BLIND_INDEX_KEY": "short"}, {"MASTER_KEY": "changeme"}])
+def test_every_environment_needs_the_encryption_keys(override):
+    with pytest.raises(ValidationError, match="MASTER_KEY|BLIND_INDEX_KEY"):
+        make(ENVIRONMENT="development", **override)
 
 
 def test_development_allows_defaults():
