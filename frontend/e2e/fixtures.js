@@ -32,14 +32,43 @@ export { expect }
 
 let counter = 0
 
-/** A new Firebase (emulator) account; returns {email, password, token}. */
-export async function newAccount(request) {
+const IDT = `${EMULATOR}/identitytoolkit.googleapis.com/v1`
+const PROJECT = 'demo-vaulta'
+const OWNER = { Authorization: 'Bearer owner' }        // the emulator's admin credential
+
+/** A fresh ID token for an emulator account (after its claims changed). */
+export async function signInToken(request, email, password) {
+  const res = await request.post(`${IDT}/accounts:signInWithPassword?key=e2e-fake-key`, { data: { email, password, returnSecureToken: true } })
+  expect(res.ok()).toBeTruthy()
+  return (await res.json()).idToken
+}
+
+/**
+ * A new Firebase (emulator) account; returns {email, password, token, uid}. Its email is confirmed unless
+ * `verified: false` (Vaulta refuses to create data for unconfirmed email/password accounts).
+ */
+export async function newAccount(request, { verified = true } = {}) {
   const email = `e2e-${Date.now()}-${process.pid}-${counter++}@vaulta.test`
   const password = 'e2e-password-123'
-  const res = await request.post(`${EMULATOR}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=e2e-fake-key`,
-    { data: { email, password, returnSecureToken: true } })
+  const res = await request.post(`${IDT}/accounts:signUp?key=e2e-fake-key`, { data: { email, password, returnSecureToken: true } })
   expect(res.ok()).toBeTruthy()
-  return { email, password, token: (await res.json()).idToken }
+  const { idToken, localId } = await res.json()
+  if (!verified) return { email, password, token: idToken, uid: localId }
+  const upd = await request.post(`${IDT}/projects/${PROJECT}/accounts:update`, { headers: OWNER, data: { localId, emailVerified: true } })
+  expect(upd.ok()).toBeTruthy()
+  return { email, password, token: await signInToken(request, email, password), uid: localId }
+}
+
+/** The emails the emulator would have sent (verification, password reset), newest last. */
+export async function emulatorEmails(request, email) {
+  const res = await request.get(`${EMULATOR}/emulator/v1/projects/${PROJECT}/oobCodes`)
+  return (await res.json()).oobCodes.filter((c) => c.email === email)
+}
+
+/** Does the emulator still have an account for this email? */
+export async function accountExists(request, email) {
+  const res = await request.post(`${IDT}/projects/${PROJECT}/accounts:lookup`, { headers: OWNER, data: { email: [email] } })
+  return ((await res.json()).users || []).length > 0
 }
 
 export async function callApi(request, account, method, path, data) {

@@ -92,6 +92,16 @@ from app.core.logs import RequestMiddleware
 
 app.add_middleware(RequestMiddleware)
 
+# ── Errors the web app acts on (email_unverified, reauth_required, …): {"detail", "code"} ──
+from app.core.auth import CodedError  # noqa: E402
+
+
+@app.exception_handler(CodedError)
+async def coded_error(_request, exc: CodedError):
+    from fastapi.responses import JSONResponse as _JSON
+    return _JSON(status_code=exc.status_code, content={"detail": exc.detail, "code": exc.code}, headers=exc.headers)
+
+
 # ── Routers ────────────────────────────────────────────────────────────────────
 from app.api.routes import auth, transactions, budgets, imports, recurring, people, rules, review, chat, settings as settings_routes, anomalies, reports, internal, unsubscribe, inbound, telegram as telegram_routes, cash as cash_routes, home, goals, alerts as alert_routes, onboarding, account
 

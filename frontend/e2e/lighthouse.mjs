@@ -7,7 +7,7 @@ import lighthouse from 'lighthouse'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { seedData } from './fixtures.js'
+import { newAccount, seedData } from './fixtures.js'
 
 const APP = 'http://localhost:4173'
 const PORT = 9333
@@ -15,12 +15,9 @@ const out = process.argv[2]
 
 // a signed-in user with three months of data
 const r = await request.newContext()
-const email = `lighthouse-${Date.now()}@vaulta.test`
-const password = 'e2e-password-123'
-const { idToken } = await (await r.post('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=e2e-fake-key',
-  { data: { email, password, returnSecureToken: true } })).json()
-const account = { email, password, token: idToken }
-await r.get('http://127.0.0.1:8001/auth/me', { headers: { Authorization: `Bearer ${idToken}` } })
+const account = await newAccount(r)
+const { email, password } = account
+await r.get('http://127.0.0.1:8001/auth/me', { headers: { Authorization: `Bearer ${account.token}` } })
 await seedData(r, account)
 
 const ctx = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), 'lh-')), { args: [`--remote-debugging-port=${PORT}`] })

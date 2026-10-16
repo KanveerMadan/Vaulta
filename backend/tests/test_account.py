@@ -8,7 +8,7 @@ import pytest
 from fastapi import HTTPException
 
 import app.core.auth as auth
-from tests.conftest import as_user
+from tests.conftest import as_user, token_payload
 from tests.test_end_to_end import USER, frozen_today, load_three_months  # noqa: F401 (fixture)
 
 BOB = as_user("bob")
@@ -50,17 +50,17 @@ def test_export_and_activity_are_per_user(client):
     data = json.loads(export(client, BOB).read("vaulta-export/data.json"))
     assert data["transactions"] == [] and [u["email"] for u in data["users"]] == ["bob@test.local"]
     client.patch("/api/settings", json={"ai_chat_enabled": False}, headers=USER)
-    assert [e["kind"] for e in client.get("/api/activity", headers=BOB).json()] == ["export"]
+    assert [e["kind"] for e in client.get("/api/activity", headers=BOB).json()] == ["export", "sign_in", "sign_up"]
     assert "settings_changed" in [e["kind"] for e in client.get("/api/activity", headers=USER).json()]
 
 
 def test_activity_log_records_account_events(client, monkeypatch):
     monkeypatch.setattr(auth, "verify_firebase_token",
-                        lambda token, check_revoked=False: {"uid": token, "email": f"{token}@test.local", "auth_time": 1_700_000_000})
+                        lambda token, check_revoked=False: token_payload(token, auth_time=1_700_000_000))
     client.get("/auth/me", headers=USER)
     client.get("/auth/me", headers=USER)                                         # same sign-in: logged once
     monkeypatch.setattr(auth, "verify_firebase_token",
-                        lambda token, check_revoked=False: {"uid": token, "email": f"{token}@test.local", "auth_time": 1_700_009_000})
+                        lambda token, check_revoked=False: token_payload(token, auth_time=1_700_009_000))
     client.patch("/api/settings", json={"timezone": "Asia/Dubai", "ai_chat_enabled": False}, headers=USER)
     client.post("/api/inbound/regenerate", headers=USER)
     client.post("/api/telegram/link-code", headers=USER)
@@ -70,8 +70,10 @@ def test_activity_log_records_account_events(client, monkeypatch):
     client.delete(f"/api/goals/{goal['id']}", headers=USER)
     events = client.get("/api/activity", headers=USER).json()
     kinds = [e["kind"] for e in reversed(events)]
-    assert kinds == ["sign_in", "sign_in", "settings_changed", "address_regenerated", "telegram_unlinked", "export", "deleted"]
-    assert events[-3]["detail"] == {"fields": ["ai_chat_enabled", "timezone"]}   # names, never values
+    assert kinds == ["sign_up", "sign_in", "sign_in", "settings_changed", "address_regenerated", "telegram_unlinked", "export",
+                     "deleted"]
+    assert events[-1]["detail"] == {"method": "password"} and events[-2]["detail"] == {"method": "password"}
+    assert events[-4]["detail"] == {"fields": ["ai_chat_enabled", "timezone"]}   # names, never values
     assert events[0]["detail"] == {"what": "goal"}
     assert "Asia/Dubai" not in json.dumps(events)
 
@@ -89,7 +91,7 @@ def test_sensitive_routes_check_for_revoked_sessions(client, monkeypatch):
         seen.append(check_revoked)
         if check_revoked:
             raise HTTPException(status_code=401, detail=auth.SIGNED_OUT)
-        return {"uid": token, "email": f"{token}@test.local"}
+        return token_payload(token)
     monkeypatch.setattr(auth, "verify_firebase_token", verify)
     for method, path in SENSITIVE:
         res = client.request(method, path, headers=USER, json={"weekly": True} if path == "/api/telegram" else {})

@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 from app.core.demo import is_demo
 from app.models.activity import ActivityEvent
 
-KINDS = ("sign_in", "export", "deleted", "telegram_linked", "telegram_unlinked", "address_regenerated",
-         "settings_changed", "profile_changed")
+KINDS = ("sign_up", "sign_in", "export", "deleted", "telegram_linked", "telegram_unlinked", "address_regenerated",
+         "settings_changed", "profile_changed", "reauth_failed", "password_reset_requested", "password_reset_completed",
+         "password_changed", "method_linked", "method_unlinked", "signed_out_everywhere", "deletion_requested")
 RECENT = 100
 
 

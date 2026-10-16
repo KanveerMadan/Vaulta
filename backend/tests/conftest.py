@@ -22,6 +22,7 @@ from urllib.parse import urlparse, urlunparse
 
 import pytest
 import secrets
+import time
 from contextlib import contextmanager
 
 from cryptography.hazmat.primitives import serialization
@@ -97,9 +98,16 @@ def clean_tables():
 
 @pytest.fixture
 def client(monkeypatch):
-    monkeypatch.setattr(auth, "verify_firebase_token", lambda token, check_revoked=False: {"uid": token, "email": f"{token}@test.local"})
+    monkeypatch.setattr(auth, "verify_firebase_token", lambda token, check_revoked=False: token_payload(token))
     with TestClient(api) as c:
         yield c
+
+
+def token_payload(uid: str, **overrides) -> dict:
+    """What Firebase's verify_id_token returns for a fresh, verified email/password sign-in as `uid`."""
+    now = int(time.time())
+    return {"uid": uid, "email": f"{uid}@test.local", "email_verified": True, "auth_time": now, "iat": now,
+            "firebase": {"sign_in_provider": "password"}, **overrides}
 
 
 def as_user(uid: str) -> dict:

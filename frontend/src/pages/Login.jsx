@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth'
 import { auth, signInWithGoogle } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
 import { Link, useNavigate } from 'react-router-dom'
 import Wordmark from '../ui/Wordmark'
+import { noteVerificationSent } from '../lib/verification'
 
 const ERROR_MAP = {
   'auth/invalid-credential':    'Incorrect email or password.',
@@ -39,10 +40,22 @@ export default function Login() {
   const handleEmail = async (e) => {
     e.preventDefault(); setError(''); setLoading(true)
     try {
-      const fn = mode === 'login' ? signInWithEmailAndPassword : createUserWithEmailAndPassword
-      const r = await fn(auth, email, password)
-      onSuccess(r.user)
+      if (mode === 'login') {
+        onSuccess((await signInWithEmailAndPassword(auth, email, password)).user)
+        return
+      }
+      const r = await createUserWithEmailAndPassword(auth, email, password)
+      await sendEmailVerification(r.user)
+      noteVerificationSent()
+      endDemo(); setUser(r.user)
+      navigate('/verify-email')
     } catch (e) {
+      if (mode === 'signup' && e.code === 'auth/email-already-in-use') {
+        // The same screen as a new sign-up, so this form never reveals which addresses have accounts
+        noteVerificationSent()
+        navigate('/verify-email', { state: { email } })
+        return
+      }
       setError(ERROR_MAP[e.code] || 'Something went wrong. Please try again.')
     } finally { setLoading(false) }
   }

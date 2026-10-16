@@ -22,6 +22,8 @@ api.interceptors.response.use(
     if (status === 401) {
       if (demo) useAuthStore.getState().endDemo()
       window.location.href = demo ? '/welcome' : '/login'
+    } else if (status === 403 && err.response.data?.code === 'email_unverified') {
+      window.dispatchEvent(new CustomEvent('vaulta:unverified'))
     } else if (status === 403 && demo) {
       // the demo is read-only: Layout shows the server's message
       window.dispatchEvent(new CustomEvent('vaulta:read-only', { detail: err.response.data?.detail }))

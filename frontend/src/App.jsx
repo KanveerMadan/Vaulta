@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useEffect } from 'react'
 import { useAuthStore } from './store/authStore'
 import { Toaster } from './ui/Toast'
@@ -9,6 +9,7 @@ import Landing from './pages/landing/Landing'   // in the main bundle: the first
 const Security = lazy(() => import('./pages/Security'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Login = lazy(() => import('./pages/Login'))
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 const Wrapped = lazy(() => import('./pages/wrapped/Wrapped'))
 const Layout = lazy(() => import('./components/Layout'))
@@ -28,9 +29,16 @@ const Goals = lazy(() => import('./pages/Goals'))
 // The app shell and home download while Firebase restores the session, not after it
 const loadShell = () => Promise.all([import('./components/Layout'), import('./pages/Dashboard')])
 
+// Pages an unconfirmed email/password account may open (the API refuses everything else with email_unverified)
+const UNVERIFIED_PAGES = ['/onboarding', '/settings']
+
 function PrivateRoute() {
-  const { user, demoToken, loading } = useAuthStore()
+  const { user, verified, demoToken, loading } = useAuthStore()
+  const { pathname } = useLocation()
   useEffect(() => { loadShell() }, [])
+  if (user && !verified && !demoToken && !UNVERIFIED_PAGES.includes(pathname)) {
+    return <Navigate to="/verify-email" replace state={{ next: pathname }} />
+  }
   if (demoToken || user) return <Outlet />
   return loading ? <Loader /> : <Navigate to="/welcome" replace />
 }
@@ -60,6 +68,14 @@ export default function App() {
     return () => { alive = false; unsub() }
   }, [setUser, setLoading])
 
+  // The API said this account must confirm its email first (403 email_unverified): show the check-your-inbox screen
+  const navigate = useNavigate()
+  useEffect(() => {
+    const onUnverified = () => navigate('/verify-email')
+    window.addEventListener('vaulta:unverified', onUnverified)
+    return () => window.removeEventListener('vaulta:unverified', onUnverified)
+  }, [navigate])
+
   const page = (el) => <Suspense fallback={<Loader />}>{el}</Suspense>
   return (
     <>
@@ -68,6 +84,7 @@ export default function App() {
       <Route path="/welcome" element={<Landing />} />
       <Route path="/security" element={page(<Security />)} />
       <Route path="/privacy" element={page(<Privacy />)} />
+      <Route path="/verify-email" element={loading ? <Loader /> : page(<VerifyEmail />)} />
       <Route path="/login" element={loading ? <Loader /> : !user ? page(<Login />) : <Navigate to="/" replace />} />
       <Route element={<PrivateRoute />}>
         <Route path="/onboarding" element={page(<Onboarding />)} />

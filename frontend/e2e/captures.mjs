@@ -3,7 +3,7 @@
 import { chromium, request } from '@playwright/test'
 import { mkdirSync, renameSync, readdirSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { seedData } from './fixtures.js'
+import { newAccount, seedData } from './fixtures.js'
 
 const APP = 'http://localhost:4173'
 const OUT = fileURLToPath(new URL('../../docs/design/captures/', import.meta.url))
@@ -14,12 +14,8 @@ const phone = { width: 390, height: 844 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function account(r, withData) {
-  const email = `capture-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@vaulta.test`
-  const password = 'e2e-password-123'
-  const { idToken } = await (await r.post('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=e2e-fake-key',
-    { data: { email, password, returnSecureToken: true } })).json()
-  const a = { email, password, token: idToken }
-  await r.get('http://127.0.0.1:8001/auth/me', { headers: { Authorization: `Bearer ${idToken}` } })
+  const a = await newAccount(r)
+  await r.get('http://127.0.0.1:8001/auth/me', { headers: { Authorization: `Bearer ${a.token}` } })
   if (withData) await seedData(r, a)
   return a
 }
