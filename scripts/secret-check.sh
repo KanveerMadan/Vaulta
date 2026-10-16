@@ -41,7 +41,8 @@ import re, subprocess, sys
 
 blobs_file, known = sys.argv[1], set(sys.argv[2].split())
 SECRET = [
-    ("connection string with a password", re.compile(rb"\b(postgres(ql)?|mysql|mongodb(\+srv)?|redis)://[^:\s/@]+:[^@\s/]{4,}@")),
+    # a password that is only a <placeholder> or a $VARIABLE (docs and runbooks) is not a credential
+    ("connection string with a password", re.compile(rb"\b(postgres(ql)?|mysql|mongodb(\+srv)?|redis)://[^:\s/@]+:(?![<$])[^@\s/]{4,}@")),
     ("Neon password", re.compile(rb"\bnpg_[A-Za-z0-9]{8,}")),
     ("private key", re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
     ("Google API key", re.compile(rb"AIza[0-9A-Za-z_-]{35}")),

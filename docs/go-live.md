@@ -15,7 +15,7 @@ step ends with a check: don't go on until it passes. Rollback for every step is 
 
 ```sh
 cd ~/vaulta && git checkout rebuild/phase6 && git pull
-export DOMAIN=vaulta.in                       # your domain: the app at https://$DOMAIN, the API at https://api.$DOMAIN
+export DOMAIN=vaulta.example                     # your domain: the app at https://$DOMAIN, the API at https://api.$DOMAIN
 npx neonctl@7.0.4 auth                        # opens the browser once
 npx neonctl@7.0.4 projects list               # note the project id
 export NEON_PROJECT=<id from the list>
