@@ -11,7 +11,7 @@ from app.core.database import SessionLocal
 from app.models.chat import ChatAction
 from app.services import chat as chat_service
 from app.services import llm
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 from tests.test_end_to_end import GOOGLE_PAY, HDFC, HDFC_CARD, SBI, USER, frozen_today, load_three_months  # noqa: F401
 
 BOB = as_user("bob")
@@ -127,12 +127,12 @@ def test_actions_need_confirmation_tokens_are_single_use_and_per_user(client, fa
 
     fake(call("remove_budget", category="Food & Dining"), say("Ready."))
     card = ask(client, "remove it").json()["actions"][0]
-    with SessionLocal() as db:
+    with user_session("rahul") as (db, _):
         db.query(ChatAction).update({ChatAction.expires_at: datetime.now(timezone.utc) - timedelta(seconds=1)})
         db.commit()
     assert client.post("/api/chat/confirm", json={"token": card["token"], "decision": "confirm"}, headers=USER).status_code == 410
     assert client.post("/api/chat/confirm", json={"token": "x" * 43, "decision": "confirm"}, headers=USER).status_code == 410
-    with SessionLocal() as db:
+    with user_session("rahul") as (db, _):
         assert all(card["token"] not in (a.token_hash, json.dumps(a.args)) for a in db.query(ChatAction))   # token never stored
 
 
@@ -230,7 +230,7 @@ def test_history_older_than_30_days_is_purged(client, fake):
     fake(say("old"), say("new"))
     ask(client, "old question", session_id=session)
     from app.models.chat import ChatMessage
-    with SessionLocal() as db:
+    with user_session("rahul") as (db, _):
         db.query(ChatMessage).update({ChatMessage.created_at: datetime.now(timezone.utc) - timedelta(days=31)})
         db.commit()
     ask(client, "new question", session_id=session)

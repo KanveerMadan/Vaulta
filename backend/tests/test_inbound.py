@@ -7,7 +7,7 @@ from sqlalchemy import text as sql
 
 from app.core.config import settings
 from app.core.database import Base, engine
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 from tests.test_import_batch import row
 
 ALICE, BOB = as_user("alice"), as_user("bob")
@@ -83,7 +83,7 @@ def test_bank_formats(client, sender, auth_domain, body, expected):
         assert t["merchant_clean"] == merchant
     from app.core.database import SessionLocal
     from app.models.transaction_source import TransactionSourceRecord
-    with SessionLocal() as db:
+    with user_session("alice") as (db, _):
         assert db.query(TransactionSourceRecord.source_label).scalar() == label
 
 

@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, BigInteger, Column, Date, String, SmallInteger, Boolean, DateTime, ForeignKey, text
+from sqlalchemy import JSON, BigInteger, Column, Date, String, SmallInteger, Boolean, DateTime, ForeignKey, Text, text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import deferred, relationship
 
+from app.core.crypto import Encrypted
 from app.core.database import Base
 
 
@@ -39,10 +40,13 @@ class User(Base):
     email_annual = Column(Boolean, nullable=False, default=True, server_default=text("true"))
 
     # --- Inbound alert email: <token>@in.<INBOUND_DOMAIN> ---
-    # sha256 of the token for lookup; the token itself encrypted (ENCRYPTION_KEY) so the
+    # sha256 of the token for lookup; the token itself encrypted with the user's data key so the
     # address can be shown again. Regenerating replaces both; the old address stops working.
     inbound_token_hash = Column(String(64), nullable=True, unique=True)
-    inbound_token_encrypted = Column(String, nullable=True)
+    inbound_token_encrypted = deferred(Column(Encrypted, nullable=True))   # loaded on use, after bind_user
+
+    # --- Field encryption: this user's data key, wrapped by MASTER_KEY (app/core/crypto.py) ---
+    data_key = Column(Text, nullable=True)
 
     # --- Telegram bot ---
     telegram_chat_id = Column(BigInteger, nullable=True, unique=True)

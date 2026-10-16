@@ -2,6 +2,7 @@
 
 from sqlalchemy import inspect, text
 
+from tests.conftest import user_session
 from app.core.database import Base, SessionLocal, engine
 from app.models.user import User
 from tests.test_end_to_end import USER, frozen_today, load_three_months  # noqa: F401 (fixture)
@@ -18,8 +19,8 @@ def test_delete_everything(client):
     client.patch("/api/onboarding", json={"banks": ["hdfc"]}, headers=USER)
     client.post("/api/import/batch", json={"rows": [{"date": "2024-06-27", "description_raw": "SWIGGY", "amount": "900.00",
                  "direction": "debit", "reference": None, "source_type": "bank_csv", "source_label": "HDFC Bank"}]}, headers=USER)
-    with SessionLocal() as db:
-        uid = db.query(User).filter_by(firebase_uid="rahul").one().id
+    with user_session("rahul") as (db, _user):
+        uid = _user.id
     tables = [t.name for t in Base.metadata.sorted_tables if "user_id" in {c["name"] for c in inspect(engine).get_columns(t.name)}]
     with engine.connect() as conn:
         before = {t: conn.execute(text(f"SELECT count(*) FROM {t} WHERE user_id = :u"), {"u": uid}).scalar() for t in tables}

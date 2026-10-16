@@ -9,7 +9,7 @@ from app.models.report import Report
 from app.models.user import User
 from app.services import llm
 from app.services import reports as reports_service
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 from tests.test_end_to_end import USER, frozen_today, load_three_months  # noqa: F401 (fixture)
 
 BOB = as_user("bob")
@@ -86,8 +86,8 @@ def test_annual_wrapped(client, no_llm):
 
 def test_narrative_must_only_use_numbers_from_the_report(client, monkeypatch):
     load_three_months(client)
-    with SessionLocal() as db:
-        uid = db.query(User).filter_by(firebase_uid="rahul").one().id
+    with user_session("rahul") as (db, _user):
+        uid = _user.id
         data = reports_service.build_report(db, uid, "monthly", date(2024, 5, 1))
     good = ("You spent ₹24,099 in May 2024, up ₹900 (3.9%) on April. Rent was ₹20,000.\n"
             "You saved 69.9% of ₹80,000.\nSuggestion: Zepto took ₹1,500; plan one weekly grocery order.")

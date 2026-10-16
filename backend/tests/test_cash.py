@@ -9,7 +9,7 @@ import pytest
 from app.core.database import SessionLocal
 from app.models.user import User
 from app.services import cash, llm, telegram, telegram_bot
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 from tests.test_import_batch import row
 
 ALICE, BOB = as_user("alice"), as_user("bob")
@@ -129,8 +129,7 @@ def test_telegram_cash_command_and_weekly_reminder(client, monkeypatch):
     monkeypatch.setattr(telegram, "call", lambda method, payload: sent.append((method, payload)) or {"ok": True})
     withdraw(client, "2000.00", day=TODAY - timedelta(days=8))
     cash_spend(client, "1400")
-    with SessionLocal() as db:
-        user = db.query(User).filter_by(firebase_uid="alice").one()
+    with user_session("alice") as (db, user):
         user.telegram_chat_id = 555
         db.commit()
         assert telegram_bot.send_cash_reminder(db, user) is True

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import secrets
 import string
@@ -15,7 +14,8 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.config import settings
 from app.core.demo import is_demo
-from app.core.encryption import decrypt_token, encrypt_token
+from app.core.crypto import lookup_hash
+from app.core.scope import find_user
 from app.models.inbound import GmailConfirmation, InboundEvent
 from app.models.user import User
 from app.schemas.imports import ImportRow
@@ -30,7 +30,7 @@ MAX_EMAIL_BYTES = 256 * 1024
 
 
 def _hash(token: str) -> str:
-    return hashlib.sha256(token.lower().encode()).hexdigest()
+    return lookup_hash("inbound", token.lower())
 
 
 def inbound_host() -> Optional[str]:
@@ -40,7 +40,7 @@ def inbound_host() -> Optional[str]:
 def regenerate_address(db: Session, user: User) -> str:
     token = "".join(secrets.choice(TOKEN_ALPHABET) for _ in range(TOKEN_LENGTH))
     user.inbound_token_hash = _hash(token)
-    user.inbound_token_encrypted = encrypt_token(token)
+    user.inbound_token_encrypted = token     # encrypted with the user's data key (models/user.py)
     db.commit()
     return token
 
@@ -49,7 +49,7 @@ def address_for(db: Session, user: User) -> Optional[str]:
     host = inbound_host()
     if host is None or is_demo(user):      # nobody can mail data into the shared demo
         return None
-    token = decrypt_token(user.inbound_token_encrypted) if user.inbound_token_encrypted else regenerate_address(db, user)
+    token = user.inbound_token_encrypted or regenerate_address(db, user)
     return f"{token}@{host}"
 
 
@@ -62,7 +62,7 @@ def user_for_recipient(db: Session, recipients: str) -> Optional[User]:
         address = email_alerts.address_of(part)
         local, _, domain = address.partition("@")
         if domain == host and len(local) == TOKEN_LENGTH:
-            user = db.query(User).filter(User.inbound_token_hash == _hash(local)).first()
+            user = find_user(db, "inbound_token_hash", _hash(local))
             if user:
                 return user
     return None

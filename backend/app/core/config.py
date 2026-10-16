@@ -34,11 +34,18 @@ class Settings(BaseSettings):
     # ── Firebase ─────────────────────────────────────────────────────────────
     FIREBASE_SERVICE_ACCOUNT_JSON: str  # JSON string of service account credentials, one line
 
-    # ── Security ─────────────────────────────────────────────────────────────
-    # Fernet symmetric encryption key for OAuth tokens stored in DB.
-    # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-    # NEVER regenerate for an existing database — all stored tokens become unreadable.
-    ENCRYPTION_KEY: str
+    # ── Field encryption (app/core/crypto.py) ────────────────────────────────
+    # MASTER_KEY wraps each user's data key; BLIND_INDEX_KEY keys the HMAC blind indexes. Both ≥ 32 random
+    # characters, required in every environment (the app refuses to start without them). Generate each with:
+    #   python -c "import secrets; print(secrets.token_urlsafe(48))"
+    # Losing MASTER_KEY makes every encrypted field unreadable: back it up outside the database. Rotate it with
+    # scripts/rotate_master_key.py (docs/security/encryption.md). BLIND_INDEX_KEY can't be rotated in place.
+    MASTER_KEY: str = ""
+    MASTER_KEY_PREVIOUS: str = ""   # only while a rotation is running
+    BLIND_INDEX_KEY: str = ""
+    # Phase 4's Fernet key for the forwarding token. Read only by the encryption migration, to move any existing
+    # token to the per-user keys; unused after that.
+    ENCRYPTION_KEY: str = ""
 
     # ── CORS ─────────────────────────────────────────────────────────────────
     # Comma-separated list of allowed origins, e.g.:
@@ -84,6 +91,20 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""
     RAZORPAY_PLAN_ID: str = ""  # ₹99/month plan created in Razorpay dashboard
+
+    @model_validator(mode="after")
+    def encryption_keys(self) -> "Settings":
+        """MASTER_KEY and BLIND_INDEX_KEY must be real random values in every environment."""
+        for name in ("MASTER_KEY", "BLIND_INDEX_KEY"):
+            value = getattr(self, name)
+            if value.strip().lower() in PLACEHOLDER_SECRETS or len(value) < MIN_SECRET_LENGTH:
+                raise ValueError(
+                    f"{name} must be set to a random value of at least {MIN_SECRET_LENGTH} characters "
+                    f"(generate one with: python -c \"import secrets; print(secrets.token_urlsafe(48))\")."
+                )
+        if self.MASTER_KEY == self.BLIND_INDEX_KEY:
+            raise ValueError("MASTER_KEY and BLIND_INDEX_KEY must be different values.")
+        return self
 
     @model_validator(mode="after")
     def production_secrets(self) -> "Settings":

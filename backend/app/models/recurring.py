@@ -10,6 +10,7 @@ from datetime import datetime
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 
+from app.core.crypto import Encrypted, Searchable
 from app.core.database import Base
 
 
@@ -19,10 +20,10 @@ class RecurringSeries(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     # "merchant:<merchant key>" or "person:<person key>"
-    key = Column(String(100), nullable=False)
+    key = Column(Searchable, nullable=False)
 
     # Detected
-    display_name = Column(String(100), nullable=False)
+    display_name = Column(Encrypted, nullable=False)
     cadence = Column(String(10), nullable=False)          # weekly | monthly | yearly
     typical_amount = Column(Numeric(12, 2), nullable=False)
     last_amount = Column(Numeric(12, 2), nullable=False)
@@ -38,7 +39,7 @@ class RecurringSeries(Base):
 
     # The user's
     user_status = Column(String(10), nullable=True)       # confirmed | dismissed
-    user_name = Column(String(100), nullable=True)
+    user_name = Column(Encrypted, nullable=True)
     user_type = Column(String(15), nullable=True)
     usage = Column(String(10), nullable=True)             # keep | review
 

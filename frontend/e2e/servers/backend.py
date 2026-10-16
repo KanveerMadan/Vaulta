@@ -31,8 +31,7 @@ cur.execute('DROP DATABASE IF EXISTS {name} WITH (FORCE)')
 cur.execute('CREATE DATABASE {name}')
 """], check=True)
 
-key = subprocess.run([PY, "-c", "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"],
-                     capture_output=True, text=True, check=True).stdout.strip()
+import secrets  # noqa: E402
 pem = subprocess.run([PY, "-c", """
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -43,7 +42,8 @@ print(k.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PK
 env = {
     **os.environ,
     "DATABASE_URL": URL,
-    "ENCRYPTION_KEY": key,
+    "MASTER_KEY": secrets.token_urlsafe(48),
+    "BLIND_INDEX_KEY": secrets.token_urlsafe(48),
     "FIREBASE_SERVICE_ACCOUNT_JSON": json.dumps({
         "type": "service_account", "project_id": "demo-vaulta", "private_key_id": "e2e", "private_key": pem,
         "client_email": "e2e@demo-vaulta.iam.gserviceaccount.com", "client_id": "0", "token_uri": "https://oauth2.googleapis.com/token"}),

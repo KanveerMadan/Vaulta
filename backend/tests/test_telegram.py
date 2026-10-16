@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.telegram import TelegramLinkCode
 from app.services import llm, telegram, telegram_bot
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 
 ALICE, BOB = as_user("alice"), as_user("bob")
 SECRET = "tg-webhook-secret"
@@ -89,7 +89,7 @@ def test_link_codes_are_single_use_expire_and_replace_each_other(client, bot):
     fresh = client.post("/api/telegram/link-code", headers=BOB).json()["code"]
     say(client, f"/start {stale}", chat=OTHER_CHAT)                  # replaced by a newer code
     assert replies(bot)[-1].startswith("That code is wrong")
-    with SessionLocal() as db:
+    with user_session("bob") as (db, _):
         db.query(TelegramLinkCode).update({TelegramLinkCode.expires_at: datetime.now(timezone.utc) - timedelta(seconds=1)})
         db.commit()
     say(client, f"/start {fresh}", chat=OTHER_CHAT)                  # expired

@@ -21,6 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
+from app.core.crypto import Encrypted, EncryptedJSON, Searchable
 from app.core.database import Base
 
 
@@ -91,8 +92,8 @@ class TransactionSourceRecord(Base):
     # Matching signals, strongest to weakest — see Section 4 tier hierarchy.
     # All nullable: not every source provides every signal (a bank CSV
     # typically has no UTR, no VPA, and date-only precision).
-    utr = Column(String, nullable=True)
-    vpa = Column(String, nullable=True)
+    utr = Column(Searchable, nullable=True)
+    vpa = Column(Searchable, nullable=True)
     raw_timestamp = Column(DateTime(timezone=True), nullable=True)
     raw_date = Column(Date, nullable=True)
     raw_amount = Column(Numeric(precision=12, scale=2), nullable=False)
@@ -101,11 +102,11 @@ class TransactionSourceRecord(Base):
     # for tier 3/4 merchant-overlap comparison. Distinct from the canonical
     # Transaction's merchant_clean/merchant_raw, which may be enriched later
     # by a higher-quality source.
-    counterparty_raw = Column(String, nullable=True)
+    counterparty_raw = Column(Encrypted, nullable=True)
 
     # Full original row, preserved for re-derivation/audit if a match is
     # later found to be wrong.
-    raw_row = Column(JSON, nullable=True)
+    raw_row = Column(EncryptedJSON, nullable=True)
 
     # Same convention as Transaction.idempotency_key — re-ingesting the same
     # statement twice must be safe at the source-record level too, regardless

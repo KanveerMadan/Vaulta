@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy import JSON, Column, Date, DateTime, ForeignKey, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 
+from app.core.crypto import Encrypted, EncryptedJSON
 from app.core.database import Base
 
 
@@ -16,8 +17,8 @@ class Report(Base):
     period_type = Column(String(10), nullable=False)      # weekly | monthly | annual
     period_start = Column(Date, nullable=False)
     period_end = Column(Date, nullable=False)
-    json = Column(JSON, nullable=False)                    # computed entirely by services/analytics.py
-    narrative = Column(Text, nullable=False)
+    json = Column(EncryptedJSON, nullable=False)                    # computed entirely by services/analytics.py
+    narrative = Column(Encrypted, nullable=False)
     narrative_source = Column(String(10), nullable=False)  # llm | template
     emailed_at = Column(DateTime(timezone=True), nullable=True)
     telegram_sent_at = Column(DateTime(timezone=True), nullable=True)

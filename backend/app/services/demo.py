@@ -31,6 +31,7 @@ from app.core import clock
 from app.core.config import settings
 from app.core.database import engine
 from app.core.demo import DEMO_UID
+from app.core.scope import bind_user, find_user
 from app.models.person import Person
 from app.models.transaction import Transaction
 from app.models.user import User
@@ -141,8 +142,8 @@ BUDGETS = ((None, "70000"), ("Food & Dining", "6000"), ("Shopping", "5000"), ("T
 
 
 def _find(db: Session, user: User, needle: str, on: Optional[date] = None) -> Optional[Transaction]:
-    q = db.query(Transaction).filter(Transaction.user_id == user.id, Transaction.merchant_raw == needle)
-    rows = [t for t in q if on is None or t.transaction_date.date() == on]
+    q = db.query(Transaction).filter(Transaction.user_id == user.id)    # merchant_raw is encrypted: compare here
+    rows = [t for t in q if t.merchant_raw == needle and (on is None or t.transaction_date.date() == on)]
     return rows[0] if rows else None
 
 
@@ -164,7 +165,7 @@ def seed(db: Session, today: Optional[date] = None) -> User:
 
 
 def _seed(db: Session, today: date) -> User:
-    old = db.query(User).filter(User.firebase_uid == DEMO_UID).first()
+    old = find_user(db, "firebase_uid", DEMO_UID)
     if old:
         db.delete(old)
         db.flush()
@@ -175,6 +176,7 @@ def _seed(db: Session, today: date) -> User:
                 alert_prefs={t: {"telegram": False, "email": False} for t in
                              ("budget_threshold", "duplicate_charge", "failed_upi_unreversed", "renewal_tomorrow",
                               "price_change", "salary_received", "unusual_amount")})
+    bind_user(db, user)
     db.add(user)
     db.commit()
 
@@ -223,7 +225,7 @@ def _seed(db: Session, today: date) -> User:
 
 
 def demo_user(db: Session) -> Optional[User]:
-    return db.query(User).filter(User.firebase_uid == DEMO_UID).first()
+    return find_user(db, "firebase_uid", DEMO_UID)
 
 
 def ensure_fresh(db: Session, today: Optional[date] = None, create: bool = False) -> Optional[User]:

@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy import BigInteger, JSON, Column, DateTime, ForeignKey, Index, String, text
 from sqlalchemy.dialects.postgresql import UUID
 
+from app.core.crypto import EncryptedJSON
 from app.core.database import Base
 
 
@@ -25,7 +26,7 @@ class TelegramEntry(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     chat_id = Column(BigInteger, nullable=False)
-    payload = Column(JSON, nullable=False)                # the parsed entry (amount, merchant, category, date, …)
+    payload = Column(EncryptedJSON, nullable=False)                # the parsed entry (amount, merchant, category, date, …)
     status = Column(String(10), nullable=False, default="pending")   # pending | saved | cancelled | undone
     transaction_id = Column(UUID(as_uuid=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)

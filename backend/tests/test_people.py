@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 from tests.test_import_batch import row
 
 ALICE, BOB = as_user("alice"), as_user("bob")
@@ -67,7 +67,7 @@ def test_lent_tag_and_partial_repayment_balance(client):
     from app.core.database import SessionLocal
     from app.models.transaction import Transaction
     from app.services.people import repayment_candidates
-    with SessionLocal() as db:
+    with user_session("alice") as (db, _):
         txs = db.query(Transaction).all()
         assert [str(t.id) for t in repayment_candidates(txs)] == [back["id"]]
 
@@ -172,7 +172,7 @@ def test_several_merges_in_one_pass_including_chains(client):
     from app.models.person import Person
     from app.services.people import resolve
     from app.core.database import SessionLocal
-    with SessionLocal() as db:
+    with user_session("alice") as (db, _):
         everyone = {p.id: p for p in db.query(Person)}
         roots = {resolve(p, everyone).id for p in everyone.values()}
         assert len(roots) == 2

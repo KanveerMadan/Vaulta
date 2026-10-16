@@ -6,6 +6,7 @@ from sqlalchemy import Column, Date, DateTime, ForeignKey, Numeric, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
+from app.core.crypto import Encrypted
 from app.core.database import Base
 
 
@@ -14,7 +15,7 @@ class Goal(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    name = Column(String(80), nullable=False)
+    name = Column(Encrypted, nullable=False)
     target_amount = Column(Numeric(12, 2), nullable=False)
     target_date = Column(Date, nullable=False)
     category = Column(String(50), nullable=True)      # optional spending category to cut

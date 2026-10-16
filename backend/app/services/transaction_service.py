@@ -36,7 +36,7 @@ from app.core import clock
 from app.services import analytics
 from app.services.dedup_matcher import ingest_or_match_transaction
 from app.services.detection import run_detection
-from app.services.keys import merchant_key
+from app.services.keys import merchant_key, merchants_containing
 from app.services.rules import learn_from
 
 logger = logging.getLogger(__name__)
@@ -355,7 +355,7 @@ def get_transactions(
     if category:
         query = query.filter(Transaction.category == category)
     if merchant:
-        query = query.filter(Transaction.merchant_clean.ilike(f"%{merchant}%"))
+        query = query.filter(Transaction.merchant_clean.in_(merchants_containing(db, user.id, merchant)))
     if source:
         query = query.filter(Transaction.source == source)
     if date_from:

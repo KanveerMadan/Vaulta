@@ -95,3 +95,23 @@ def evidence_identities(txn: Transaction) -> list[tuple[Optional[str], Optional[
 def person_key(identity: tuple[Optional[str], Optional[str]]) -> str:
     vpa, name = identity
     return hashlib.sha256(f"{vpa or ''}|{name or ''}".encode()).hexdigest()
+
+
+# ── Text search over encrypted columns ────────────────────────────────────────
+# merchant_clean is Searchable (deterministic per user), so its distinct values are read and matched here and the
+# query filters on the matches; merchant_raw is randomized, so it is matched row by row.
+
+def merchants_containing(db, user_id, needle: str) -> list[str]:
+    """The user's merchant names containing `needle` (case-insensitive), for Transaction.merchant_clean.in_()."""
+    needle = needle.lower()
+    names = db.query(Transaction.merchant_clean).filter(Transaction.user_id == user_id,
+                                                         Transaction.merchant_clean.isnot(None)).distinct()
+    return [m for (m,) in names if needle in m.lower()]
+
+
+def ids_with_narration_containing(db, user_id, needle: str) -> list:
+    """Ids of the user's transactions whose narration contains `needle` (case-insensitive)."""
+    # ponytail: decrypts every narration of the user per search; fine at personal-finance volumes (≈10⁴ rows)
+    needle = needle.lower()
+    rows = db.query(Transaction.id, Transaction.merchant_raw).filter(Transaction.user_id == user_id)
+    return [tid for tid, raw in rows if needle in (raw or "").lower()]

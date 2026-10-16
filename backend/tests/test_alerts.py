@@ -11,7 +11,7 @@ from app.core.database import SessionLocal
 from app.models.alert import Alert
 from app.models.user import User
 from app.services import email, telegram
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 from tests.test_anomalies import gpay, r
 from tests.test_end_to_end import TODAY, USER
 
@@ -49,8 +49,8 @@ def messages(client, headers=USER):
 
 
 def link_telegram(uid="rahul", chat=555):
-    with SessionLocal() as db:
-        db.query(User).filter_by(firebase_uid=uid).one().telegram_chat_id = chat
+    with user_session(uid) as (db, _user):
+        _user.telegram_chat_id = chat
         db.commit()
 
 
@@ -110,7 +110,7 @@ def test_telegram_quiet_hours_and_channel_settings(client, outbox, monkeypatch):
     monkeypatch.setattr(clock, "now", lambda: NIGHT_UTC)
     load(client, r("2024-06-27", "SWIGGY", "850.00"))
     assert outbox["telegram"] == []                                     # 23:00 IST: held
-    with SessionLocal() as db:
+    with user_session("rahul") as (db, _):
         assert [a.telegram_status for a in db.query(Alert)] == ["queued"]
     monkeypatch.setattr(settings, "INTERNAL_SECRET", "x" * 40)
     run = lambda: client.post("/internal/run-reports", headers={"X-Internal-Secret": "x" * 40}).json()
@@ -157,7 +157,7 @@ def test_bell_unread_and_isolation(client):
     assert after["unread"] == 1
     assert client.post("/api/alerts/read", json={}, headers=USER).json()["unread"] == 0
     assert client.post("/api/alerts/read", json={"ids": ["x"]}, headers=USER).status_code == 422
-    with SessionLocal() as db:
+    with user_session("rahul") as (db, _):
         stored = json.dumps([a.message for a in db.query(Alert)])
     assert "SWIGGY" not in stored and "UBER INDIA" not in stored
 

@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.user import User
+from app.core.scope import find_user
 from app.services.report_email import read_unsubscribe_token
 
 router = APIRouter(tags=["unsubscribe"], include_in_schema=False)
@@ -35,7 +35,7 @@ def _unsubscribe(token: str, db: Session) -> HTMLResponse:
     user = None
     if parsed:
         try:
-            user = db.query(User).filter(User.id == uuid.UUID(parsed[0])).first()
+            user = find_user(db, "id", uuid.UUID(parsed[0]))
         except ValueError:
             user = None
     if user is None:

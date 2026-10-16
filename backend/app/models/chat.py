@@ -8,6 +8,7 @@ import uuid
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 
+from app.core.crypto import Encrypted, EncryptedJSON
 from app.core.database import Base
 
 
@@ -18,7 +19,7 @@ class ChatMessage(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     session_id = Column(UUID(as_uuid=True), nullable=False)
     role = Column(String(10), nullable=False)          # user | assistant
-    content = Column(Text, nullable=False)
+    content = Column(Encrypted, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
 
     __table_args__ = (
@@ -36,8 +37,8 @@ class ChatAction(Base):
     session_id = Column(UUID(as_uuid=True), nullable=False)
     token_hash = Column(String(64), nullable=False, unique=True)   # sha256 of the token; the token itself is never stored
     tool = Column(String(40), nullable=False)
-    args = Column(JSON, nullable=False)                              # resolved, validated arguments
-    summary = Column(String(300), nullable=False)
+    args = Column(EncryptedJSON, nullable=False)                              # resolved, validated arguments
+    summary = Column(Encrypted, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     used_at = Column(DateTime(timezone=True), nullable=True)
     outcome = Column(String(10), nullable=True)                      # confirmed | cancelled

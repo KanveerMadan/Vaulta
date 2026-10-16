@@ -5,6 +5,7 @@ from decimal import Decimal as D
 
 import pytest
 
+from tests.conftest import user_session
 from app.core.database import SessionLocal
 from app.models.user import User
 from app.services import analytics as a
@@ -19,8 +20,8 @@ Q2 = (date(2024, 4, 1), date(2024, 6, 30))
 @pytest.fixture
 def ctx(client):
     load_three_months(client)
-    with SessionLocal() as db:
-        yield db, db.query(User).filter_by(firebase_uid="rahul").one().id
+    with user_session("rahul") as (db, _user):
+        yield db, _user.id
 
 
 def groups(result):

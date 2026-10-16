@@ -31,7 +31,7 @@ from app.services import analytics, cash, transaction_service
 from app.services.budgets import create_or_reactivate
 from app.services.detection import run_detection
 from app.services.goals import add_entry, create_goal, find_goal
-from app.services.keys import merchant_key
+from app.services.keys import ids_with_narration_containing, merchant_key, merchants_containing
 from app.services.people import set_tag
 from app.services.recurring import add_months
 from app.services.rules import upsert_rule
@@ -141,7 +141,7 @@ def search_transactions(db: Session, user: User, args: dict) -> dict:
     if args.get("category"):
         q = q.filter(Transaction.category == _category(args["category"]))
     if args.get("merchant"):
-        q = q.filter(Transaction.merchant_clean.ilike(f"%{args['merchant']}%"))
+        q = q.filter(Transaction.merchant_clean.in_(merchants_containing(db, user.id, args["merchant"])))
     if args.get("min_amount") is not None:
         q = q.filter(Transaction.amount >= _amount(args["min_amount"], "min_amount"))
     if args.get("max_amount") is not None:
@@ -149,10 +149,12 @@ def search_transactions(db: Session, user: User, args: dict) -> dict:
     people = {p.id: p.display_name for p in db.query(Person).filter(Person.user_id == user.id)}
     if args.get("query"):
         term = f"%{args['query']}%"
+        merchants = merchants_containing(db, user.id, args["query"])
+        narrations = ids_with_narration_containing(db, user.id, args["query"])
         person_ids = [pid for pid, name in people.items() if args["query"].lower() in name.lower()]
         # matching may look at the narration server-side; the narration itself is never returned
-        q = q.filter(or_(Transaction.merchant_clean.ilike(term), Transaction.category.ilike(term),
-                         Transaction.merchant_raw.ilike(term), Transaction.person_id.in_(person_ids)))
+        q = q.filter(or_(Transaction.merchant_clean.in_(merchants), Transaction.category.ilike(term),
+                         Transaction.id.in_(narrations), Transaction.person_id.in_(person_ids)))
     limit = max(1, min(int(args.get("limit") or 20), MAX_SEARCH_RESULTS))
     rows = q.order_by(Transaction.transaction_date.desc()).limit(limit).all()
     return {"count": len(rows), "transactions": [

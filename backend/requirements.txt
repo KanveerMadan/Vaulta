@@ -18,7 +18,7 @@ email-validator==2.3.0
 # Firebase
 firebase-admin==7.4.0
 
-# Security — Fernet key validated at startup (core/encryption.py)
+# Security — AES-GCM field encryption and HKDF (core/crypto.py)
 cryptography==48.0.0
 
 # Statements are parsed in the browser (frontend/src/import/); no route takes

@@ -13,7 +13,7 @@ from app.models.report import Report
 from app.models.user import User
 from app.services import email, scheduler
 from app.services.report_email import unsubscribe_token
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 from tests.test_end_to_end import USER, frozen_today, load_three_months  # noqa: F401 (fixture)
 
 SECRET = "s3cret-for-tests"
@@ -31,7 +31,7 @@ def outbox(monkeypatch):
     monkeypatch.setattr(email, "configured", lambda: True)
     monkeypatch.setattr(email, "send", lambda to, subject, html, text, headers=None: sent.append(
         {"to": to, "subject": subject, "html": html, "text": text, "headers": headers}) or "id")
-    monkeypatch.setattr(scheduler, "purge_old", lambda db: 0)
+    monkeypatch.setattr(scheduler, "purge_old", lambda db, user_id=None: 0)
     return sent
 
 
@@ -43,8 +43,7 @@ def run_at(client, monkeypatch, when):
 
 
 def user(field=None, value=None, uid="rahul"):
-    with SessionLocal() as db:
-        u = db.query(User).filter_by(firebase_uid=uid).one()
+    with user_session(uid) as (db, u):
         if field:
             setattr(u, field, value)
             db.commit()
@@ -81,7 +80,7 @@ def test_monthly_run_builds_emails_once(client, monkeypatch, outbox):
     assert {k: first[k] for k in ("generated", "emailed", "skipped_empty", "errors")} == {
         "generated": 1, "emailed": 1, "skipped_empty": 2, "errors": 0}
     [mail] = outbox
-    with SessionLocal() as db:
+    with user_session("rahul") as (db, _):
         report = db.query(Report).one()
         assert (report.period_type, report.period_start.isoformat(), report.emailed_at is not None) == ("monthly", "2024-06-01", True)
     assert mail["to"] == "rahul@test.local"
@@ -97,7 +96,7 @@ def test_monthly_run_builds_emails_once(client, monkeypatch, outbox):
     again = run_at(client, monkeypatch, utc(2024, 7, 1, 4, 30))             # next hour
     assert (again["generated"], again["emailed"]) == (0, 0)
     assert len(outbox) == 1
-    with SessionLocal() as db:
+    with user_session("rahul") as (db, _):
         assert db.query(Report).count() == 1
 
 
@@ -120,7 +119,7 @@ def test_preferences(client, monkeypatch, outbox):
     user("email_monthly", False)
     assert run_at(client, monkeypatch, utc(2024, 7, 1, 3, 30))["generated"] == 1
     assert outbox == []                                         # built, not emailed
-    with SessionLocal() as db:
+    with user_session("rahul") as (db, _):
         db.query(Report).delete()
         db.commit()
     user("reports_monthly", False)
@@ -131,14 +130,13 @@ def test_users_timezone_decides_what_is_due(client, monkeypatch, outbox):
     load_three_months(client)
     user("timezone", "America/New_York")
     run_at(client, monkeypatch, utc(2024, 7, 1, 3, 30))             # 30 June 23:30 in New York
-    with SessionLocal() as db:
+    with user_session("rahul") as (db, _):
         assert [(r.period_type, r.period_start.isoformat()) for r in db.query(Report)] == [("monthly", "2024-05-01")]
 
 
 def test_unsubscribe(client, monkeypatch, outbox):
     load_three_months(client)
-    with SessionLocal() as db:
-        u = db.query(User).filter_by(firebase_uid="rahul").one()
+    with user_session("rahul") as (db, u):
         monthly, weekly = unsubscribe_token(u, "monthly"), unsubscribe_token(u, "weekly")
     page = client.get(f"/unsubscribe?token={monthly}")
     assert page.status_code == 200 and "won't get monthly report emails" in page.text
@@ -173,7 +171,7 @@ def test_run_purges_old_chat_history(client, monkeypatch):
     monkeypatch.setattr(settings, "INTERNAL_SECRET", SECRET)
     client.get("/api/settings", headers=USER)          # first request creates the user
     uid = user()
-    with SessionLocal() as db:
+    with user_session("rahul") as (db, _):
         db.add(ChatMessage(user_id=uid, session_id=uuid.uuid4(), role="user", content="old",
                            created_at=datetime.now(timezone.utc) - timedelta(days=31)))
         db.commit()

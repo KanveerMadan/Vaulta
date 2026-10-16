@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.config import settings
 from app.models.telegram import TelegramEntry, TelegramLinkCode
+from app.core.scope import find_user
 from app.models.user import User
 from app.schemas.transaction import CATEGORIES, ManualTransactionCreate
 from app.services import analytics, cash, chat, telegram, transaction_service
@@ -88,7 +89,7 @@ def redeem(db: Session, code: str, chat_id: int) -> Optional[User]:
         return None
     row.used_at = clock.now()
     db.query(User).filter(User.telegram_chat_id == chat_id).update({"telegram_chat_id": None})   # one account per chat
-    user = db.query(User).filter(User.id == row.user_id).one()
+    user = find_user(db, "id", row.user_id)
     user.telegram_chat_id = chat_id
     db.commit()
     return user
@@ -208,7 +209,7 @@ def _message(db: Session, chat_id: int, msg: dict) -> None:
         telegram.send(chat_id, f"Linked to Vaulta. {HELP}" if user else (LINK_FIRST if code == "" else
                       "That code is wrong or has expired. Get a new one in Vaulta → Settings → Link Telegram."))
         return
-    user = db.query(User).filter(User.telegram_chat_id == chat_id).first()
+    user = find_user(db, "telegram_chat_id", chat_id)
     if user is None:
         telegram.send(chat_id, LINK_FIRST)
         return
@@ -247,7 +248,7 @@ def _callback(db: Session, cb: dict) -> None:
     chat_id = cb["message"]["chat"]["id"]
     message_id = cb["message"]["message_id"]
     telegram.answer_callback(cb["id"])
-    user = db.query(User).filter(User.telegram_chat_id == chat_id).first()
+    user = find_user(db, "telegram_chat_id", chat_id)
     if user is None:
         telegram.send(chat_id, LINK_FIRST)
         return

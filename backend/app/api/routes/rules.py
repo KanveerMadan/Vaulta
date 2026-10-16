@@ -51,7 +51,7 @@ def _owned(db: Session, user: User, rule_id: uuid.UUID) -> Rule:
 @router.get("", response_model=RuleList)
 def list_rules(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     counts = _counts(db, current_user)
-    rules = db.query(Rule).filter(Rule.user_id == current_user.id).order_by(Rule.merchant_label, Rule.field).all()
+    rules = sorted(db.query(Rule).filter(Rule.user_id == current_user.id), key=lambda r: (r.merchant_label, r.field))   # label is encrypted
     return RuleList(rules=[_view(r, counts) for r in rules])
 
 

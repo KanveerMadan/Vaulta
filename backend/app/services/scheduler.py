@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.models.report import Report
 from app.models.transaction import Transaction
+from app.core.scope import all_user_ids, find_user
 from app.models.user import User
 from app.services import alerts, analytics, demo, email, report_email, reports
 from app.services.chat import purge_old
@@ -76,9 +77,13 @@ def _send(db: Session, user: User, report: Report, now: datetime) -> bool:
 def run(db: Session, now: Optional[datetime] = None) -> dict:
     now = now or clock.now()
     result = {"users": 0, "generated": 0, "emailed": 0, "telegram": 0, "cash_reminders": 0, "alerts": 0, "alerts_sent": 0,
-              "skipped_empty": 0, "errors": 0}
-    for user in db.query(User).order_by(User.created_at):
+              "skipped_empty": 0, "errors": 0, "chat_messages_purged": 0}
+    for user_id in all_user_ids(db):
+        user = find_user(db, "id", user_id)
+        if user is None:
+            continue
         result["users"] += 1
+        result["chat_messages_purged"] += purge_old(db, user.id)
         local_now = now.astimezone(user_zone(user))
         try:
             done = alerts.run_hourly(db, user, now)
@@ -122,5 +127,4 @@ def run(db: Session, now: Optional[datetime] = None) -> dict:
         db.rollback()
         result["errors"] += 1
         logger.error(f"demo reseed failed: {e.__class__.__name__}: {e}")
-    result["chat_messages_purged"] = purge_old(db)
     return result

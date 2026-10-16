@@ -10,6 +10,7 @@ from datetime import datetime
 from sqlalchemy import Column, DateTime, ForeignKey, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 
+from app.core.crypto import Encrypted, Searchable
 from app.core.database import Base
 
 
@@ -18,9 +19,9 @@ class Person(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    key_hash = Column(String(64), nullable=False)
-    display_name = Column(String(100), nullable=False)
-    masked_vpa = Column(String(80), nullable=True)
+    key_hash = Column(Searchable, nullable=False)
+    display_name = Column(Encrypted, nullable=False)
+    masked_vpa = Column(Encrypted, nullable=True)
     tag = Column(String(20), nullable=True)               # Rent | Splits | Family | Friend | Lent | Other
     default_category = Column(String, nullable=True)
     default_kind = Column(String(12), nullable=True)

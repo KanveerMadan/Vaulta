@@ -14,7 +14,9 @@ import os
 from urllib.parse import urlparse
 
 import pytest
-from cryptography.fernet import Fernet
+import secrets
+from contextlib import contextmanager
+
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
@@ -32,10 +34,12 @@ def _fake_service_account() -> str:
     })
 
 
-# Environment beats backend/.env in pydantic-settings, so nothing real is used.
+# Environment beats backend/.env in pydantic-settings, so nothing real is used. This module is imported twice
+# (as conftest and as tests.conftest): random keys are set once, so subprocesses (alembic) get the same ones.
+for _name in ("MASTER_KEY", "BLIND_INDEX_KEY"):
+    os.environ.setdefault(_name, secrets.token_urlsafe(48))
 os.environ.update({
     "DATABASE_URL": TEST_DATABASE_URL,
-    "ENCRYPTION_KEY": Fernet.generate_key().decode(),
     "FIREBASE_SERVICE_ACCOUNT_JSON": _fake_service_account(),
     "ENVIRONMENT": "test",
     "RAZORPAY_KEY_ID": "",
@@ -43,12 +47,18 @@ os.environ.update({
 })
 
 from fastapi.testclient import TestClient  # noqa: E402
-from sqlalchemy import text  # noqa: E402
+from sqlalchemy import create_engine, text  # noqa: E402
 
 import app.core.auth as auth  # noqa: E402
 from app.core.database import Base, engine, wait_for_db  # noqa: E402
+from app.core.database import SessionLocal  # noqa: E402
+from app.core.scope import find_user, unbind  # noqa: E402
 from app.main import app as api  # noqa: E402
 from app.models import alert, anomaly, cash, chat, correction, goal, inbound, import_template, person, recurring, report, review, rule, telegram, transaction_source  # noqa: E402,F401 — register tables
+
+
+# The tables' owner, for setup and for looking at raw rows (the API's engine is app.core.database.engine)
+owner_engine = create_engine(TEST_DATABASE_URL)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -62,7 +72,9 @@ def schema():
 
 @pytest.fixture(autouse=True)
 def clean_tables():
+    unbind()
     yield
+    unbind()
     with engine.begin() as conn:
         tables = ", ".join(t.name for t in Base.metadata.sorted_tables)
         conn.execute(text(f"TRUNCATE {tables} CASCADE"))
@@ -77,3 +89,15 @@ def client(monkeypatch):
 
 def as_user(uid: str) -> dict:
     return {"Authorization": f"Bearer {uid}"}
+
+
+@contextmanager
+def user_session(uid: str):
+    """A database session bound to the user signed up as `uid` (as the API binds it), yielding (db, user)."""
+    with SessionLocal() as db:
+        user = find_user(db, "firebase_uid", uid)
+        assert user is not None, f"no user {uid}"
+        try:
+            yield db, user
+        finally:
+            unbind(db)

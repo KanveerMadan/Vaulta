@@ -10,6 +10,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
+from app.core.crypto import Encrypted, EncryptedJSON, Searchable
 from app.core.database import Base
 from app.models.transaction_source import TransactionDirection
 
@@ -74,9 +75,9 @@ class Transaction(Base):
     source = Column(SAEnum(TransactionSource), nullable=False)
 
     # Raw string from the source (UPI: "Swiggy*ORDER123@ibl", email subject, etc.)
-    merchant_raw = Column(String, nullable=False)
+    merchant_raw = Column(Encrypted, nullable=False)
     # Normalized merchant name ("Swiggy") — from merchant normalizer
-    merchant_clean = Column(String, nullable=True)
+    merchant_clean = Column(Searchable, nullable=True)
     # Effective category ("Food & Dining"): auto_category unless the user
     # corrected it or detection overrode it (e.g. a refund takes its original's)
     category = Column(String, nullable=True)
@@ -122,13 +123,13 @@ class Transaction(Base):
     idempotency_key = Column(String(64), nullable=False)
 
     # Original source payload preserved for re-derivation (email body, SMS text, CSV row)
-    raw_source_data = Column(JSON, nullable=True)
+    raw_source_data = Column(EncryptedJSON, nullable=True)
 
     # "true" once the user has edited the category/notes (string flag kept for API compatibility)
     user_corrected = Column(String, nullable=True)
 
     # Free-text note from the user
-    notes = Column(String(500), nullable=True)
+    notes = Column(Encrypted, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=text("now()"), onupdate=datetime.utcnow, nullable=False)

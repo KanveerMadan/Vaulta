@@ -9,7 +9,7 @@ from app.core.database import SessionLocal
 from app.models.inbound import InboundEvent
 from app.models.user import User
 from app.services import analytics
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 from tests.test_end_to_end import TODAY, USER, load_three_months
 
 NEW = as_user("newcomer")
@@ -33,8 +33,8 @@ def test_cards_for_the_current_month(client):
     client.post("/api/budgets", json={"category": "Food & Dining", "monthly_limit": "200"}, headers=USER)
     h = home(client)
     assert (h["month"], h["is_current_month"]) == ("2024-06", True)
-    with SessionLocal() as db:
-        uid = db.query(User).filter_by(firebase_uid="rahul").one().id
+    with user_session("rahul") as (db, _user):
+        uid = _user.id
         assert h["safe_to_spend"]["amount"] == str(analytics.safe_to_spend_today(db, uid)["amount"])
         f = analytics.forecast_month_end(db, uid, TODAY)
     o = h["outlook"]
@@ -73,15 +73,13 @@ def test_empty_account(client):
 
 def test_quiet_alerts_are_flagged_stale(client):
     home(client, headers=NEW)
-    with SessionLocal() as db:
-        user = db.query(User).filter_by(firebase_uid="newcomer").one()
+    with user_session("newcomer") as (db, user):
         db.add(InboundEvent(user_id=user.id, outcome="parsed", bank_name="HDFC Bank",
                             received_at=clock.now() - timedelta(days=8)))
         db.commit()
     email = home(client, headers=NEW)["coverage"]["email"]
     assert (email["connected"], email["stale"], email["active"]) == (True, True, False)
-    with SessionLocal() as db:
-        user = db.query(User).filter_by(firebase_uid="newcomer").one()
+    with user_session("newcomer") as (db, user):
         db.add(InboundEvent(user_id=user.id, outcome="parsed", bank_name="HDFC Bank", received_at=clock.now() - timedelta(minutes=2)))
         db.commit()
     cov = home(client, headers=NEW)["coverage"]

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.demo import DEMO_UID
+from app.core.scope import bind_user, find_user
 from app.models.user import User
 
 settings = get_settings()
@@ -52,6 +53,7 @@ def _demo_user(request: Request, token: str, db: Session) -> User:
     if user is None:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="The demo is being reset. Try again in a minute.")
     user.demo_session = session_id      # per-visitor chat limits (services/chat.py)
+    bind_user(db, user)
     return user
 
 
@@ -78,17 +80,21 @@ def get_current_user(
 
     # Upsert — create user on first login. The app fires several requests at once on a first
     # sign-in, so another request may create the row first: then use that one.
-    user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
+    user = find_user(db, "firebase_uid", firebase_uid)
     if not user:
         user = User(firebase_uid=firebase_uid, email=email, full_name=name)
+        bind_user(db, user)             # gives the new user an id and a data key
         db.add(user)
         try:
             db.commit()
         except IntegrityError:
             db.rollback()
-            user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
+            user = find_user(db, "firebase_uid", firebase_uid)
             if user is None:
                 raise
         db.refresh(user)
 
+    bind_user(db, user)
+    if db.is_modified(user):            # a data key was just created for an existing user
+        db.commit()
     return user

@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
 from app.core.database import get_db
+from app.core.scope import find_user
 from app.models.user import User
 from app.schemas.payment import CreateSubscriptionResponse, SubscriptionStatusResponse, WebhookAck
 from app.services.razorpay_service import create_subscription, verify_webhook_signature, RazorpayError
@@ -132,7 +133,7 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
         # Event not subscription-related (e.g. payment.* events we don't act on) — ack and ignore
         return WebhookAck()
 
-    user = db.query(User).filter(User.razorpay_subscription_id == subscription_id).first()
+    user = find_user(db, "razorpay_subscription_id", subscription_id)
     if not user:
         logger.warning(f"Webhook for unknown subscription_id={subscription_id}")
         return WebhookAck()

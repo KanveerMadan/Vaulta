@@ -4,7 +4,7 @@ Vaulta API — FastAPI application entry point.
 Startup sequence:
   1. Validate config (fail fast on missing env vars)
   2. Initialize Firebase Admin SDK
-  3. Validate encryption key
+  3. Check the field-encryption keys (MASTER_KEY, BLIND_INDEX_KEY)
   4. Mount middleware (CORS, security headers)
   5. Register routers
   6. On startup, connect to the database in a background thread with
@@ -36,13 +36,15 @@ except Exception as e:
     logger.critical(f"Firebase Admin SDK init failed: {e}")
     sys.exit(1)
 
-# ── 3. Encryption key check ────────────────────────────────────────────────────
+# ── 3. Field-encryption keys (also validated by config; this proves they derive) ──
 try:
-    from app.core.encryption import _get_fernet
-    _get_fernet()
-    logger.info("Encryption key valid")
+    from app.core.crypto import blind_index, current_kek
+    import uuid as _uuid
+    current_kek()
+    blind_index(_uuid.UUID(int=0), "startup check")
+    logger.info("Encryption keys valid")
 except Exception as e:
-    logger.critical(f"Encryption key invalid: {e}")
+    logger.critical(f"Encryption keys invalid: {e}")
     sys.exit(1)
 
 # ── App ────────────────────────────────────────────────────────────────────────
@@ -94,6 +96,11 @@ async def security_headers(request: Request, call_next):
     if settings.APP_ENV == "production":
         response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     return response
+
+# ── Per-request scope for the bound user (app/core/scope.py); outermost, so it covers everything ──
+from app.core.scope import ScopeMiddleware
+
+app.add_middleware(ScopeMiddleware)
 
 # ── Routers ────────────────────────────────────────────────────────────────────
 from app.api.routes import auth, transactions, budgets, imports, recurring, people, rules, review, chat, settings as settings_routes, anomalies, reports, internal, unsubscribe, inbound, telegram as telegram_routes, cash as cash_routes, home, goals, alerts as alert_routes, onboarding

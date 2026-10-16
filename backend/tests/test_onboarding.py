@@ -6,7 +6,7 @@ from app.core import clock
 from app.core.database import SessionLocal
 from app.models.inbound import InboundEvent
 from app.models.user import User
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 from tests.test_end_to_end import USER, load_three_months
 
 ALICE, BOB = as_user("alice"), as_user("bob")
@@ -53,8 +53,7 @@ def test_coverage_meter_counts_history_review_and_sources(client):
     assert parts["statements"] == 30 and parts["email"] == 0 and parts["telegram"] == 0
     open_cards = client.get("/api/review", headers=USER).json()["count"]
     assert parts["review"] == max(25 - 5 * open_cards, 0)
-    with SessionLocal() as db:
-        user = db.query(User).filter_by(firebase_uid="rahul").one()
+    with user_session("rahul") as (db, user):
         user.telegram_chat_id = 42
         db.commit()
     assert ob(client, USER)["coverage"]["parts"]["telegram"] == 10
@@ -63,13 +62,11 @@ def test_coverage_meter_counts_history_review_and_sources(client):
 def test_send_test_email_is_verified_by_any_arrival(client):
     s = client.post("/api/onboarding/test-email", headers=ALICE).json()
     assert s["test_started_at"] and s["test_received"] is False
-    with SessionLocal() as db:
-        user = db.query(User).filter_by(firebase_uid="alice").one()
+    with user_session("alice") as (db, user):
         db.add(InboundEvent(user_id=user.id, outcome="untrusted_sender", received_at=clock.now() - timedelta(hours=1)))
         db.commit()
     assert ob(client)["test_received"] is False                # arrived before the test started
-    with SessionLocal() as db:
-        user = db.query(User).filter_by(firebase_uid="alice").one()
+    with user_session("alice") as (db, user):
         db.add(InboundEvent(user_id=user.id, outcome="untrusted_sender"))
         db.commit()
     s = ob(client)

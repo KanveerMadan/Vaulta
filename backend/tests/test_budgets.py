@@ -3,7 +3,7 @@
 from datetime import date
 
 from app.services.recurring import add_months
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 from tests.test_import_batch import row
 
 ALICE = as_user("alice")
@@ -36,8 +36,7 @@ def test_database_enforces_one_active_budget_per_category(client):
     from app.models.transaction import Budget
     from app.models.user import User
     create(client, "Travel", "3000")
-    with SessionLocal() as db:
-        user = db.query(User).filter_by(firebase_uid="alice").one()
+    with user_session("alice") as (db, user):
         db.add(Budget(user_id=user.id, category="Travel", monthly_limit=1, is_active=True))
         with pytest.raises(IntegrityError):
             db.commit()

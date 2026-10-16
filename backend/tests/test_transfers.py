@@ -1,6 +1,6 @@
 """Own-account transfer detection (services/detection.py)."""
 
-from tests.conftest import as_user
+from tests.conftest import as_user, user_session
 from tests.test_import_batch import row
 
 ALICE = as_user("alice")
@@ -89,8 +89,8 @@ def test_one_sided_signal_is_not_guessed(client):
     from app.services.detection import run_detection
     _, txns = load(client, hdfc(date="2024-03-05", description_raw="TRANSFER TO OWN A/C 4321", amount="8000.00"))
     assert txns["TRANSFER TO OWN A/C 4321"]["kind"] == "spend"
-    with SessionLocal() as db:
-        ctx = run_detection(db, db.query(User).filter_by(firebase_uid="alice").one())
+    with user_session("alice") as (db, _user):
+        ctx = run_detection(db, _user)
         assert [str(i) for i in ctx.review_transfer_ids] == [txns["TRANSFER TO OWN A/C 4321"]["id"]]
 
 
