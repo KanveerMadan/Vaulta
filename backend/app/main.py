@@ -134,6 +134,21 @@ except Exception as e:
         f"(/api/payments/* will 404): {e}"
     )
 
+# ── security.txt (RFC 9116) ──
+from datetime import datetime, timedelta, timezone
+
+from fastapi import HTTPException
+from fastapi.responses import PlainTextResponse
+
+
+@app.get("/.well-known/security.txt", include_in_schema=False)
+def security_txt():
+    if not settings.SECURITY_CONTACT_EMAIL:
+        raise HTTPException(status_code=404, detail="Not found")
+    expires = (datetime.now(timezone.utc) + timedelta(days=180)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return PlainTextResponse(f"Contact: mailto:{settings.SECURITY_CONTACT_EMAIL}\nExpires: {expires}\nPreferred-Languages: en\n")
+
+
 # ── Health check ───────────────────────────────────────────────────────────────
 @app.get("/health", tags=["ops"])
 def health():

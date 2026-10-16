@@ -35,11 +35,32 @@ function cspCoversApi(env, mode) {
   }
 }
 
+// /.well-known/security.txt (RFC 9116) from VITE_SECURITY_CONTACT; the privacy page needs VITE_PRIVACY_CONTACT.
+// A production build without them fails, so the security page and privacy policy never ship without a contact.
+function securityTxt(env, mode) {
+  return {
+    name: 'security-txt',
+    buildStart() {
+      if (mode !== 'production') return
+      for (const name of ['VITE_SECURITY_CONTACT', 'VITE_PRIVACY_CONTACT']) {
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(env[name] || '')) this.error(`${name} must be set to an email address for a production build.`)
+      }
+    },
+    generateBundle() {
+      if (!env.VITE_SECURITY_CONTACT) return
+      const expires = new Date(Date.now() + 180 * 864e5).toISOString().replace(/\.\d+Z$/, 'Z')
+      this.emitFile({ type: 'asset', fileName: '.well-known/security.txt', source:
+        `Contact: mailto:${env.VITE_SECURITY_CONTACT}\nExpires: ${expires}\nPreferred-Languages: en\n` })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
   return {
   plugins: [
     cspCoversApi(env, mode),
+    securityTxt(env, mode),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

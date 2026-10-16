@@ -59,6 +59,9 @@ class Settings(BaseSettings):
             raise ValueError("BACKEND_CORS_ORIGINS must not be empty")
         return v
 
+    # Published at /.well-known/security.txt (also on the web app, from VITE_SECURITY_CONTACT)
+    SECURITY_CONTACT_EMAIL: str = ""
+
     # New demo sessions per client IP per 10 minutes. Generous: mobile carriers put many people behind one address.
     DEMO_SESSIONS_PER_IP: int = 30
 

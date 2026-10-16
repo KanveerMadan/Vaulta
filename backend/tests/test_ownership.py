@@ -104,6 +104,7 @@ EXEMPT = {
     ("POST", "/internal/telegram"),        # Telegram's secret_token header: tests/test_telegram.py::test_webhook_secret
     # no user session: signed per-user token (tests/test_delivery.py::test_unsubscribe)
     ("GET", "/unsubscribe"), ("POST", "/unsubscribe"),
+    ("GET", "/.well-known/security.txt"),   # public, no data (tests/test_app_security.py)
 }
 
 

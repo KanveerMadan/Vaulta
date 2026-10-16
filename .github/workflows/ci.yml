@@ -71,6 +71,8 @@ jobs:
           VITE_FIREBASE_AUTH_DOMAIN: vaulta-a3d7a.firebaseapp.com
           VITE_FIREBASE_PROJECT_ID: vaulta-a3d7a
           VITE_FIREBASE_APP_ID: "1:0:web:ci"
+          VITE_SECURITY_CONTACT: security@vaulta.example
+          VITE_PRIVACY_CONTACT: privacy@vaulta.example
         run: npm run build
 
   worker:

@@ -72,7 +72,7 @@ Each row: the threat, then what stops it and where that is enforced or tested.
 | Cross-origin calls from other sites | CORS allows only `BACKEND_CORS_ORIGINS` and, when set, `BACKEND_CORS_ORIGIN_REGEX` (Vercel previews). Auth is a bearer header, never cookies, so there is no CSRF surface. |
 | Forging internal calls | `/internal/*` requires `X-Internal-Secret` (≥ 32 random characters in production) compared in constant time; refuses everything when unset. The Telegram webhook requires its own secret. |
 | Forging demo, unsubscribe or confirm tokens | HMAC-SHA256 with `SECRET_KEY` (demo, unsubscribe); chat confirm tokens are 256-bit random and stored as SHA-256 only, bound to user and session, single use, 10 minutes. |
-| Guessing a forwarding address | 10 random characters from a 36-character alphabet (about 52 bits), rate limited at the worker by Cloudflare and checked as a hash; unknown recipients are dropped without a reply. |
+| Guessing a forwarding address | 10 random characters from a 36-character alphabet (about 52 bits), looked up by a keyed HMAC (a dump can't be brute-forced back to addresses); the internal endpoint itself needs `X-Internal-Secret`, so guesses have to arrive as real email through Cloudflare; unknown recipients are dropped without a reply. |
 
 ### Another Vaulta user
 
@@ -114,7 +114,7 @@ Each row: the threat, then what stops it and where that is enforced or tested.
 | Threat | Mitigation |
 |---|---|
 | The provider sees raw narrations, UPI IDs, references or notes | Chat tools return merchant names, categories, amounts and dates only; `llm_safe` (`services/chat_tools.py`) strips raw descriptions, references, UPI IDs and notes; `tests/test_chat.py` asserts the prompts contain none of them. |
-| The provider sees data the user didn't choose to share | AI chat can be switched off in Settings (then nothing is sent); report narratives are built from the computed report figures only, and a template is used when chat is off or no key is configured. |
+| The provider sees data the user didn't choose to share | AI chat can be switched off in Settings (then no chat data is sent). Report summaries are written by Groq from the report's computed figures only, whether or not chat is on, and /security says so; a user who doesn't want that turns the report off. A template is used when no key is configured or the model's text uses a number that isn't in the report. |
 
 ## Logging
 

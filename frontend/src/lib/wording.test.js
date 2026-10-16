@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { TRUST } from "./trust";
+import { LANDING_CLAIMS, TRUST } from "./trust";
 
 // Claims that can't be verified (or aren't true) never appear anywhere in the frontend
 const BANNED = [/bank[\s-]*grade/i, /100\s*%\s*secure/i, /military[\s-]*grade/i, /unhackable/i, /completely\s+secure/i, /fully\s+secure/i];
@@ -29,13 +29,32 @@ describe("wording", () => {
     expect(hits).toEqual([]);
   });
 
-  it("states exactly the five trust claims", () => {
-    expect(TRUST.map((t) => t.claim)).toEqual([
-      "Statements are processed on your device and never uploaded.",
-      "Account numbers, balances and passwords are never stored.",
-      "Raw alert emails are never stored.",
-      "The AI never sees bank narrations or UPI IDs.",
-      "Delete everything, anytime.",
-    ]);
+  it("gives every claim an anchor, a how-it-works text and how it's checked", () => {
+    const ids = TRUST.map((t) => t.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const t of TRUST) {
+      expect(t.id).toMatch(/^[a-z-]+$/);
+      expect(t.claim.length).toBeGreaterThan(10);
+      expect(t.how.length).toBeGreaterThan(80);
+      expect(t.checked.length).toBeGreaterThan(20);
+    }
+  });
+
+  it("names the AI provider and states what it receives", () => {
+    const ai = TRUST.find((t) => t.id === "ai").how;
+    expect(ai).toContain("Groq");
+    expect(ai).toMatch(/merchant names, categories, amounts and dates/);
+  });
+
+  it("puts the core claims on the landing page, each pointing at its place on /security", () => {
+    expect(LANDING_CLAIMS.map((t) => t.id)).toEqual(["on-device", "stripped", "encrypted", "isolated", "alert-emails", "ai", "your-data"]);
+    for (const t of LANDING_CLAIMS) expect(TRUST[t.n - 1].id).toBe(t.id);
+  });
+
+  it("the security page links every claim to its how-it-works section", () => {
+    const page = readFileSync("src/pages/Security.jsx", "utf8");
+    expect(page).toContain("href={`#how-${t.id}`}");
+    expect(page).toContain("id={`how-${t.id}`}");
+    expect(page).toContain("id={`claim-${i + 1}`}");
   });
 });

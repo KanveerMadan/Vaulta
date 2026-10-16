@@ -7,6 +7,7 @@ import Landing from './pages/landing/Landing'   // in the main bundle: the first
 // Every other page is its own chunk. Showpieces (the landing's story, onboarding, Wrapped) bring the animation
 // library with them; the workspace never loads it. Firebase loads off the landing's critical path.
 const Security = lazy(() => import('./pages/Security'))
+const Privacy = lazy(() => import('./pages/Privacy'))
 const Login = lazy(() => import('./pages/Login'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 const Wrapped = lazy(() => import('./pages/wrapped/Wrapped'))
@@ -66,6 +67,7 @@ export default function App() {
     <Routes>
       <Route path="/welcome" element={<Landing />} />
       <Route path="/security" element={page(<Security />)} />
+      <Route path="/privacy" element={page(<Privacy />)} />
       <Route path="/login" element={loading ? <Loader /> : !user ? page(<Login />) : <Navigate to="/" replace />} />
       <Route element={<PrivateRoute />}>
         <Route path="/onboarding" element={page(<Onboarding />)} />

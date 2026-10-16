@@ -46,9 +46,53 @@ test('security page states the claims and how each works', async ({ page }, test
   await page.goto('/welcome')
   await page.getByRole('link', { name: 'How each of these works →' }).click()
   await expect(page.getByRole('heading', { name: 'Security and privacy' })).toBeVisible()
-  await expect(page.getByRole('heading', { level: 2 })).toHaveCount(5)
-  await expect(page.getByText('How it works:')).toHaveCount(5)
+  const claims = page.getByRole('list', { name: 'Claims' }).getByRole('listitem')
+  const count = await claims.count()
+  expect(count).toBeGreaterThanOrEqual(10)
+  // every claim links to a "how it works" section that exists, says how it's checked, and is reached by the link
+  for (let i = 0; i < count; i++) {
+    const link = claims.nth(i).getByRole('link', { name: 'How it works' })
+    const target = (await link.getAttribute('href')).slice(1)
+    const section = page.locator(`section#${target}`)
+    await expect(section).toHaveCount(1)
+    await expect(section.getByText("How it's checked:")).toBeVisible()
+    await expect(section.getByRole('heading', { level: 3 })).toHaveText(await claims.nth(i).getByRole('heading', { level: 2 }).innerText())
+  }
+  await claims.nth(2).getByRole('link', { name: 'How it works' }).click()
+  await expect(page).toHaveURL(/#how-encrypted$/)
+  await expect(page.locator('section#how-encrypted')).toBeInViewport()
+  await expect(page.getByText('Groq', { exact: false }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'security@vaulta.test' })).toHaveAttribute('href', 'mailto:security@vaulta.test')
   await checkLayout(page, testInfo)
+})
+
+test('landing claims each open their place on /security', async ({ page }) => {
+  await page.goto('/welcome')
+  const items = page.getByRole('region', { name: 'What happens to your data' }).getByRole('listitem')
+  const n = await items.count()
+  expect(n).toBe(7)
+  for (let i = 0; i < n; i++) {
+    const href = await items.nth(i).getByRole('link').getAttribute('href')
+    expect(href).toMatch(/^\/security#claim-\d+$/)
+  }
+  await items.nth(2).getByRole('link').click()
+  await expect(page.locator('#claim-3')).toBeInViewport()
+  await expect(page.locator('#claim-3 h2')).toHaveText(/encrypted/)
+})
+
+test('privacy policy and security.txt', async ({ page, request }, testInfo) => {
+  await page.goto('/welcome')
+  await page.getByRole('navigation', { name: 'Footer' }).getByRole('link', { name: 'Privacy' }).click()
+  await expect(page.getByRole('heading', { name: 'Privacy policy' })).toBeVisible()
+  await expect(page.getByRole('note')).toContainText('Draft for review')
+  for (const h of ['What Vaulta collects and why', 'What Vaulta never collects', 'Who else handles it', "How long it's kept", 'Your rights', 'Grievances and questions']) {
+    await expect(page.getByRole('heading', { name: h })).toBeVisible()
+  }
+  await expect(page.getByText('Chat history: 30 days')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'privacy@vaulta.test' })).toBeVisible()
+  await checkLayout(page, testInfo)
+  const txt = await (await request.get('/.well-known/security.txt')).text()
+  expect(txt).toMatch(/^Contact: mailto:security@vaulta\.test\nExpires: \d{4}-\d\d-\d\dT/)
 })
 
 test('installable: manifest, icons, service worker caches static files only', async ({ page }) => {

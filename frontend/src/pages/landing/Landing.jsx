@@ -2,7 +2,7 @@ import { lazy, Suspense, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight, Check } from '@phosphor-icons/react'
 import { useAuthStore } from '../../store/authStore'
-import { TRUST } from '../../lib/trust'
+import { LANDING_CLAIMS } from '../../lib/trust'
 import Wordmark from '../../ui/Wordmark'
 import StaticStory from './StaticStory'
 import { useMedia } from '../../lib/useMedia'
@@ -119,13 +119,13 @@ export default function Landing() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 grid lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] gap-10">
             <div>
               <h2 id="trust" className="font-display text-display-s text-ink">What happens to your data</h2>
-              <p className="mt-3 text-ink-2 max-w-[36ch]">Five things that are true of the code today. Each one links to how it works.</p>
+              <p className="mt-3 text-ink-2 max-w-[36ch]">Things that are true of the code today. Each one links to how it works and how it's checked.</p>
               <Link to="/security" className="inline-flex items-center gap-1.5 mt-5 text-sm font-medium text-accent-text hover:underline">How each of these works →</Link>
             </div>
             <ul className="divide-y divide-line border-y border-line">
-              {TRUST.map((t, i) => (
-                <li key={t.claim}>
-                  <Link to={`/security#claim-${i + 1}`} className="group flex items-center gap-4 py-4 hover:bg-sunken/60 px-2 -mx-2 rounded-sm">
+              {LANDING_CLAIMS.map((t) => (
+                <li key={t.id}>
+                  <Link to={`/security#claim-${t.n}`} className="group flex items-center gap-4 py-4 hover:bg-sunken/60 px-2 -mx-2 rounded-sm">
                     <span className="w-7 h-7 shrink-0 rounded-full bg-accent-tint text-accent-text flex items-center justify-center"><Check size={14} weight="bold" aria-hidden /></span>
                     <span className="flex-1 text-[15px] text-ink">{t.claim}</span>
                     <ArrowRight size={16} className="text-muted group-hover:text-ink transition-colors" aria-hidden />
@@ -151,7 +151,8 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row gap-4 sm:items-center justify-between text-sm text-muted">
           <Wordmark to="/welcome" size="text-lg" />
           <nav aria-label="Footer" className="flex gap-4">
-            <Link to="/security" className="hover:text-ink">Security and privacy</Link>
+            <Link to="/security" className="hover:text-ink">Security</Link>
+            <Link to="/privacy" className="hover:text-ink">Privacy</Link>
             <Link to="/login" className="hover:text-ink">Log in</Link>
           </nav>
         </div>

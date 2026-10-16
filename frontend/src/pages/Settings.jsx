@@ -204,8 +204,9 @@ export default function Settings() {
         <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">AI chat</h2>
         <Toggle checked={data.ai_chat_enabled} onChange={(v) => save({ ai_chat_enabled: v })} label="Let me ask questions in chat" />
         <p className="text-xs text-ink-500">
-          When on, your question and the figures needed to answer it (merchant names, categories, amounts, dates) go to an AI
-          service. Statement text, account details and UPI IDs never do. Report summaries use the same rule.
+          When on, your question and the figures needed to answer it (merchant names, categories, amounts, dates) go to Groq,
+          the AI service Vaulta uses. Statement text, account details, UPI IDs and notes never do. Report summaries are
+          written the same way, from the report's figures, whether or not chat is on.
         </p>
       </section>
 

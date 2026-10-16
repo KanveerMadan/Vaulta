@@ -77,3 +77,12 @@ def test_cors_allows_only_configured_origins(client):
 @pytest.mark.parametrize("field,value", [("message", "x" * 2001)])
 def test_chat_input_is_bounded(client, field, value):
     assert client.post("/api/chat", json={field: value}, headers=USER).status_code == 422
+
+
+def test_security_txt(client, monkeypatch):
+    assert client.get("/.well-known/security.txt").status_code == 404           # not published without a contact
+    monkeypatch.setattr(settings, "SECURITY_CONTACT_EMAIL", "security@vaulta.example")
+    res = client.get("/.well-known/security.txt")
+    assert res.status_code == 200 and res.headers["content-type"].startswith("text/plain")
+    lines = res.text.splitlines()
+    assert lines[0] == "Contact: mailto:security@vaulta.example" and lines[1].startswith("Expires: 20")
