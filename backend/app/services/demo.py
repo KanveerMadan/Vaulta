@@ -232,18 +232,20 @@ def demo_user(db: Session) -> Optional[User]:
 def ensure_fresh(db: Session, today: Optional[date] = None, create: bool = False) -> Optional[User]:
     """
     Hourly run (create=False): rebuild when last built on an earlier day; never create it.
-    A visitor (create=True): build it only if it doesn't exist at all — never make a
-    visitor wait for the daily rebuild.
+    A visitor (create=True): build it only if there is no complete one — never make a
+    visitor wait for the daily rebuild, but do wait for a build that's still running
+    (the landing page's live preview starts one), so nobody gets a half-built demo.
     """
     today = today or clock.today()
     fresh = lambda u: u is not None and (u.onboarding or {}).get("demo_seeded") == today.isoformat()
+    complete = lambda u: u is not None and "demo_seeded" in (u.onboarding or {})
     user = demo_user(db)
-    if fresh(user) or (user is None and not create) or (user is not None and create):
+    if fresh(user) or (user is None and not create) or (create and complete(user)):
         return user
     with _seed_lock():
         db.expire_all()
         user = demo_user(db)       # another request may have built it while we waited
-        return user if fresh(user) or (user is not None and create) else _seed(db, today)
+        return user if fresh(user) or (create and complete(user)) else _seed(db, today)
 
 
 if __name__ == "__main__":

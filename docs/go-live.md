@@ -23,7 +23,13 @@ npx neonctl@7.0.4 branches list --project-id $NEON_PROJECT   # note the producti
 export NEON_PROD_BRANCH=<that name>
 ```
 
-**Check:** CI on the pull request is green (`gh pr checks`). The staging rehearsal (Phase 6 step 8) is done.
+**Check:** CI on the pull request is green (`gh pr checks`), and the staging rehearsal passes on a fresh copy of
+production:
+```sh
+NEON_PROJECT=$NEON_PROJECT NEON_PROD_BRANCH=$NEON_PROD_BRANCH scripts/staging-rehearsal.sh
+```
+It must end with `ALL CHECKS PASSED`, `PASS readiness` and the smoke tests passing. Then delete the branch with
+`npx neonctl@7.0.4 branches delete staging --project-id $NEON_PROJECT`. It only ever touches the `staging` branch.
 
 Generate the new secrets now, store them in your password manager, and keep them for steps 1–7:
 - `SECRET_KEY`, `INTERNAL_SECRET`, `MASTER_KEY`, `BLIND_INDEX_KEY`, `TELEGRAM_WEBHOOK_SECRET`: each one from

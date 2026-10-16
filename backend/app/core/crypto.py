@@ -190,11 +190,13 @@ class Encrypted(TypeDecorator):
 
 class Searchable(Encrypted):
     """Deterministic per user (blind-index nonce): supports =, IN, GROUP BY and UNIQUE in SQL, not LIKE or ordering."""
+    cache_ok = True
     searchable = True
 
 
 class EncryptedJSON(Encrypted):
     """JSON document encrypted as a whole. Not queryable in SQL."""
+    cache_ok = True
 
     def _dump(self, value) -> str:
         return json.dumps(value, separators=(",", ":"), default=str)

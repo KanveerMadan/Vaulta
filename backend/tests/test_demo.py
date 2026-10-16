@@ -179,3 +179,20 @@ def test_concurrent_first_visitors_get_one_complete_demo(client):
     with SessionLocal() as db:
         assert str(demo.demo_user(db).id) in ids and demo.demo_user(db).onboarding["demo_seeded"] == "2024-06-28"
     assert _counts()["months"] == 4
+
+
+def test_a_visitor_waits_for_a_demo_still_being_built(client):
+    """The landing page's preview can start the build; a visitor arriving mid-build must not get half a demo."""
+    with SessionLocal() as db:
+        user = demo.User(firebase_uid=demo.DEMO_UID, email="demo@vaulta.invalid", full_name="Demo",
+                         onboarding={"status": "done"})                       # created, not yet seeded
+        demo.bind_user(db, user)
+        db.add(user)
+        db.commit()
+    token = client.post("/auth/demo").json()["token"]
+    with SessionLocal() as db:
+        built = demo.demo_user(db)
+        assert "demo_seeded" in built.onboarding
+        assert db.query(Budget).filter(Budget.user_id == built.id, Budget.category.is_(None)).count() == 1
+    home = client.get("/api/home", headers={"Authorization": f"Bearer {token}"}).json()
+    assert home["safe_to_spend"]["basis"] == "overall budget"
