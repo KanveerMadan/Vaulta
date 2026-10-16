@@ -3,6 +3,10 @@ import { defineConfig } from '@playwright/test'
 
 const PY = process.env.E2E_PYTHON || '../backend/venv/bin/python'
 const reuse = !process.env.CI && !!process.env.E2E_REUSE
+// Visual baselines depend on the OS the *browser* runs on. To render Linux baselines from a Mac, run the browser in
+// Playwright's Linux image (e2e/README.md): PW_WS_ENDPOINT points at it and PW_BROWSER_OS=linux names the files.
+const browserOS = process.env.PW_BROWSER_OS || process.platform
+const remote = process.env.PW_WS_ENDPOINT ? { connectOptions: { wsEndpoint: process.env.PW_WS_ENDPOINT, exposeNetwork: '<loopback>' } } : {}
 
 export default defineConfig({
   testDir: './e2e',
@@ -12,7 +16,8 @@ export default defineConfig({
   workers: process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : 3,
   retries: 0,
   reporter: [['list']],
-  use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },
+  snapshotPathTemplate: `{testDir}/{testFileName}-snapshots/{arg}{-projectName}-${browserOS}{ext}`,
+  use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure', ...remote },
   projects: [
     { name: 'desktop', use: { browserName: 'chromium', viewport: { width: 1280, height: 800 } } },
     { name: 'mobile', use: { browserName: 'chromium', viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } },

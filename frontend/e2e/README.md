@@ -28,3 +28,18 @@ npm run test:e2e
 `E2E_REUSE=1` reuses servers you already started; `E2E_WORKERS` sets parallelism (default 3).
 Each test signs up its own user in the emulator and seeds data through the real API, so tests are
 independent of each other and of order.
+
+**Security headers.** `vite preview` serves the headers from `vercel.json` (with the local API, emulator and auth
+domain swapped in), so every test runs under the production Content-Security-Policy; a CSP violation is a console
+error, which fails the test.
+
+**Visual baselines per OS.** `visual.spec.js` keeps one set of screenshots per operating system of the browser
+(`…-darwin.png`, `…-linux.png`; CI runs Linux). To render the Linux set from a Mac, run the browser in Playwright's
+Linux image and point the tests at it:
+
+```sh
+docker run -d --name pw-server -p 3000:3000 --init --ipc=host mcr.microsoft.com/playwright:v1.56.1-noble \
+  /bin/sh -c "npx -y playwright@1.56.1 run-server --port 3000 --host 0.0.0.0"
+PW_WS_ENDPOINT=ws://127.0.0.1:3000/ PW_BROWSER_OS=linux npx playwright test e2e/visual.spec.js --update-snapshots
+docker rm -f pw-server
+```

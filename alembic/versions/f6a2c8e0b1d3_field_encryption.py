@@ -83,7 +83,10 @@ def _decrypted(cipher, value):
 def _rewrite(conn, ciphers: dict, encrypt: bool) -> None:
     for table, columns in COLUMNS.items():
         names = [c for c, _, _ in columns]
-        select = sa.text(f"SELECT id, user_id, {', '.join(names)} FROM {table} WHERE id > :last ORDER BY id LIMIT {BATCH}")
+        # Table and column names come from COLUMNS above, never from data; values are bound parameters.
+        # constant table/column names from COLUMNS; values are bound parameters
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        select = sa.text(f"SELECT id, user_id, {', '.join(names)} FROM {table} WHERE id > :last ORDER BY id LIMIT {BATCH}")  # nosec B608
         last = uuid.UUID(int=0)
         while True:
             rows = conn.execute(select, {"last": last}).all()
@@ -105,7 +108,9 @@ def _rewrite(conn, ciphers: dict, encrypt: bool) -> None:
                         changes[name] = plain
                 if changes:
                     sets = ", ".join(f"{n} = :{n}" for n in changes)
-                    conn.execute(sa.text(f"UPDATE {table} SET {sets} WHERE id = :id"), {**changes, "id": row[0]})
+                    # constant table/column names from COLUMNS; values are bound parameters
+                    # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+                    conn.execute(sa.text(f"UPDATE {table} SET {sets} WHERE id = :id"), {**changes, "id": row[0]})  # nosec B608
 
 
 def _fernet():
@@ -149,6 +154,8 @@ def upgrade() -> None:
     op.add_column("users", sa.Column("data_key", sa.Text(), nullable=True))
     for table, columns in COLUMNS.items():
         for name, _, _ in columns:
+            # constant table/column names from COLUMNS; values are bound parameters
+            # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             op.execute(f'ALTER TABLE {table} ALTER COLUMN "{name}" TYPE text USING "{name}"::text')
     op.execute("ALTER TABLE users ALTER COLUMN inbound_token_encrypted TYPE text")
     conn = op.get_bind()
@@ -164,6 +171,8 @@ def downgrade() -> None:
     _tokens_down(conn, ciphers)
     for table, columns in COLUMNS.items():
         for name, previous, _ in columns:
+            # constant table/column names from COLUMNS; values are bound parameters
+            # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
             op.execute(f'ALTER TABLE {table} ALTER COLUMN "{name}" TYPE {previous} USING "{name}"::{previous}')
     op.execute("ALTER TABLE users ALTER COLUMN inbound_token_encrypted TYPE varchar")
     op.drop_column("users", "data_key")

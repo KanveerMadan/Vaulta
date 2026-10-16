@@ -81,6 +81,8 @@ export function holderNamePattern(displayName) {
     `${initial}(?:\\.\\s*|\\s+)${last}`,
     `${last}\\s+${initial}\\.?`,
   ];
+  // built only from letter-only name tokens (checked above), so no metacharacters
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   return new RegExp(`(?<!\\p{L})(?:${alternatives.join("|")})(?!\\p{L})`, "giu");
 }
 

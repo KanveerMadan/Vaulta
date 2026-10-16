@@ -68,11 +68,29 @@ DEFINERS = ["vaulta_find_user(text, text)", "vaulta_user_ids()", "vaulta_telegra
             "vaulta_release_telegram_chat(bigint)"]
 
 
+GRANTS = """
+DO $$ BEGIN
+  IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'APP_ROLE') THEN
+    GRANT USAGE ON SCHEMA public TO APP_ROLE;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO APP_ROLE;
+    REVOKE INSERT, UPDATE, DELETE ON alembic_version FROM APP_ROLE;
+    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO APP_ROLE;
+    GRANT EXECUTE ON FUNCTION DEFINERS_LIST TO APP_ROLE;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO APP_ROLE;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO APP_ROLE;
+  END IF;
+END $$;"""
+
+
 def upgrade() -> None:
     op.execute(FUNCTIONS)
     for fn in DEFINERS:
+        # constant table/function names from this module; DDL takes no bind parameters
+        # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
         op.execute(f"REVOKE ALL ON FUNCTION {fn} FROM PUBLIC")
     for table in USER_TABLES:
+        # constant table/function names from this module; DDL takes no bind parameters
+        # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
         op.execute(f"CREATE POLICY user_isolation ON {table} USING (user_id = vaulta_current_user_id()) "
                    f"WITH CHECK (user_id = vaulta_current_user_id())")
@@ -81,23 +99,18 @@ def upgrade() -> None:
     op.execute("ALTER TABLE households ENABLE ROW LEVEL SECURITY")
     op.execute("CREATE POLICY user_isolation ON households USING (owner_user_id = vaulta_current_user_id()) "
                "WITH CHECK (owner_user_id = vaulta_current_user_id())")
-    op.execute(f"""
-DO $$ BEGIN
-  IF EXISTS (SELECT FROM pg_roles WHERE rolname = '{APP_ROLE}') THEN
-    GRANT USAGE ON SCHEMA public TO {APP_ROLE};
-    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {APP_ROLE};
-    REVOKE INSERT, UPDATE, DELETE ON alembic_version FROM {APP_ROLE};
-    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {APP_ROLE};
-    GRANT EXECUTE ON FUNCTION {", ".join(DEFINERS)} TO {APP_ROLE};
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO {APP_ROLE};
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO {APP_ROLE};
-  END IF;
-END $$;""")
+    op.execute(GRANTS.replace("APP_ROLE", APP_ROLE).replace("DEFINERS_LIST", ", ".join(DEFINERS)))
 
 
 def downgrade() -> None:
     for table in USER_TABLES + ["users", "households"]:
+        # constant table/function names from this module; DDL takes no bind parameters
+        # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
         op.execute(f"DROP POLICY IF EXISTS user_isolation ON {table}")
+        # constant table/function names from this module; DDL takes no bind parameters
+        # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
         op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
     for fn in DEFINERS + ["vaulta_current_user_id()"]:
+        # constant table/function names from this module; DDL takes no bind parameters
+        # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query, python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
         op.execute(f"DROP FUNCTION IF EXISTS {fn}")

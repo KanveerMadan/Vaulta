@@ -1,0 +1,24 @@
+# Weekly dependency updates. Dependabot waits for the cooldown before proposing a new release, in line with the
+# project's rule of only adopting versions that are a couple of weeks old.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
+    open-pull-requests-limit: 5
+    groups:
+      dev-tooling: { dependency-type: development }
+  - package-ecosystem: npm
+    directory: /infra/email-worker
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }

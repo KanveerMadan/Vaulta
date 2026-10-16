@@ -36,6 +36,8 @@ function compile(format) {
       src += ch.replace(/[.*+?^${}()|[\]\\/-]/g, "\\$&");
     }
   }
+  // every literal character is escaped above
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const re = new RegExp(`^${src}$`, "i");
   cache.set(format, re);
   return re;

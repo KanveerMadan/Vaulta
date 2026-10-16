@@ -2,7 +2,7 @@
 # Test-only deps: requirements-dev.txt
 
 fastapi==0.136.3
-starlette==1.2.1
+starlette==1.3.1
 uvicorn[standard]==0.49.0
 
 # Database
@@ -12,14 +12,14 @@ alembic==1.18.4
 
 # Config & validation
 pydantic==2.13.4
-pydantic-settings==2.14.1
+pydantic-settings==2.14.2
 email-validator==2.3.0
 
 # Firebase
 firebase-admin==7.4.0
 
 # Security — AES-GCM field encryption and HKDF (core/crypto.py)
-cryptography==48.0.0
+cryptography==50.0.2
 
 # Statements are parsed in the browser (frontend/src/import/); no route takes
 # multipart uploads, so python-multipart is not needed.
@@ -27,6 +27,5 @@ cryptography==48.0.0
 # LLM API calls (Groq, OpenAI-compatible endpoint) and email (Resend)
 httpx==0.28.1
 
-# Payments. razorpay 1.4.2 imports pkg_resources, which setuptools 81 removes.
-razorpay==1.4.2
-setuptools>=69,<81
+# Payments (razorpay 2.x reads its version with importlib.metadata, so no setuptools pin is needed)
+razorpay==2.0.1
