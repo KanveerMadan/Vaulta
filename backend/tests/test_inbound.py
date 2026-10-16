@@ -1,12 +1,14 @@
 """Inbound bank-alert email (services/email_alerts.py, services/inbound.py)."""
 
 import logging
+from datetime import datetime
 
 import pytest
 from sqlalchemy import text as sql
 
 from app.core.config import settings
 from app.core.database import Base
+from app.services.transaction_service import IST
 from tests.conftest import as_user, owner_engine, user_session
 from tests.test_import_batch import row
 
@@ -77,7 +79,10 @@ def test_bank_formats(client, sender, auth_domain, body, expected):
     assert mail(client, address(client), sender, "Transaction alert", body, auth=f"dkim=pass header.d={auth_domain}") == "parsed"
     [t] = txns(client)
     date, amount, direction, merchant, label = expected
-    assert t["transaction_date"].startswith(date) if "T" not in date else t["transaction_date"][:19] == date
+    if "T" in date:   # alert times are Indian time; compare instants (the database may return any offset)
+        assert datetime.fromisoformat(t["transaction_date"]) == datetime.fromisoformat(date).replace(tzinfo=IST)
+    else:
+        assert t["transaction_date"].startswith(date)
     assert (t["amount"], t["direction"]) == (amount, direction)
     if merchant:
         assert t["merchant_clean"] == merchant

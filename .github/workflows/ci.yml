@@ -187,10 +187,12 @@ jobs:
         run: >-
           docker run --rm --network host -v "$PWD:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:2.17.0
           zap-baseline.py -t http://127.0.0.1:4173/welcome -c .zap/rules.tsv -r zap-app.html -m 2
+      # DOM XSS needs a browser-rendered page; against a JSON API the rule only launches a browser and crashes ZAP
       - name: ZAP API scan, API (from its OpenAPI description)
         run: >-
           docker run --rm --network host -v "$PWD:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:2.17.0
           zap-api-scan.py -t http://127.0.0.1:8001/openapi.json -f openapi -c .zap/rules.tsv -r zap-api.html
+          -z "-addonuninstall domxss"
       - if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with: { name: zap-reports, path: "zap-*.html", retention-days: 14 }

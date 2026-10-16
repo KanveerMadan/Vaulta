@@ -1,3 +1,7 @@
 10049	IGNORE	(Non-storable content: API and HTML responses are deliberately not cached)
 10096	IGNORE	(Timestamp disclosure: the demo session token and expires_in carry its own expiry by design)
 100000	IGNORE	(Server error: /api/payments/* answer 503 on purpose while Razorpay is not configured)
+10027	IGNORE	(Suspicious comments: words like "user" or "select" inside minified third-party JavaScript, not developer notes)
+10109	IGNORE	(Modern web application: informational, the app is a single-page React app)
+90004	IGNORE	(Cross-Origin-Embedder-Policy: require-corp would block the Google sign-in popup and Razorpay checkout; COOP and CORP are set)
+10106	IGNORE	(HTTP only site: CI scans the locally started servers over plain http; production is https-only with HSTS)

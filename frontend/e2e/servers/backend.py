@@ -9,6 +9,7 @@ Auth emulator, the LLM pointed at servers/fake_llm.py. Refuses non-local DBs.
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -16,7 +17,7 @@ from urllib.parse import urlparse, urlunparse
 
 REPO = Path(__file__).resolve().parents[3]
 URL = os.environ.get("E2E_DATABASE_URL", "postgresql://vaulta@localhost:54329/vaulta_e2e")
-PY = os.environ.get("E2E_PYTHON", str(REPO / "backend/venv/bin/python"))
+PY = shutil.which(os.environ.get("E2E_PYTHON", str(REPO / "backend/venv/bin/python")))   # execve needs a full path
 parsed = urlparse(URL)
 assert parsed.hostname in ("localhost", "127.0.0.1"), "browser tests only run against a local database"
 
