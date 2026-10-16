@@ -157,16 +157,18 @@ function DeleteEverything() {
       setError(err?.response?.data?.detail || "Couldn't delete your data. Try again.");
       return;
     }
+    // The server deleted the data and the login itself (and emails a confirmation): forget the session here
     const { getAuth, signOut } = await import("firebase/auth");
-    try { await getAuth().currentUser?.delete(); } catch { await signOut(getAuth()); }   // needs a recent sign-in
+    await signOut(getAuth()).catch(() => {});
     navigate("/welcome");
   };
   return (
     <section className="card p-5 space-y-2">
       <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Delete everything</h2>
       <p className="text-sm text-ink-600">
-        Permanently deletes your account and all your data from Vaulta: transactions, budgets, goals, reports, alerts, chat
-        history and settings. This can't be undone.
+        Permanently deletes all your data from Vaulta (transactions, budgets, goals, people, rules, reports, alerts, chat
+        history, activity, the forwarding address and the Telegram link), then your sign-in itself, and emails you a
+        confirmation. You'll be asked to sign in again first. This can't be undone.
       </p>
       <label className="text-sm text-ink-600 block">Type DELETE to confirm
         <input className="input mt-1" value={typed} onChange={(e) => setTyped(e.target.value)} aria-label="Type DELETE to confirm" />

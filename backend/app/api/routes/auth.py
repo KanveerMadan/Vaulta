@@ -49,9 +49,12 @@ def delete_me(
     current_user: User = Depends(get_recent_user),
     db: Session = Depends(get_db),
 ):
-    """Hard delete — user requests full account deletion."""
-    db.delete(current_user)
-    db.commit()
+    """
+    Delete everything, the login included (services/deletion.py). Needs a recent sign-in. If Firebase can't delete
+    the login right now, the deletion is recorded and the hourly run completes it.
+    """
+    from app.services import deletion
+    deletion.delete_account(db, current_user)
 
 
 class ResetRequest(BaseModel):

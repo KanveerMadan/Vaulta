@@ -187,7 +187,10 @@ def _user_for_token(request: Request, token: str, db: Session, check_revoked: bo
     # sign-in, so another request may create the row first: then use that one.
     user = find_user(db, "firebase_uid", firebase_uid)
     if not user:
+        from app.services import deletion
         from app.services.activity import record
+        if deletion.is_pending(db, firebase_uid):     # deleted account, login not yet gone: don't open a new one
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="This account has been deleted.")
         user = User(firebase_uid=firebase_uid, email=email, full_name=name)
         bind_user(db, user)             # gives the new user an id and a data key
         db.add(user)

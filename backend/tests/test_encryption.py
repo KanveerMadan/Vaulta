@@ -53,6 +53,7 @@ PLAINTEXT_OK = {
     "review_dismissals": set(), "goal_entries": set(),
     "activity_log": {"kind", "detail"},                                              # event names, field names only
     "rate_limits": {"bucket"},                                                       # keyed hash
+    "pending_auth_deletions": {"firebase_uid", "email", "last_error"},   # a deleted account's login until it goes; error type only
 }
 
 

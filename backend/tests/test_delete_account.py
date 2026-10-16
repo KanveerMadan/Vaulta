@@ -8,7 +8,7 @@ from app.models.user import User
 from tests.test_end_to_end import USER, frozen_today, load_three_months  # noqa: F401 (fixture)
 
 
-def test_delete_everything(client):
+def test_delete_everything(client, firebase_deletions):
     load_three_months(client)
     goal = client.post("/api/goals", json={"name": "Bike", "target_amount": "50000", "target_date": "2024-12-01"}, headers=USER).json()
     client.post(f"/api/goals/{goal['id']}/entries", json={"amount": "500"}, headers=USER)
@@ -30,3 +30,4 @@ def test_delete_everything(client):
         after = {t: conn.execute(text(f"SELECT count(*) FROM {t} WHERE user_id = :u"), {"u": uid}).scalar() for t in tables}
         assert conn.execute(text("SELECT count(*) FROM users WHERE id = :u"), {"u": uid}).scalar() == 0
     assert after == {t: 0 for t in tables}
+    assert firebase_deletions == ["rahul"]                              # and the login itself

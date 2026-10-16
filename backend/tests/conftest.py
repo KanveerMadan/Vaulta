@@ -65,7 +65,7 @@ from app.core.database import Base, engine, wait_for_db  # noqa: E402
 from app.core.database import SessionLocal  # noqa: E402
 from app.core.scope import find_user, unbind  # noqa: E402
 from app.main import app as api  # noqa: E402
-from app.models import activity, ratelimit, alert, anomaly, cash, chat, correction, goal, inbound, import_template, person, recurring, report, review, rule, telegram, transaction_source  # noqa: E402,F401 — register tables
+from app.models import activity, deletion, ratelimit, alert, anomaly, cash, chat, correction, goal, inbound, import_template, person, recurring, report, review, rule, telegram, transaction_source  # noqa: E402,F401 — register tables
 
 
 # The tables' owner, for setup and for looking at raw rows (the API's engine is app.core.database.engine)
@@ -130,3 +130,12 @@ def reset_rate_limits() -> None:
     """Forget every rate-limit counter (they live in Postgres, shared like in production)."""
     with owner_engine.begin() as conn:
         conn.execute(text("DELETE FROM rate_limits"))
+
+
+@pytest.fixture(autouse=True)
+def firebase_deletions(monkeypatch):
+    """Firebase Admin delete_user, faked for every test (never a network call): the uids deleted, in order."""
+    from firebase_admin import auth as firebase_auth
+    deleted = []
+    monkeypatch.setattr(firebase_auth, "delete_user", lambda uid: deleted.append(uid))
+    return deleted

@@ -124,6 +124,8 @@ def run(db: Session, now: Optional[datetime] = None) -> dict:
                 result["errors"] += 1
                 logger.error(f"report run: user={user_ref(user.id)} type={period_type} failed: {e.__class__.__name__}")
     result["rate_limits_purged"] = purge_expired(db)
+    from app.services import deletion
+    result["deletions_completed"] = deletion.complete_pending(db)
     try:
         result["demo"] = "ready" if demo.ensure_fresh(db) else "not created"   # daily rebuild, once it exists
     except Exception as e:

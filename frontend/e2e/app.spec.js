@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { test, expect, API, checkLayout, newAccount, signIn, signedInWithData, callApi } from './fixtures'
+import { test, expect, accountExists, checkLayout, newAccount, signIn, signedInWithData, callApi } from './fixtures'
 
 const STATEMENT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../fixtures/statements/hdfc.csv')
 const menu = async (page, testInfo, name) => {
@@ -354,8 +354,10 @@ test('your data: export a zip, see it in Activity, then delete everything', asyn
   await page.getByLabel('Type DELETE to confirm').fill('DELETE')
   await page.getByRole('button', { name: 'Delete my account and data' }).click()
   await page.waitForURL('**/welcome')
-  const res = await request.get(`${API}/api/transactions`, { headers: { Authorization: `Bearer ${account.token}` } })
-  expect((await res.json()).total).toBe(0)                                     // a fresh, empty account if the token is reused
+  expect(await accountExists(request, account.email)).toBe(false)             // the login itself is gone
+  const login = await request.post('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=e2e-fake-key',
+    { data: { email: account.email, password: account.password, returnSecureToken: true } })
+  expect(login.ok()).toBe(false)
 })
 
 test('the app is served with the strict Content-Security-Policy', async ({ page }) => {

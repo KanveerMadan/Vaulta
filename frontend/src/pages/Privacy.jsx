@@ -39,7 +39,7 @@ const PROCESSORS = [
 const RETENTION = [
   'Chat history: 30 days, then deleted automatically.',
   'Forwarded alert emails: not kept at all once read; only the transaction found and which bank sent it.',
-  'Everything else: until you delete it, or delete your account. Delete everything removes it all from Vaulta\'s database at once.',
+  'Everything else: until you delete it, or delete your account. Delete everything removes it all from Vaulta\'s database at once, then deletes your sign-in and emails you a confirmation. If the sign-in can\'t be deleted at that moment, Vaulta keeps only its id and your email address until it is, within the hour.',
   'After deletion, copies can remain in the database provider\'s short-term recovery backups until they expire, and are never restored into the service except to recover from a failure.',
 ]
 
@@ -86,7 +86,7 @@ export default function Privacy() {
         <ul className="mt-4 list-disc pl-5 space-y-1">
           <li><span className="text-ink">See your data:</span> Settings → Your data downloads all of it, as JSON and CSV.</li>
           <li><span className="text-ink">Correct it:</span> edit any transaction, category, note, person, budget or goal in the app, or ask us.</li>
-          <li><span className="text-ink">Erase it:</span> Settings → Delete everything, at any time.</li>
+          <li><span className="text-ink">Erase it:</span> Settings → Delete everything, at any time: your data, then your sign-in, with an email to confirm.</li>
           <li><span className="text-ink">Withdraw consent:</span> delete your account; turn off AI chat, reports or Telegram individually in Settings.</li>
           <li><span className="text-ink">Nominate someone</span> to exercise these rights if you can't: write to the contact below.</li>
           <li><span className="text-ink">Complain:</span> write to the grievance contact below. If you're not satisfied with the answer, you can complain to the Data Protection Board of India.</li>

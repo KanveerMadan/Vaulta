@@ -245,3 +245,59 @@ def test_linking_is_logged_only_when_firebase_confirms_it(client, monkeypatch):
     assert client.post("/api/account/sign-in-methods/linked", json={"method": "google.com"}, headers=USER).status_code == 204
     assert client.get("/api/activity", headers=USER).json()[0] == {"kind": "method_linked", "detail": {"method": "google.com"},
                                                                    "at": client.get("/api/activity", headers=USER).json()[0]["at"]}
+
+
+# ── Delete everything deletes the login (step 4) ──────────────────────────────
+
+def _pending():
+    from sqlalchemy import text
+    from tests.conftest import owner_engine
+    with owner_engine.connect() as conn:
+        return [tuple(r) for r in conn.execute(text("SELECT firebase_uid, attempts, last_error FROM pending_auth_deletions"))]
+
+
+def test_delete_everything_deletes_the_login_and_confirms_by_email(client, monkeypatch, firebase_deletions):
+    from app.services import email
+    sent = []
+    monkeypatch.setattr(email, "configured", lambda: True)
+    monkeypatch.setattr(email, "send", lambda to, subject, html, text, headers=None: sent.append((to, subject)))
+    client.get("/auth/me", headers=USER)
+    assert client.delete("/auth/me", headers=USER).status_code == 204
+    assert firebase_deletions == ["alice"]
+    assert sent == [("alice@test.local", "Your Vaulta account has been deleted")]
+    assert _pending() == []
+
+
+def test_a_failed_login_delete_is_recorded_and_finished_by_the_hourly_run(client, monkeypatch, firebase_deletions):
+    from firebase_admin import auth as firebase_auth
+    from app.core.config import settings
+    from app.services import deletion
+    monkeypatch.setattr(deletion, "BACKOFF_SECONDS", 0)
+    tries = []
+
+    def down(uid):
+        tries.append(uid)
+        raise ConnectionError("Firebase unreachable")
+    monkeypatch.setattr(firebase_auth, "delete_user", down)
+    client.get("/auth/me", headers=USER)
+    client.post("/api/budgets", json={"category": "Travel", "monthly_limit": "100"}, headers=USER)
+    assert client.delete("/auth/me", headers=USER).status_code == 204              # the data is gone regardless
+    assert len(tries) == deletion.ATTEMPTS
+    assert _pending() == [("alice", 1, "ConnectionError")]
+    res = client.get("/auth/me", headers=USER)                                      # the login can't start a new account
+    assert res.status_code == 401 and res.json()["detail"] == "This account has been deleted."
+
+    monkeypatch.setattr(firebase_auth, "delete_user", lambda uid: firebase_deletions.append(uid))
+    monkeypatch.setattr(settings, "INTERNAL_SECRET", "x" * 40)
+    run = client.post("/internal/run-reports", headers={"X-Internal-Secret": "x" * 40}).json()
+    assert run["deletions_completed"] == 1 and firebase_deletions == ["alice"] and _pending() == []
+
+
+def test_a_login_already_gone_counts_as_deleted(client, monkeypatch):
+    from firebase_admin import auth as firebase_auth
+
+    def gone(uid):
+        raise firebase_auth.UserNotFoundError("no user")
+    monkeypatch.setattr(firebase_auth, "delete_user", gone)
+    client.get("/auth/me", headers=USER)
+    assert client.delete("/auth/me", headers=USER).status_code == 204 and _pending() == []

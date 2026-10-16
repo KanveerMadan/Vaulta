@@ -59,8 +59,8 @@ export const TRUST = [
     id: "your-data",
     landing: true,
     claim: "Export or delete everything, anytime.",
-    how: "Settings → Your data downloads everything Vaulta holds about you, decrypted, as a zip of JSON and CSV files. It's built when you ask and isn't kept. Settings → Delete everything removes your account and every transaction, budget, goal, report, alert, chat message and activity record from Vaulta's database at once. Settings → Activity lists sign-ins, exports, deletions, Telegram links and settings changes.",
-    checked: "Tests check that the export holds everything, decrypted, and that after deleting, no table has a single row of the account left.",
+    how: "Settings → Your data downloads everything Vaulta holds about you, decrypted, as a zip of JSON and CSV files. It's built when you ask and isn't kept. Settings → Delete everything (after you sign in again and type DELETE) removes every transaction, budget, goal, person, rule, report, alert, chat message and activity record, your encryption key, forwarding address and Telegram link from Vaulta's database at once, then deletes your sign-in itself and emails you a confirmation. If the sign-in can't be deleted at that moment, the deletion is recorded and finished within the hour, and the sign-in can't be used in the meantime. Settings → Activity lists sign-ins, exports, deletions, sign-in method changes and settings changes.",
+    checked: "Tests check that the export holds everything, decrypted; that after deleting, no table has a row of the account left and the sign-in no longer exists; and that a failed sign-in deletion is finished by the hourly run.",
   },
   {
     id: "checks",
