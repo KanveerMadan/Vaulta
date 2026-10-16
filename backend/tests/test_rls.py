@@ -97,7 +97,7 @@ def test_lookups_return_ids_only_and_bind_the_user(two_users):
         assert db.execute(text("SELECT count(*) FROM users")).scalar() == 1         # now bound to rahul
         assert find_user(db, "firebase_uid", "nobody") is None
         with pytest.raises(DBAPIError):
-            db.execute(text("SELECT vaulta_find_user('email', 'x')"))
+            db.execute(text("SELECT vaulta_find_user('full_name', 'x')"))
         db.rollback()
         unbind(db)
 
