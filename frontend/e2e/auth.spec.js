@@ -78,6 +78,7 @@ test('sign out of all devices ends a second browser\'s session too', async ({ pa
   const p3 = await third.newPage()
   await signIn(p3, account)
   await p3.goto('/goals')
+  await page.waitForTimeout(1100)    // revocation counts whole seconds: sessions from the same second stay valid
 
   await page.goto('/settings')
   await page.getByRole('button', { name: 'Sign out of all devices' }).click()
