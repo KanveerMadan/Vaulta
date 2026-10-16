@@ -53,8 +53,9 @@ SECRET = [
     ("PAN", re.compile(rb"\b[A-Z]{3}[PCHABGJLFT][A-Z][0-9]{4}[A-Z]\b")),
     ("Aadhaar", re.compile(rb"\b[2-9][0-9]{3} [0-9]{4} [0-9]{4}\b")),
 ]
-# made-up addresses used by tests and fixtures, and the bank/UPI senders the app trusts
-SAFE_EMAIL = re.compile(rb"@(([a-z0-9-]+\.)*(example\.(com|org|in)|test\.local|vaulta\.(test|invalid)|yourdomain\.in|anthropic\.com|"
+# made-up addresses used by tests and fixtures (incl. reserved TLDs: .test .example .invalid .localhost),
+# and the bank/UPI senders the app trusts
+SAFE_EMAIL = re.compile(rb"@(([a-z0-9-]+\.)*(example\.(com|org|in)|test\.local|[a-z0-9-]+\.(test|example|invalid|localhost)|yourdomain\.in|anthropic\.com|"
                         rb"[a-z0-9-]+\.iam\.gserviceaccount\.com|gmail\.com|evil\.example|elsewhere\.example|shop\.example)|"
                         rb"([a-z0-9-]+\.)*(hdfcbank|icicibank|sbi|sbicard|axisbank|kotak|yesbank|indusind|idfcfirstbank|bankofbaroda|pnb|"
                         rb"canarabank|unionbankofindia|federalbank|aubank|rblbank|americanexpress|aexp|paytm|paytmbank|phonepe|google)\.(com|net|in|co\.in|bank\.in))$", re.I)
@@ -63,7 +64,9 @@ EMAIL = re.compile(rb"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 OWNER = re.compile(rb"kanveer" + rb"madan@", re.I)   # split so this file doesn't match itself
 BAD_PATH = re.compile(r"(^|/)\.env(\.|$)(?!e2e$)|\.(eml|msg|p12|pfx|pem|key)$|(^|/)local-statements/|service[-_]?account.*\.json$", re.I)
 DATA_FILE = re.compile(r"\.(pdf|csv|xlsx?|png|jpe?g|webp|heic)$", re.I)
-DATA_OK = re.compile(r"^(fixtures/statements/|frontend/public/icon-|frontend/src/assets/)")
+# allowed binary data: synthetic statement fixtures, app icons, and the browser tests' visual
+# snapshots (screenshots of seeded synthetic accounts, frontend/e2e/visual.spec.js)
+DATA_OK = re.compile(r"^(fixtures/statements/|frontend/public/icon-|frontend/src/assets/|frontend/e2e/visual\.spec\.js-snapshots/)")
 
 findings = []
 for line in open(blobs_file):
