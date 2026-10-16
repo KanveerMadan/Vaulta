@@ -55,11 +55,13 @@ target_metadata = Base.metadata
 
 def get_url() -> str:
     """
-    Read DATABASE_URL from environment — never from alembic.ini (no secrets in source).
+    MIGRATION_DATABASE_URL (the tables' owner) if set, else DATABASE_URL — from the environment, never from
+    alembic.ini (no secrets in source). In production the API's DATABASE_URL is the vaulta_app role, which can't
+    change the schema, so migrations need MIGRATION_DATABASE_URL (docs/deploy.md).
     Neon requires ?sslmode=require; add it if not already present.
     """
     from app.core.config import settings
-    url = settings.DATABASE_URL
+    url = os.environ.get("MIGRATION_DATABASE_URL") or settings.DATABASE_URL
     if "sslmode" not in url and "neon.tech" in url:
         url += "?sslmode=require"
     return url

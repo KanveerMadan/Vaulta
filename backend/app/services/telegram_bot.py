@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Optional
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core import clock
@@ -84,12 +85,14 @@ def new_link_code(db: Session, user: User) -> tuple[str, datetime]:
 
 
 def redeem(db: Session, code: str, chat_id: int) -> Optional[User]:
-    row = db.query(TelegramLinkCode).filter(TelegramLinkCode.code_hash == _hash(code)).first()
+    owner = db.execute(text("SELECT vaulta_telegram_code_user(:h)"), {"h": _hash(code)}).scalar()
+    user = find_user(db, "id", owner) if owner else None       # row-level security: read the code as its owner
+    row = db.query(TelegramLinkCode).filter(TelegramLinkCode.code_hash == _hash(code)).first() if user else None
     if row is None or row.used_at is not None or row.expires_at < clock.now():
         return None
     row.used_at = clock.now()
-    db.query(User).filter(User.telegram_chat_id == chat_id).update({"telegram_chat_id": None})   # one account per chat
-    user = find_user(db, "id", row.user_id)
+    db.execute(text("SELECT vaulta_release_telegram_chat(:c)"), {"c": chat_id})   # one account per chat
+    db.expire(user, ["telegram_chat_id"])
     user.telegram_chat_id = chat_id
     db.commit()
     return user

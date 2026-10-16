@@ -32,7 +32,7 @@ def fresh_db_url():
 def alembic(url, *args):
     return subprocess.run(
         [sys.executable, "-m", "alembic", *args],
-        cwd=REPO, env={**os.environ, "DATABASE_URL": url}, capture_output=True, text=True,
+        cwd=REPO, env={**os.environ, "DATABASE_URL": url, "MIGRATION_DATABASE_URL": url}, capture_output=True, text=True,
     )
 
 

@@ -9,7 +9,8 @@ from app.models.report import Report
 from app.models.user import User
 from app.services import llm
 from app.services import reports as reports_service
-from tests.conftest import as_user, user_session
+from sqlalchemy import text
+from tests.conftest import as_user, owner_engine, user_session
 from tests.test_end_to_end import USER, frozen_today, load_three_months  # noqa: F401 (fixture)
 
 BOB = as_user("bob")
@@ -120,8 +121,8 @@ def test_reports_are_idempotent_and_per_user(client, no_llm):
     a = gen(client, "monthly", "2024-05-01")
     b = gen(client, "monthly", "2024-05-31")
     assert a["id"] == b["id"]
-    with SessionLocal() as db:
-        assert db.query(Report).count() == 1
+    with owner_engine.connect() as conn:                              # every user's reports, past row-level security
+        assert conn.execute(text("SELECT count(*) FROM reports")).scalar() == 1
     archive = client.get("/api/reports", headers=USER).json()
     assert [(r["period_type"], r["label"], r["spend"]) for r in archive] == [("monthly", "May 2024", "24099.00")]
     assert client.get(f"/api/reports/{a['id']}", headers=USER).json()["data"]["totals"]["spend"] == "24099.00"

@@ -2,8 +2,8 @@
 
 from sqlalchemy import inspect, text
 
-from tests.conftest import user_session
-from app.core.database import Base, SessionLocal, engine
+from tests.conftest import owner_engine, user_session
+from app.core.database import Base
 from app.models.user import User
 from tests.test_end_to_end import USER, frozen_today, load_three_months  # noqa: F401 (fixture)
 
@@ -21,12 +21,12 @@ def test_delete_everything(client):
                  "direction": "debit", "reference": None, "source_type": "bank_csv", "source_label": "HDFC Bank"}]}, headers=USER)
     with user_session("rahul") as (db, _user):
         uid = _user.id
-    tables = [t.name for t in Base.metadata.sorted_tables if "user_id" in {c["name"] for c in inspect(engine).get_columns(t.name)}]
-    with engine.connect() as conn:
+    tables = [t.name for t in Base.metadata.sorted_tables if "user_id" in {c["name"] for c in inspect(owner_engine).get_columns(t.name)}]
+    with owner_engine.connect() as conn:
         before = {t: conn.execute(text(f"SELECT count(*) FROM {t} WHERE user_id = :u"), {"u": uid}).scalar() for t in tables}
     assert sum(1 for n in before.values() if n) >= 12, before          # the fixture really touched most tables
     assert client.delete("/auth/me", headers=USER).status_code == 204
-    with engine.connect() as conn:
+    with owner_engine.connect() as conn:
         after = {t: conn.execute(text(f"SELECT count(*) FROM {t} WHERE user_id = :u"), {"u": uid}).scalar() for t in tables}
         assert conn.execute(text("SELECT count(*) FROM users WHERE id = :u"), {"u": uid}).scalar() == 0
     assert after == {t: 0 for t in tables}

@@ -1,6 +1,6 @@
 """
 Start the API for browser tests: a fresh local database, migrations applied
-from empty (alembic upgrade head), Firebase tokens checked against the local
+from empty (alembic upgrade head) as the owner, the API as the vaulta_app role, Firebase tokens checked against the local
 Auth emulator, the LLM pointed at servers/fake_llm.py. Refuses non-local DBs.
 
   E2E_DATABASE_URL   default postgresql://vaulta@localhost:54329/vaulta_e2e
@@ -29,7 +29,11 @@ c = psycopg2.connect({admin!r}); c.autocommit = True
 cur = c.cursor()
 cur.execute('DROP DATABASE IF EXISTS {name} WITH (FORCE)')
 cur.execute('CREATE DATABASE {name}')
+cur.execute("DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'vaulta_app') THEN "
+            "CREATE ROLE vaulta_app LOGIN NOSUPERUSER NOBYPASSRLS; END IF; END $$")
 """], check=True)
+# The API connects as vaulta_app (row-level security applies); migrations run as the database owner, as in production
+APP_URL = urlunparse(parsed._replace(netloc=f"vaulta_app@{parsed.netloc.split('@')[-1]}"))
 
 import secrets  # noqa: E402
 pem = subprocess.run([PY, "-c", """
@@ -41,7 +45,8 @@ print(k.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PK
 
 env = {
     **os.environ,
-    "DATABASE_URL": URL,
+    "DATABASE_URL": APP_URL,
+    "MIGRATION_DATABASE_URL": URL,
     "MASTER_KEY": secrets.token_urlsafe(48),
     "BLIND_INDEX_KEY": secrets.token_urlsafe(48),
     "FIREBASE_SERVICE_ACCOUNT_JSON": json.dumps({

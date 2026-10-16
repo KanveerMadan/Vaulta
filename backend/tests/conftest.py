@@ -5,13 +5,20 @@ Needs a disposable local Postgres (models use Postgres enums/UUIDs):
     TEST_DATABASE_URL=postgresql://user@localhost:5432/vaulta_test
 Default: postgresql://vaulta@localhost:54329/vaulta_test. Refuses non-local URLs.
 
+The schema is built by the real migrations (alembic upgrade head) as that URL's user, the tables' owner. The API
+connects as vaulta_app, a role without superuser or BYPASSRLS created here if missing, exactly as in production
+(docs/deploy.md), so row-level security applies to every test.
+
 Auth: Firebase token verification is replaced so that the bearer token IS the
 user's uid ("Authorization: Bearer alice"); the real get_current_user runs.
 """
 
 import json
 import os
-from urllib.parse import urlparse
+import subprocess
+import sys
+from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
 import pytest
 import secrets
@@ -22,6 +29,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "postgresql://vaulta@localhost:54329/vaulta_test")
 assert urlparse(TEST_DATABASE_URL).hostname in ("localhost", "127.0.0.1"), "tests only run against a local database"
+APP_DATABASE_URL = urlunparse(urlparse(TEST_DATABASE_URL)._replace(netloc=f"vaulta_app@{urlparse(TEST_DATABASE_URL).netloc.split('@')[-1]}"))
 
 
 def _fake_service_account() -> str:
@@ -39,7 +47,8 @@ def _fake_service_account() -> str:
 for _name in ("MASTER_KEY", "BLIND_INDEX_KEY"):
     os.environ.setdefault(_name, secrets.token_urlsafe(48))
 os.environ.update({
-    "DATABASE_URL": TEST_DATABASE_URL,
+    "DATABASE_URL": APP_DATABASE_URL,
+    "MIGRATION_DATABASE_URL": TEST_DATABASE_URL,
     "FIREBASE_SERVICE_ACCOUNT_JSON": _fake_service_account(),
     "ENVIRONMENT": "test",
     "RAZORPAY_KEY_ID": "",
@@ -63,11 +72,16 @@ owner_engine = create_engine(TEST_DATABASE_URL)
 
 @pytest.fixture(scope="session", autouse=True)
 def schema():
+    with owner_engine.begin() as conn:
+        conn.execute(text("DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'vaulta_app') THEN "
+                          "CREATE ROLE vaulta_app LOGIN NOSUPERUSER NOBYPASSRLS; END IF; END $$"))
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+    migrate = subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=Path(__file__).resolve().parents[2],
+                             env=os.environ, capture_output=True, text=True)
+    assert migrate.returncode == 0, migrate.stderr[-3000:]
     wait_for_db()
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
     yield
-    Base.metadata.drop_all(engine)
 
 
 @pytest.fixture(autouse=True)
@@ -75,7 +89,7 @@ def clean_tables():
     unbind()
     yield
     unbind()
-    with engine.begin() as conn:
+    with owner_engine.begin() as conn:
         tables = ", ".join(t.name for t in Base.metadata.sorted_tables)
         conn.execute(text(f"TRUNCATE {tables} CASCADE"))
 

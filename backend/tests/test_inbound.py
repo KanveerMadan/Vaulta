@@ -6,8 +6,8 @@ import pytest
 from sqlalchemy import text as sql
 
 from app.core.config import settings
-from app.core.database import Base, engine
-from tests.conftest import as_user, user_session
+from app.core.database import Base
+from tests.conftest import as_user, owner_engine, user_session
 from tests.test_import_batch import row
 
 ALICE, BOB = as_user("alice"), as_user("bob")
@@ -168,7 +168,7 @@ def test_no_raw_email_content_is_written_anywhere(client, caplog):
     mail(client, to, "Spoof <alerts@hdfcbank.net>", "You have done a UPI txn", UPI_DEBIT, auth="dkim=fail")
     assert len(txns(client)) == 3
 
-    with engine.connect() as conn:
+    with owner_engine.connect() as conn:          # the raw rows, past row-level security
         dump = "\n".join(
             str(r[0]) for table in Base.metadata.sorted_tables
             for r in conn.execute(sql(f"SELECT row_to_json(t)::text FROM {table.name} t")))
