@@ -307,3 +307,27 @@ test('the workspace never loads the animation library', async ({ page, request }
   }
   expect(scripts.filter((u) => motionChunks.some((c) => u.endsWith(c)))).toEqual([])
 })
+
+test('Money Wrapped: story, privacy toggles and the share image', async ({ page, request }, testInfo) => {
+  const account = await signedInWithData(page, request)
+  const annual = await callApi(request, account, 'POST', '/api/reports/generate', { period_type: 'annual', date: new Date().toISOString().slice(0, 10) })
+  await page.goto(`/reports/${annual.id}/wrapped`)
+  await expect(page.getByText('Money Wrapped').first()).toBeVisible()
+  const next = page.getByRole('button', { name: 'Next scene' })
+  for (let i = 0; i < 12 && await next.isEnabled(); i++) await next.click()
+  await expect(page.getByText('Your card to share')).toBeVisible()
+  const card = page.getByRole('figure', { name: 'Share card preview' })
+  await expect(card).toContainText('One place,')                      // merchant names off by default
+  await page.getByLabel('Show merchant names').check()
+  await expect(card).not.toContainText('One place,')
+  await page.getByLabel('Show amounts').uncheck()
+  await expect(card).toContainText('₹ hidden')
+  await checkLayout(page, testInfo)
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Save image' }).click()])
+  const bytes = await (await import('node:fs')).promises.readFile(await download.path())
+  expect(download.suggestedFilename()).toMatch(/^vaulta-wrapped-\d{4}\.png$/)
+  expect(bytes.subarray(1, 4).toString()).toBe('PNG')
+  expect(bytes.length).toBeGreaterThan(20_000)
+  await page.keyboard.press('Escape')
+  await expect(page).toHaveURL(new RegExp(`/reports/${annual.id}$`))
+})
