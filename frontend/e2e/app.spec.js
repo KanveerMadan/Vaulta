@@ -259,7 +259,7 @@ test('transactions: search, j/k, e to recategorize (optimistic)', async ({ page,
   const list = page.getByRole('list', { name: 'Transactions' })
   await expect(list.getByRole('listitem').first()).toBeVisible()
   await checkLayout(page, testInfo)
-  if (testInfo.project.name === 'desktop') {
+  if (testInfo.project.name !== 'mobile') {
     await page.keyboard.press('j')
     await page.keyboard.press('j')
     await expect(list.locator('[data-selected]')).toHaveCount(1)
@@ -277,14 +277,14 @@ test('transactions: search, j/k, e to recategorize (optimistic)', async ({ page,
 
 test('command palette: jump, search and quick add', async ({ page, request }, testInfo) => {
   await signedInWithData(page, request)
-  if (testInfo.project.name === 'desktop') await page.keyboard.press('Control+k')
+  if (testInfo.project.name !== 'mobile') await page.keyboard.press('Control+k')
   else await page.getByRole('button', { name: 'Search and commands' }).click()
   const palette = page.getByRole('dialog', { name: 'Search and commands' })
   await expect(palette).toBeVisible()
   await palette.getByRole('combobox').fill('budg')
   await palette.getByRole('combobox').press('Enter')
   await expect(page).toHaveURL(/\/budgets$/)
-  if (testInfo.project.name === 'desktop') await page.keyboard.press('Control+k')
+  if (testInfo.project.name !== 'mobile') await page.keyboard.press('Control+k')
   else await page.getByRole('button', { name: 'Search and commands' }).click()
   await palette.getByRole('combobox').fill('320 autorickshaw cash')
   await expect(palette.getByRole('option').first()).toContainText('Add ₹320')

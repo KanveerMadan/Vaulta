@@ -50,11 +50,11 @@ function SafeToSpend({ safe }) {
   }
   return (
     <div>
-      <p className="text-sm text-muted">{todayLong()}</p>
+      <p className="text-sm text-muted"><time dateTime={new Date().toISOString().slice(0, 10)}>{todayLong()}</time></p>
       <p className="mt-3 text-[15px] text-ink-2">Safe to spend today</p>
       <Money value={safe.amount} decimals={0} className="block font-display font-semibold text-[clamp(3.6rem,9vw,6rem)] leading-[0.9] tracking-[-0.04em] text-ink mt-1" />
       <p className="mt-3 text-sm text-ink-2">
-        <Money value={safe.remaining} decimals={0} className="font-semibold text-ink" /> left this month for {safe.days_left_including_today} day{safe.days_left_including_today === 1 ? "" : "s"}
+        <Money value={safe.remaining} decimals={0} className="font-semibold text-ink" /> left this month for <span className="num">{safe.days_left_including_today}</span> day{safe.days_left_including_today === 1 ? "" : "s"}
       </p>
       <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="mt-1 text-sm font-medium text-accent-text hover:underline">
         {open ? "Hide the working" : "How is this worked out?"}
@@ -256,7 +256,7 @@ export default function Dashboard() {
         ) : <span />}
         <div className="flex items-center gap-1" role="group" aria-label="Month">
           <button onClick={() => setMonth(shiftMonth(month, -1))} className="btn-ghost w-9 h-9 !p-0" aria-label="Previous month"><CaretLeft size={16} /></button>
-          <span className="text-sm text-ink-2 min-w-[8.5rem] text-center">{monthLabel(month)}</span>
+          <time dateTime={month} className="text-sm text-ink-2 min-w-[8.5rem] text-center">{monthLabel(month)}</time>
           <button onClick={() => setMonth(shiftMonth(month, 1))} disabled={current} className="btn-ghost w-9 h-9 !p-0" aria-label="Next month"><CaretRight size={16} /></button>
         </div>
       </div>

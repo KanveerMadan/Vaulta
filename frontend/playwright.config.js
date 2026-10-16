@@ -16,6 +16,8 @@ export default defineConfig({
   projects: [
     { name: 'desktop', use: { browserName: 'chromium', viewport: { width: 1280, height: 800 } } },
     { name: 'mobile', use: { browserName: 'chromium', viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } },
+    // the same flows with prefers-reduced-motion: every animated surface has a designed still version
+    { name: 'reduced-motion', testMatch: /(public|app|visual)\.spec\.js/, use: { browserName: 'chromium', viewport: { width: 1280, height: 800 }, contextOptions: { reducedMotion: 'reduce' } } },
   ],
   webServer: [
     { command: 'npx firebase emulators:start --only auth --project demo-vaulta --config e2e/firebase.json',

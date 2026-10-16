@@ -81,3 +81,11 @@ test('demo chat: actions show a read-only card', async ({ page }, testInfo) => {
   await expect(chat.getByRole('button', { name: 'Confirm' })).toHaveCount(0)
   await checkLayout(page, testInfo)
 })
+
+test('reduced motion gets the designed still story', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'reduced-motion', 'reduced-motion project only')
+  await page.goto('/welcome')
+  const story = page.getByRole('region', { name: 'How Vaulta handles your statement' })
+  await expect(story.getByRole('figure')).toHaveCount(4)
+  await expect(story.getByText('Account number and IFSC')).toBeVisible()
+})
