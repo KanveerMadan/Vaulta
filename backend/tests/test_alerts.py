@@ -160,3 +160,12 @@ def test_bell_unread_and_isolation(client):
     with SessionLocal() as db:
         stored = json.dumps([a.message for a in db.query(Alert)])
     assert "SWIGGY" not in stored and "UBER INDIA" not in stored
+
+
+def test_alert_email_escapes_the_message(monkeypatch):
+    from app.services import alerts as alerts_service
+    sent = []
+    monkeypatch.setattr(email, "send", lambda to, subject, html, text, headers=None: sent.append(html) or "id")
+    alert = Alert(type="duplicate_charge", message='Possible duplicate charge: <img src=x onerror=alert(1)> ₹450.')
+    alerts_service._send_email(alert, User(email="a@b.test"), NOON_UTC)
+    assert "<img" not in sent[0] and "&lt;img src=x" in sent[0]

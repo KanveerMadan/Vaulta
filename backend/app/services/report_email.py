@@ -48,10 +48,37 @@ def report_url(report: Report) -> str:
 
 # ── Rendering ─────────────────────────────────────────────────────────────────
 
+# Vaulta's "Ledger" identity in email-client-safe HTML: tables, inline styles, system fonts.
+INK, MUTED, LINE, CANVAS, ACCENT = "#101511", "#56615A", "#D9DFDA", "#F4F6F3", "#17643F"
+FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+
+
 def _rows(pairs: list[tuple[str, str]]) -> str:
     return "".join(
-        f'<tr><td style="padding:4px 0;color:#4A6B50">{escape(k)}</td>'
-        f'<td style="padding:4px 0;text-align:right;font-family:monospace">{escape(v)}</td></tr>' for k, v in pairs)
+        f'<tr><td style="padding:10px 0;border-top:1px solid {LINE};color:{MUTED};font-size:14px">{escape(k)}</td>'
+        f'<td style="padding:10px 0;border-top:1px solid {LINE};text-align:right;font-size:15px;font-weight:600;color:{INK};'
+        f'font-variant-numeric:tabular-nums">{escape(v)}</td></tr>' for k, v in pairs)
+
+
+def shell(eyebrow: str, heading: str, body_html: str, footer_html: str) -> str:
+    """The frame every Vaulta email shares: wordmark, heading, white panel, quiet footer."""
+    return f"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>{escape(heading)}</title></head>
+<body style="margin:0;padding:0;background:{CANVAS};font-family:{FONT};color:{INK}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{CANVAS}"><tr><td align="center" style="padding:28px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
+<tr><td style="padding:0 4px 20px"><span style="font-size:20px;font-weight:700;letter-spacing:-0.3px;color:{INK}"><span style="border-bottom:2px solid {ACCENT}">V</span>aulta</span></td></tr>
+<tr><td style="padding:0 4px"><p style="margin:0;font-size:13px;color:{MUTED}">{escape(eyebrow)}</p>
+<h1 style="margin:4px 0 18px;font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-0.6px;color:{INK}">{escape(heading)}</h1></td></tr>
+<tr><td style="background:#FFFFFF;border:1px solid {LINE};border-radius:12px;padding:22px 22px 24px">{body_html}</td></tr>
+<tr><td style="padding:18px 4px 0;font-size:12px;line-height:1.6;color:{MUTED}">{footer_html}</td></tr>
+</table></td></tr></table></body></html>"""
+
+
+def button(href: str, label: str) -> str:
+    return (f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px"><tr><td style="background:{ACCENT};border-radius:8px">'
+            f'<a href="{escape(href)}" style="display:inline-block;padding:12px 18px;color:#FFFFFF;text-decoration:none;font-weight:600;font-size:14px">{escape(label)}</a>'
+            f'</td></tr></table>')
 
 
 GOAL_STATUS = {"done": "reached", "on_track": "on track", "behind": "behind", "not_started": "not started"}
@@ -80,20 +107,14 @@ def render(report: Report, user: User) -> tuple[str, str, str, dict]:
     link, unsub = report_url(report), unsubscribe_url(user, report.period_type)
     narrative_html = "<br>".join(escape(line) for line in report.narrative.splitlines())
 
-    section = lambda title, pairs: (f'<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#8FAF98;margin:20px 0 6px">{escape(title)}</h3>'
-                                    f'<table style="width:100%;border-collapse:collapse;font-size:14px">{_rows(pairs)}</table>') if pairs else ""
-    html = f"""<!doctype html><html><body style="margin:0;background:#F2F7F3;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1A2E1E">
-<div style="max-width:560px;margin:0 auto;padding:24px 16px">
-<p style="font-size:13px;color:#7A9E80;margin:0">Vaulta · {escape(TYPE_NAMES[report.period_type])} report</p>
-<h1 style="font-size:22px;font-weight:600;margin:4px 0 16px">{escape(label)}</h1>
-<div style="background:#fff;border:1px solid #D4E4D7;border-radius:12px;padding:16px 18px">
-<p style="font-size:14px;line-height:1.6;margin:0">{narrative_html}</p>
-{section("Totals", totals)}{section("Top categories", top)}{section("Goals", goals)}{section("Money Wrapped", wrapped)}
-<p style="margin:20px 0 0"><a href="{escape(link)}" style="background:#2D6A4F;color:#F2F7F3;text-decoration:none;padding:10px 16px;border-radius:8px;font-size:14px;display:inline-block">View the full report</a></p>
-</div>
-<p style="font-size:12px;color:#8FAF98;margin-top:16px">You get this because {escape(TYPE_NAMES[report.period_type])} reports are on in your Vaulta settings.
-<a href="{escape(unsub)}" style="color:#8FAF98">Stop {escape(TYPE_NAMES[report.period_type])} emails</a>.</p>
-</div></body></html>"""
+    section = lambda title, pairs: (f'<p style="margin:22px 0 4px;font-size:13px;font-weight:600;color:{MUTED}">{escape(title)}</p>'
+                                    f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">{_rows(pairs)}</table>') if pairs else ""
+    body = (f'<p style="margin:0;font-size:16px;line-height:1.6;color:{INK}">{narrative_html}</p>'
+            f'{section("Totals", totals)}{section("Top categories", top)}{section("Goals", goals)}{section("Money Wrapped", wrapped)}'
+            f'{button(link, "View the full report")}')
+    footer = (f'You get this because {escape(TYPE_NAMES[report.period_type])} reports are on in your Vaulta settings. '
+              f'<a href="{escape(unsub)}" style="color:{MUTED}">Stop {escape(TYPE_NAMES[report.period_type])} emails</a>.')
+    html = shell(f"Your {TYPE_NAMES[report.period_type]} report", label, body, footer)
     text = "\n".join(
         [f"Vaulta {TYPE_NAMES[report.period_type]} report: {label}", "", report.narrative, ""]
         + [f"{k}: {v}" for k, v in totals]

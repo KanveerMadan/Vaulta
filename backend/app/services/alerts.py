@@ -203,9 +203,11 @@ def _send_email(alert: Alert, user: User, now: datetime) -> None:
     from app.core.config import settings
     link = f"{settings.APP_BASE_URL.rstrip('/')}/"
     text = f"{alert.message}\n\nOpen Vaulta: {link}\n\nYou get this email because this alert type is on in your Vaulta settings."
-    html = (f'<p style="font-family:sans-serif;font-size:15px">{alert.message}</p>'
-            f'<p style="font-family:sans-serif;font-size:13px"><a href="{link}">Open Vaulta</a></p>'
-            f'<p style="font-family:sans-serif;font-size:12px;color:#777">You get this email because this alert type is on in your Vaulta settings.</p>')
+    from html import escape
+    from app.services.report_email import button, shell
+    html = shell("Alert", LABELS[alert.type],
+                 f'<p style="margin:0;font-size:16px;line-height:1.6">{escape(alert.message)}</p>{button(link, "Open Vaulta")}',
+                 "You get this email because this alert type is on in your Vaulta settings.")
     try:
         email.send(user.email, f"Vaulta: {LABELS[alert.type]}", html, text)
         alert.email_sent_at = now
