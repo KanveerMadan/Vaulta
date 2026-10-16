@@ -135,7 +135,9 @@ test('set a budget', async ({ page, request }, testInfo) => {
   await signedInWithData(page, request)
   await menu(page, testInfo, 'Budgets')
   await page.getByLabel('Transport monthly limit').fill('3000')
+  const saved = page.waitForResponse((r) => r.url().includes('/api/budgets') && ['POST', 'PATCH'].includes(r.request().method()))
   await page.getByLabel('Transport monthly limit').press('Enter')
+  expect((await saved).ok()).toBe(true)                 // saved before leaving the page
   await checkLayout(page, testInfo)
   await menu(page, testInfo, 'Home')
   await expect(page.locator('section', { hasText: 'Budgets' }).getByLabel('Transport budget')).toBeVisible()
