@@ -100,8 +100,20 @@ export async function seedData(request, account) {
   await callApi(request, account, 'PATCH', '/api/onboarding', { status: 'done', step: 'finish' })
 }
 
-/** Sign in through the real login form (Firebase emulator). */
-export async function signIn(page, account) {
+/**
+ * Sign in through the real login form (Firebase emulator). Unless `reauth: false`, a "Sign in again" prompt
+ * (sensitive actions after RECENT_LOGIN_SECONDS, 30 s in browser tests) is answered with the password whenever
+ * it appears; e2e/auth.spec.js tests the prompt itself.
+ */
+export async function signIn(page, account, { reauth = true } = {}) {
+  if (reauth) {
+    const prompt = page.getByRole('dialog', { name: 'Sign in again' })
+    await page.addLocatorHandler(prompt, async () => {
+      await prompt.getByLabel(/^Password for/).fill(account.password)
+      await prompt.getByRole('button', { name: 'Confirm' }).click()
+      await expect(prompt).toBeHidden()
+    })
+  }
   await page.goto('/login')
   await page.getByPlaceholder('you@example.com').fill(account.email)
   await page.getByPlaceholder('••••••••').fill(account.password)
@@ -110,11 +122,11 @@ export async function signIn(page, account) {
 }
 
 /** A signed-in user with data, on the home screen. */
-export async function signedInWithData(page, request) {
+export async function signedInWithData(page, request, options) {
   const account = await newAccount(request)
   await callApi(request, account, 'GET', '/auth/me')   // creates the Vaulta user
   await seedData(request, account)
-  await signIn(page, account)
+  await signIn(page, account, options)
   await expect(page.getByText('Safe to spend today')).toBeVisible()
   return account
 }

@@ -64,7 +64,8 @@ env = {
     "BACKEND_CORS_ORIGINS": "http://localhost:4173",
     "GROQ_API_KEY": "fake", "GROQ_API_URL": "http://127.0.0.1:8002/v1/chat/completions",
     "INBOUND_DOMAIN": "vaulta.test",
-    "DEMO_SESSIONS_PER_IP": "100000",   # every browser test starts its demo from 127.0.0.1
+    "DEMO_SESSIONS_PER_IP": "100000",
+    "RECENT_LOGIN_SECONDS": "30",       # so the "sign in again" prompt can be tested without waiting 5 minutes   # every browser test starts its demo from 127.0.0.1
     "TELEGRAM_BOT_TOKEN": "0:e2e", "TELEGRAM_BOT_USERNAME": "VaultaTestBot", "TELEGRAM_WEBHOOK_SECRET": "e2e",
     "RESEND_API_KEY": "", "EMAIL_FROM": "", "RAZORPAY_KEY_ID": "", "RAZORPAY_KEY_SECRET": "",
 }

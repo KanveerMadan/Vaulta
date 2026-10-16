@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.core.auth import get_current_user, get_sensitive_user
+from app.core.auth import get_current_user, get_recent_user, get_sensitive_user
 from app.core.ratelimit import per_ip, per_user
 from app.core.config import settings
 from app.core.database import get_db
@@ -43,9 +43,9 @@ def update_me(
     return current_user
 
 
-@router.delete("/me", status_code=204, dependencies=[Depends(per_user("delete-account", 5, 3600, get_sensitive_user))])
+@router.delete("/me", status_code=204, dependencies=[Depends(per_user("delete-account", 5, 3600, get_recent_user))])
 def delete_me(
-    current_user: User = Depends(get_sensitive_user),
+    current_user: User = Depends(get_recent_user),
     db: Session = Depends(get_db),
 ):
     """Hard delete — user requests full account deletion."""

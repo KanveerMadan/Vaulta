@@ -103,7 +103,7 @@ function YourData() {
     setBusy(true);
     setError(null);
     try {
-      const res = await api.get("/api/export", { responseType: "blob", timeout: 120000 });
+      const res = await api.get("/api/export", { responseType: "blob", timeout: 120000, recent: true });
       const name = /filename="([^"]+)"/.exec(res.headers["content-disposition"] || "")?.[1] || "vaulta-export.zip";
       const url = URL.createObjectURL(res.data);
       const a = Object.assign(document.createElement("a"), { href: url, download: name });
@@ -151,7 +151,7 @@ function DeleteEverything() {
   const remove = async () => {
     setError(null);
     try {
-      await api.delete("/auth/me");
+      await api.delete("/auth/me", { recent: true });
     } catch (err) {
       setError(err?.response?.data?.detail || "Couldn't delete your data. Try again.");
       return;

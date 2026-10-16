@@ -29,7 +29,7 @@ export default function InboundCard({ banks = null }) {
 
   const regenerate = async () => {
     if (!window.confirm("Get a new address? The current one stops working, so update your Gmail filter afterwards.")) return;
-    await api.post("/api/inbound/regenerate");
+    await api.post("/api/inbound/regenerate", null, { recent: true });
     setRefreshKey((k) => k + 1);
   };
   const dismiss = async () => { await api.post("/api/inbound/gmail-confirmation/dismiss"); setRefreshKey((k) => k + 1); };

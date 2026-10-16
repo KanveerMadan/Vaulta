@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime, timezone
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
@@ -52,6 +53,7 @@ class TokenInfo:
 # itself, but nothing that creates data or reaches outside (imports, forwarding address, Telegram, chat).
 UNVERIFIED_WRITES_ALLOWED = {
     ("PATCH", "/auth/me"), ("DELETE", "/auth/me"), ("PATCH", "/api/onboarding"), ("PATCH", "/api/settings"),
+    ("POST", "/api/account/reauth-failed"),
 }
 UNVERIFIED_READS_BLOCKED = {("GET", "/api/inbound")}   # shows (and creates) the forwarding address
 EMAIL_UNVERIFIED = "Verify your email address first: open the link we sent you, then try again."
@@ -133,6 +135,28 @@ def get_sensitive_user(
 ) -> User:
     """get_current_user, plus a revocation check with Firebase: for delete, export, unlink, settings changes."""
     return _authenticate(request, credentials.credentials, db, check_revoked=True)
+
+
+REAUTH_REQUIRED = "For your security, sign in again to do this."
+
+
+def get_recent_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    """
+    get_sensitive_user, plus: the user actually signed in (password or Google) within the last 5 minutes, by the
+    token's auth_time. Otherwise 403 {code: reauth_required}; the web app asks them to sign in again and retries.
+    For export, delete everything, password and sign-in method changes, address regeneration, Telegram unlink.
+    """
+    user = _authenticate(request, credentials.credentials, db, check_revoked=True)
+    token = getattr(user, "token", None)
+    if token is None:                     # the demo: read-only, and nothing personal to protect
+        return user
+    if not isinstance(token.auth_time, (int, float)) or time.time() - token.auth_time > settings.RECENT_LOGIN_SECONDS:
+        raise CodedError(status.HTTP_403_FORBIDDEN, "reauth_required", REAUTH_REQUIRED)
+    return user
 
 
 def _authenticate(request: Request, token: str, db: Session, check_revoked: bool) -> User:

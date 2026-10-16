@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core import clock
 from app.core.alert_senders import BANKS
-from app.core.auth import get_current_user, get_sensitive_user
+from app.core.auth import get_current_user, get_recent_user
 from app.core.ratelimit import per_user
 from app.core.database import get_db
 from app.models.inbound import GmailConfirmation, InboundEvent
@@ -93,8 +93,8 @@ def get_status(current_user: User = Depends(get_current_user), db: Session = Dep
     return status_for(db, current_user)
 
 
-@router.post("/regenerate", response_model=InboundStatus, dependencies=[Depends(per_user("regenerate", 10, 3600, get_sensitive_user))])
-def regenerate(current_user: User = Depends(get_sensitive_user), db: Session = Depends(get_db)):
+@router.post("/regenerate", response_model=InboundStatus, dependencies=[Depends(per_user("regenerate", 10, 3600, get_recent_user))])
+def regenerate(current_user: User = Depends(get_recent_user), db: Session = Depends(get_db)):
     activity.record(db, current_user, "address_regenerated")
     inbound.regenerate_address(db, current_user)          # commits
     return status_for(db, current_user)

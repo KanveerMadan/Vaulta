@@ -1,6 +1,7 @@
 """Export my data, the activity log, and Firebase revocation checks on sensitive routes."""
 
 import io
+import time
 import json
 import zipfile
 
@@ -56,11 +57,11 @@ def test_export_and_activity_are_per_user(client):
 
 def test_activity_log_records_account_events(client, monkeypatch):
     monkeypatch.setattr(auth, "verify_firebase_token",
-                        lambda token, check_revoked=False: token_payload(token, auth_time=1_700_000_000))
+                        lambda token, check_revoked=False: token_payload(token, auth_time=int(time.time()) - 200))
     client.get("/auth/me", headers=USER)
     client.get("/auth/me", headers=USER)                                         # same sign-in: logged once
     monkeypatch.setattr(auth, "verify_firebase_token",
-                        lambda token, check_revoked=False: token_payload(token, auth_time=1_700_009_000))
+                        lambda token, check_revoked=False: token_payload(token, auth_time=int(time.time()) - 100))
     client.patch("/api/settings", json={"timezone": "Asia/Dubai", "ai_chat_enabled": False}, headers=USER)
     client.post("/api/inbound/regenerate", headers=USER)
     client.post("/api/telegram/link-code", headers=USER)

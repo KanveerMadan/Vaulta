@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react
 import { lazy, Suspense, useEffect } from 'react'
 import { useAuthStore } from './store/authStore'
 import { Toaster } from './ui/Toast'
+import ReauthDialog from './components/ReauthDialog'
 import Landing from './pages/landing/Landing'   // in the main bundle: the first thing most visitors see
 
 // Every other page is its own chunk. Showpieces (the landing's story, onboarding, Wrapped) bring the animation
@@ -80,6 +81,7 @@ export default function App() {
   return (
     <>
     <Toaster />
+    {user && <ReauthDialog />}
     <Routes>
       <Route path="/welcome" element={<Landing />} />
       <Route path="/security" element={page(<Security />)} />

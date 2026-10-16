@@ -61,6 +61,7 @@ COVERED = {
     # tests/test_account.py::test_export_and_activity_are_per_user
     ("GET", "/api/export"),
     ("GET", "/api/activity"),
+    ("POST", "/api/account/reauth-failed"),   # writes only to the caller's own activity log
     # tests/test_inbound.py::test_addresses_are_per_user
     ("GET", "/api/inbound"),
     ("POST", "/api/inbound/regenerate"),

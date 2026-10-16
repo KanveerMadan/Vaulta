@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user, get_sensitive_user
+from app.core.auth import get_current_user, get_recent_user, get_sensitive_user
 from app.core.ratelimit import per_user
 from app.core.config import settings
 from app.core.database import get_db
@@ -67,5 +67,5 @@ def update(payload: TelegramUpdate, current_user: User = Depends(get_sensitive_u
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
-def unlink(current_user: User = Depends(get_sensitive_user), db: Session = Depends(get_db)):
+def unlink(current_user: User = Depends(get_recent_user), db: Session = Depends(get_db)):
     telegram_bot.unlink(db, current_user)

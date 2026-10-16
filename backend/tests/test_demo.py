@@ -10,7 +10,7 @@ import pytest
 from fastapi.routing import APIRoute
 
 from app.core import clock
-from app.core.auth import get_current_user, get_sensitive_user
+from app.core.auth import get_current_user, get_recent_user, get_sensitive_user
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.main import app
@@ -100,7 +100,7 @@ def test_bad_tokens(client, demo_headers):
 
 
 def _uses_session(dependant) -> bool:
-    return any(d.call in (get_current_user, get_sensitive_user) or _uses_session(d) for d in dependant.dependencies)
+    return any(d.call in (get_current_user, get_sensitive_user, get_recent_user) or _uses_session(d) for d in dependant.dependencies)
 
 
 def _fill(path: str) -> str:

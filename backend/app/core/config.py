@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     # Published at /.well-known/security.txt (also on the web app, from VITE_SECURITY_CONTACT)
     SECURITY_CONTACT_EMAIL: str = ""
 
+    # Sensitive actions need a real sign-in this recent (seconds). Browser tests shorten it to test the prompt.
+    RECENT_LOGIN_SECONDS: int = 300
+
     # New demo sessions per client IP per 10 minutes. Generous: mobile carriers put many people behind one address.
     DEMO_SESSIONS_PER_IP: int = 30
 
@@ -147,6 +150,8 @@ class Settings(BaseSettings):
             problems.append("SECURITY_CONTACT_EMAIL must be set (it is published in /.well-known/security.txt)")
         if self.TELEGRAM_BOT_TOKEN and len(self.TELEGRAM_WEBHOOK_SECRET) < MIN_SECRET_LENGTH:
             problems.append(f"TELEGRAM_WEBHOOK_SECRET must be at least {MIN_SECRET_LENGTH} characters when the bot is configured")
+        if not 60 <= self.RECENT_LOGIN_SECONDS <= 600:
+            problems.append("RECENT_LOGIN_SECONDS must be between 60 and 600 in production (default 300)")
         if self.MASTER_KEY_PREVIOUS and self.MASTER_KEY_PREVIOUS == self.MASTER_KEY:
             problems.append("MASTER_KEY_PREVIOUS must differ from MASTER_KEY (remove it when no rotation is running)")
         if problems:

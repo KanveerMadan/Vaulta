@@ -9,7 +9,7 @@ import pytest
 from fastapi.routing import APIRoute
 
 import app.core.auth as auth
-from app.core.auth import UNVERIFIED_READS_BLOCKED, UNVERIFIED_WRITES_ALLOWED, get_current_user, get_sensitive_user
+from app.core.auth import UNVERIFIED_READS_BLOCKED, UNVERIFIED_WRITES_ALLOWED, get_current_user, get_recent_user, get_sensitive_user
 from app.main import app
 from tests.conftest import as_user, token_payload
 
@@ -17,7 +17,7 @@ USER = as_user("alice")
 
 
 def _uses_session(dependant) -> bool:
-    return any(d.call in (get_current_user, get_sensitive_user) or _uses_session(d) for d in dependant.dependencies)
+    return any(d.call in (get_current_user, get_sensitive_user, get_recent_user) or _uses_session(d) for d in dependant.dependencies)
 
 
 def _fill(path: str) -> str:
@@ -58,3 +58,34 @@ def test_verifying_unlocks_the_account(client, monkeypatch):
     assert client.post("/api/budgets", json=body, headers=USER).json()["code"] == "email_unverified"
     signed_in_as(monkeypatch, email_verified=True)
     assert client.post("/api/budgets", json=body, headers=USER).status_code == 201
+
+
+# ── Recent login (step 8) ─────────────────────────────────────────────────────
+
+RECENT_ONLY = [("GET", "/api/export"), ("DELETE", "/auth/me"), ("POST", "/api/inbound/regenerate"), ("DELETE", "/api/telegram")]
+
+
+def test_sensitive_routes_need_a_sign_in_from_the_last_five_minutes(client, monkeypatch):
+    import time
+    client.get("/auth/me", headers=USER)
+    signed_in_as(monkeypatch, auth_time=int(time.time()) - auth.settings.RECENT_LOGIN_SECONDS - 5)
+    assert client.get("/api/transactions", headers=USER).status_code == 200          # ordinary use is unaffected
+    for method, path in RECENT_ONLY:
+        res = client.request(method, path, headers=USER)
+        assert res.status_code == 403, (method, path, res.status_code)
+        assert res.json() == {"detail": auth.REAUTH_REQUIRED, "code": "reauth_required"}, (method, path)
+    signed_in_as(monkeypatch, auth_time=int(time.time()) - 60)                       # signed in again a minute ago
+    assert client.get("/api/export", headers=USER).status_code == 200
+    assert client.delete("/api/telegram", headers=USER).status_code == 204
+
+
+def test_routes_marked_recent_really_are(client):
+    from app.core.auth import get_recent_user
+    recent = {(m, r.path) for r in app.routes if isinstance(r, APIRoute)
+              for m in r.methods if any(d.call is get_recent_user for d in r.dependant.dependencies)}
+    assert set(RECENT_ONLY) <= recent
+
+
+def test_a_failed_reauthentication_is_logged(client):
+    assert client.post("/api/account/reauth-failed", headers=USER).status_code == 204
+    assert [e["kind"] for e in client.get("/api/activity", headers=USER).json()][0] == "reauth_failed"

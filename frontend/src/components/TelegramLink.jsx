@@ -20,7 +20,7 @@ export default function TelegramLink() {
   if (!data || !data.configured) return null;
 
   const getCode = async () => setCode((await api.post("/api/telegram/link-code")).data);
-  const unlink = async () => { await api.delete("/api/telegram"); setCode(null); reload(); };
+  const unlink = async () => { await api.delete("/api/telegram", { recent: true }); setCode(null); reload(); };
   const setWeekly = async (weekly) => { await api.patch("/api/telegram", { weekly }); reload(); };
 
   return (

@@ -1,6 +1,6 @@
 // Phase 6.5 sign-in flows against the Firebase Auth emulator: email verification, password reset, linking Google
 // and a password to one account, re-authentication for sensitive actions, signing out everywhere, deleting the login.
-import { test, expect, API, checkLayout, newAccount, signIn, signInToken, emulatorEmails, accountExists, callApi } from './fixtures'
+import { test, expect, API, checkLayout, newAccount, signInToken, signedInWithData, emulatorEmails, callApi } from './fixtures'
 
 const uniqueEmail = (tag) => `${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@vaulta.test`
 const STRONG = 'correct-horse-battery'
@@ -44,4 +44,25 @@ test('signing up with an address that already has an account looks the same as a
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page.getByRole('heading', { name: 'Check your inbox' })).toBeVisible()
   await expect(page.getByText('If ')).toContainText(existing.email)
+})
+
+test('a stale session must sign in again before exporting', async ({ page, request, guard }, testInfo) => {
+  guard.allow(/status of 400/)                              // Firebase's answer to the wrong password below
+  const account = await signedInWithData(page, request, { reauth: false })
+  await page.goto('/settings')
+  await page.waitForTimeout(31_000)                       // RECENT_LOGIN_SECONDS is 30 in browser tests
+  await page.getByRole('button', { name: 'Export my data' }).click()
+  const prompt = page.getByRole('dialog', { name: 'Sign in again' })
+  await expect(prompt).toBeVisible()
+  await checkLayout(page, testInfo)
+  await prompt.getByLabel(/^Password for/).fill('not-the-password')
+  await prompt.getByRole('button', { name: 'Confirm' }).click()
+  await expect(prompt.getByRole('alert')).toHaveText("That password didn't work.")
+  const downloading = page.waitForEvent('download')
+  await prompt.getByLabel(/^Password for/).fill(account.password)
+  await prompt.getByRole('button', { name: 'Confirm' }).click()
+  expect((await downloading).suggestedFilename()).toMatch(/^vaulta-export-/)   // the request was retried
+  const kinds = (await callApi(request, { token: await signInToken(request, account.email, account.password) }, 'GET', '/api/activity')).map((e) => e.kind)
+  expect(kinds).toContain('reauth_failed')
+  expect(kinds).toContain('export')
 })
