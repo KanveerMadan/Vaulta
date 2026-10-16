@@ -82,8 +82,17 @@ function ResumeSetup() {
   );
 }
 
+const METHOD = { password: "email and password", "google.com": "Google" };
 const ACTIVITY = {
-  sign_in: "Signed in",
+  sign_up: (d) => `Created the account${d?.method ? ` with ${METHOD[d.method] || d.method}` : ""}`,
+  sign_in: (d) => `Signed in${d?.method && METHOD[d.method] ? ` with ${METHOD[d.method]}` : ""}`,
+  reauth_failed: "A sign-in check failed",
+  password_reset_requested: "Asked for a password reset email",
+  password_reset_completed: "Reset the password",
+  password_changed: "Changed the password",
+  method_linked: (d) => `Added ${METHOD[d?.method] || "a sign-in method"}`,
+  method_unlinked: (d) => `Removed ${METHOD[d?.method] || "a sign-in method"}`,
+  signed_out_everywhere: "Signed out of all devices",
   export: "Exported your data",
   deleted: (d) => `Deleted ${d?.what || "an item"}`,
   telegram_linked: "Linked Telegram",

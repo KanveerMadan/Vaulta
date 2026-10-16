@@ -54,7 +54,7 @@ export default function Security() {
         </div>
 
         <p className="mt-16 text-ink-2">
-          What Vaulta collects, why, how long it's kept and your rights: <Link to="/privacy" className="font-medium text-accent-text hover:underline">privacy policy</Link>.
+          What Vaulta collects, why, how long it's kept and your rights: <Link to="/privacy" className="font-medium text-accent-text underline underline-offset-2">privacy policy</Link>.
         </p>
       </main>
     </div>

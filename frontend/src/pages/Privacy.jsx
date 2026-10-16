@@ -58,7 +58,7 @@ export default function Privacy() {
         <p className="mt-4 max-w-[60ch]">
           Vaulta helps you track your own spending. This page explains, in plain language, what personal data it handles,
           why, how long it keeps it and the rights you have under India's Digital Personal Data Protection Act, 2023. How the
-          data is protected is on the <Link to="/security" className="text-accent-text hover:underline">security page</Link>.
+          data is protected is on the <Link to="/security" className="text-accent-text underline underline-offset-2">security page</Link>.
         </p>
 
         <h2 className="mt-12 font-display text-2xl text-ink">What Vaulta collects and why</h2>
@@ -99,7 +99,7 @@ export default function Privacy() {
         <p className="mt-4">
           Contact for privacy questions, requests and grievances:{' '}
           {PRIVACY_CONTACT
-            ? <a href={`mailto:${PRIVACY_CONTACT}`} className="font-medium text-accent-text hover:underline">{PRIVACY_CONTACT}</a>
+            ? <a href={`mailto:${PRIVACY_CONTACT}`} className="font-medium text-accent-text underline underline-offset-2">{PRIVACY_CONTACT}</a>
             : <span className="text-ink">set by the deployment</span>}.
         </p>
         <p className="mt-4">If this policy changes, the new version is published here before it applies.</p>
