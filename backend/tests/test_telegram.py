@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.telegram import TelegramLinkCode
 from app.services import llm, telegram, telegram_bot
-from tests.conftest import as_user, user_session
+from tests.conftest import as_user, user_session, reset_rate_limits
 
 ALICE, BOB = as_user("alice"), as_user("bob")
 SECRET = "tg-webhook-secret"
@@ -23,7 +23,7 @@ def bot(monkeypatch):
     monkeypatch.setattr(settings, "TELEGRAM_WEBHOOK_SECRET", SECRET)
     monkeypatch.setattr(telegram, "configured", lambda: True)
     monkeypatch.setattr(telegram, "call", lambda method, payload: sent.append((method, payload)) or {"ok": True})
-    telegram_bot._recent.clear()
+    reset_rate_limits()
     return sent
 
 
@@ -187,7 +187,7 @@ def test_rate_limit_and_unlink(client, bot):
     for _ in range(25):
         say(client, "/help")
     assert len(replies(bot)) - before == telegram_bot.RATE_LIMIT - 1   # the /start counted too
-    telegram_bot._recent.clear()
+    reset_rate_limits()
     say(client, "/unlink")
     assert client.get("/api/telegram", headers=ALICE).json()["linked"] is False
     say(client, "150 auto")

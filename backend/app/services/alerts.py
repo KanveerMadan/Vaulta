@@ -41,6 +41,7 @@ from app.models.transaction import Transaction, TransactionKind
 from app.models.user import User
 from app.services import analytics, email, telegram
 from app.services.keys import merchant_key
+from app.core.logs import user_ref
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +197,7 @@ def _send_telegram(alert: Alert, user: User) -> None:
         alert.telegram_status = "sent"
     except telegram.TelegramError as e:
         alert.telegram_status = "queued"      # retried by the hourly run
-        logger.warning(f"alerts: telegram failed user={user.id}: {e}")
+        logger.warning(f"alerts: telegram failed user={user_ref(user.id)}: {e.__class__.__name__}")
 
 
 def _send_email(alert: Alert, user: User, now: datetime) -> None:
@@ -212,7 +213,7 @@ def _send_email(alert: Alert, user: User, now: datetime) -> None:
         email.send(user.email, f"Vaulta: {LABELS[alert.type]}", html, text)
         alert.email_sent_at = now
     except email.EmailError as e:
-        logger.warning(f"alerts: email failed user={user.id}: {e}")
+        logger.warning(f"alerts: email failed user={user_ref(user.id)}: {e.__class__.__name__}")
 
 
 def deliver(db: Session, user: User, alerts: list[Alert], now: Optional[datetime] = None) -> None:

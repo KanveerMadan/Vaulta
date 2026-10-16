@@ -38,6 +38,8 @@ from app.services.dedup_matcher import ingest_or_match_transaction
 from app.services.detection import run_detection
 from app.services.keys import merchant_key, merchants_containing
 from app.services.rules import learn_from
+from app.services import activity
+from app.core.logs import user_ref
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +163,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
         except Exception as e:
             db.rollback()
             result.failed += 1
-            logger.error(f"import_rows: user={user.id} row failed ({e.__class__.__name__}: {e})")
+            logger.error(f"import_rows: user={user_ref(user.id)} row failed ({e.__class__.__name__})")
             continue
 
         if txn is not None:
@@ -175,7 +177,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
 
     ctx = run_detection(db, user)
     result.transfers_flagged = sum(1 for t in ctx.txns if t.id in batch_txn_ids and t.kind == TransactionKind.transfer)
-    logger.info(f"Import batch: user={user.id}, rows={len(rows)}, result={result.model_dump()}")
+    logger.info(f"Import batch: user={user_ref(user.id)}, rows={len(rows)}, result={result.model_dump()}")
     return result
 
 
@@ -329,6 +331,7 @@ def delete_manual_transaction(db: Session, txn: Transaction) -> None:
     user = txn.user
     db.query(TransactionSourceRecord).filter(TransactionSourceRecord.transaction_id == txn.id).delete()
     db.delete(txn)
+    activity.record(db, user, "deleted", {"what": "transaction"})
     db.commit()
     run_detection(db, user)
 

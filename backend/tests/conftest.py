@@ -51,6 +51,7 @@ os.environ.update({
     "MIGRATION_DATABASE_URL": TEST_DATABASE_URL,
     "FIREBASE_SERVICE_ACCOUNT_JSON": _fake_service_account(),
     "ENVIRONMENT": "test",
+    "BACKEND_CORS_ORIGIN_REGEX": r"^https://vaulta-[a-z0-9-]+-preview\.example$",
     "RAZORPAY_KEY_ID": "",
     "RAZORPAY_KEY_SECRET": "",
 })
@@ -63,7 +64,7 @@ from app.core.database import Base, engine, wait_for_db  # noqa: E402
 from app.core.database import SessionLocal  # noqa: E402
 from app.core.scope import find_user, unbind  # noqa: E402
 from app.main import app as api  # noqa: E402
-from app.models import alert, anomaly, cash, chat, correction, goal, inbound, import_template, person, recurring, report, review, rule, telegram, transaction_source  # noqa: E402,F401 — register tables
+from app.models import activity, ratelimit, alert, anomaly, cash, chat, correction, goal, inbound, import_template, person, recurring, report, review, rule, telegram, transaction_source  # noqa: E402,F401 — register tables
 
 
 # The tables' owner, for setup and for looking at raw rows (the API's engine is app.core.database.engine)
@@ -96,7 +97,7 @@ def clean_tables():
 
 @pytest.fixture
 def client(monkeypatch):
-    monkeypatch.setattr(auth, "verify_firebase_token", lambda token: {"uid": token, "email": f"{token}@test.local"})
+    monkeypatch.setattr(auth, "verify_firebase_token", lambda token, check_revoked=False: {"uid": token, "email": f"{token}@test.local"})
     with TestClient(api) as c:
         yield c
 
@@ -115,3 +116,9 @@ def user_session(uid: str):
             yield db, user
         finally:
             unbind(db)
+
+
+def reset_rate_limits() -> None:
+    """Forget every rate-limit counter (they live in Postgres, shared like in production)."""
+    with owner_engine.begin() as conn:
+        conn.execute(text("DELETE FROM rate_limits"))

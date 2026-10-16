@@ -21,6 +21,7 @@ from app.models.user import User
 from app.schemas.imports import ImportRow
 from app.services import email_alerts
 from app.services.transaction_service import import_rows
+from app.core.logs import user_ref
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +95,7 @@ def process(db: Session, to: str, from_: str, subject: str, text: Optional[str],
     trust = email_alerts.check_sender(from_, auth_results)
     if trust.reason != "ok":
         outcome = "untrusted_sender" if trust.reason == "unknown_sender" else "auth_failed"
-        logger.info(f"inbound: discarded user={user.id} outcome={outcome} sender_domain={email_alerts.address_of(from_).rpartition('@')[2]}")
+        logger.info(f"inbound: discarded user={user_ref(user.id)} outcome={outcome} sender_domain={email_alerts.address_of(from_).rpartition('@')[2]}")
         _event(db, user, outcome, trust.bank)
         return outcome
 
@@ -109,5 +110,5 @@ def process(db: Session, to: str, from_: str, subject: str, text: Optional[str],
         return "unparsed"
     import_rows(db, user, [row])
     _event(db, user, "parsed", trust.bank)
-    logger.info(f"inbound: parsed user={user.id} bank={trust.bank['key']}")
+    logger.info(f"inbound: parsed user={user_ref(user.id)} bank={trust.bank['key']}")
     return "parsed"

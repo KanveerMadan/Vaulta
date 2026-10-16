@@ -46,7 +46,8 @@ from app.services.recurring import add_months
 
 logger = logging.getLogger(__name__)
 
-TOKEN_PREFIX = "demo."
+# The prefix of signed demo tokens, not a secret
+TOKEN_PREFIX = "demo."  # nosec B105
 TOKEN_TTL_SECONDS = 2 * 3600
 LOCK_ID = 74_219_001                   # pg advisory lock key for seeding
 MONTHS = 4

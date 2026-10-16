@@ -43,6 +43,8 @@ from app.models.report import Report  # noqa: F401
 from app.models.inbound import GmailConfirmation, InboundEvent  # noqa: F401
 from app.models.telegram import TelegramEntry, TelegramLinkCode  # noqa: F401
 from app.models.cash import CashDeclaration  # noqa: F401
+from app.models.activity import ActivityEvent  # noqa: F401
+from app.models.ratelimit import RateLimit  # noqa: F401
 # Phase 2+: import new models here as they're created
 
 # ── Config ────────────────────────────────────────────────────────────────────

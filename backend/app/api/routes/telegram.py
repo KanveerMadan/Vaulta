@@ -13,11 +13,12 @@ from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, get_sensitive_user
+from app.core.ratelimit import per_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
-from app.services import telegram, telegram_bot
+from app.services import activity, telegram, telegram_bot
 
 router = APIRouter(prefix="/api/telegram", tags=["telegram"])
 
@@ -51,19 +52,20 @@ def get_status(current_user: User = Depends(get_current_user)):
     return _status(current_user)
 
 
-@router.post("/link-code", response_model=LinkCode)
-def link_code(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@router.post("/link-code", response_model=LinkCode, dependencies=[Depends(per_user("telegram-link", 10, 3600, get_sensitive_user))])
+def link_code(current_user: User = Depends(get_sensitive_user), db: Session = Depends(get_db)):
     code, expires = telegram_bot.new_link_code(db, current_user)
     return LinkCode(code=code, expires_at=expires.isoformat(), bot_username=settings.TELEGRAM_BOT_USERNAME or None)
 
 
 @router.patch("", response_model=TelegramStatus)
-def update(payload: TelegramUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update(payload: TelegramUpdate, current_user: User = Depends(get_sensitive_user), db: Session = Depends(get_db)):
     current_user.telegram_weekly = payload.weekly
+    activity.record(db, current_user, "settings_changed", {"fields": ["telegram_weekly"]})
     db.commit()
     return _status(current_user)
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
-def unlink(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def unlink(current_user: User = Depends(get_sensitive_user), db: Session = Depends(get_db)):
     telegram_bot.unlink(db, current_user)

@@ -23,6 +23,7 @@ from app.models.transaction import Budget
 from app.models.user import User
 from app.services.budgets import create_or_reactivate
 from app.schemas.budget import BudgetCreate, BudgetUpdate, BudgetResponse, BudgetListResponse
+from app.services import activity
 
 router = APIRouter(prefix="/api/budgets", tags=["budgets"])
 
@@ -116,4 +117,5 @@ def delete_budget(
     """
     budget = _get_budget_or_404(db, budget_id, current_user)
     budget.is_active = False
+    activity.record(db, current_user, "deleted", {"what": "budget"})
     db.commit()

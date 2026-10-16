@@ -59,6 +59,13 @@ class Settings(BaseSettings):
             raise ValueError("BACKEND_CORS_ORIGINS must not be empty")
         return v
 
+    # New demo sessions per client IP per 10 minutes. Generous: mobile carriers put many people behind one address.
+    DEMO_SESSIONS_PER_IP: int = 30
+
+    # Optional: a full-match regex for extra origins, e.g. Vercel previews of this project:
+    #   ^https://vaulta-[a-z0-9-]+-kanveer-madans-projects\.vercel\.app$
+    BACKEND_CORS_ORIGIN_REGEX: str = ""
+
     def cors_origins(self) -> List[str]:
         """Parse comma-separated origins into a list. Strips whitespace."""
         return [origin.strip() for origin in self.BACKEND_CORS_ORIGINS.split(",") if origin.strip()]

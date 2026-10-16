@@ -23,11 +23,13 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.models.report import Report
 from app.models.transaction import Transaction
+from app.core.ratelimit import purge_expired
 from app.core.scope import all_user_ids, find_user
 from app.models.user import User
 from app.services import alerts, analytics, demo, email, report_email, reports
 from app.services.chat import purge_old
 from app.services.telegram_bot import send_cash_reminder, send_weekly_summary
+from app.core.logs import user_ref
 
 logger = logging.getLogger(__name__)
 
@@ -92,14 +94,14 @@ def run(db: Session, now: Optional[datetime] = None) -> dict:
         except Exception as e:
             db.rollback()
             result["errors"] += 1
-            logger.error(f"alerts: user={user.id} failed: {e.__class__.__name__}: {e}")
+            logger.error(f"alerts: user={user_ref(user.id)} failed: {e.__class__.__name__}")
         try:
             if local_now.weekday() == 6 and local_now.time() >= WEEKLY_SEND and send_cash_reminder(db, user):
                 result["cash_reminders"] += 1
         except Exception as e:
             db.rollback()
             result["errors"] += 1
-            logger.error(f"cash reminder: user={user.id} failed: {e.__class__.__name__}: {e}")
+            logger.error(f"cash reminder: user={user_ref(user.id)} failed: {e.__class__.__name__}")
         for period_type in PERIOD_TYPES:
             if not getattr(user, f"reports_{period_type}"):
                 continue
@@ -120,11 +122,12 @@ def run(db: Session, now: Optional[datetime] = None) -> dict:
             except Exception as e:   # one user's failure mustn't stop everyone else's reports
                 db.rollback()
                 result["errors"] += 1
-                logger.error(f"report run: user={user.id} type={period_type} failed: {e.__class__.__name__}: {e}")
+                logger.error(f"report run: user={user_ref(user.id)} type={period_type} failed: {e.__class__.__name__}")
+    result["rate_limits_purged"] = purge_expired(db)
     try:
         result["demo"] = "ready" if demo.ensure_fresh(db) else "not created"   # daily rebuild, once it exists
     except Exception as e:
         db.rollback()
         result["errors"] += 1
-        logger.error(f"demo reseed failed: {e.__class__.__name__}: {e}")
+        logger.error(f"demo reseed failed: {e.__class__.__name__}")
     return result

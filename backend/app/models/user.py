@@ -63,6 +63,9 @@ class User(Base):
     # --- Onboarding (services/onboarding.py): step, answers, done/skipped ---
     onboarding = Column(JSON, nullable=True)
 
+    # --- Last sign-in (Firebase auth_time); a newer one is logged in the activity log ---
+    last_sign_in_at = Column(DateTime(timezone=True), nullable=True)
+
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled
     subscription_status = Column(String, nullable=True, default="trial")

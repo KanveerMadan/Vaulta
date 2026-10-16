@@ -18,11 +18,13 @@ import logging
 import sys
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")   # until config loads
 
 # ── 1. Config (fail fast) ──────────────────────────────────────────────────────
 try:
     from app.core.config import settings
+    from app.core import logs
+    logs.configure()                     # JSON lines from here on (app/core/logs.py)
     logger.info(f"Config loaded | env={settings.APP_ENV}")
 except Exception as e:
     logger.critical(f"Config failed to load: {e}")
@@ -77,33 +79,21 @@ from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins(),
-    allow_credentials=True,
+    allow_origin_regex=settings.BACKEND_CORS_ORIGIN_REGEX or None,   # Vercel preview deployments
+    allow_credentials=False,             # auth is a bearer header, never cookies
+    expose_headers=["X-Request-ID", "Retry-After", "Content-Disposition"],
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# ── Security headers middleware ────────────────────────────────────────────────
-from fastapi import Request
-from fastapi.responses import Response
+# ── Request wrapper (app/core/logs.py), outermost: request id, user scope, security headers, body limit,
+#    generic 500s, one structured log line per request ──
+from app.core.logs import RequestMiddleware
 
-@app.middleware("http")
-async def security_headers(request: Request, call_next):
-    response: Response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    if settings.APP_ENV == "production":
-        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
-    return response
-
-# ── Per-request scope for the bound user (app/core/scope.py); outermost, so it covers everything ──
-from app.core.scope import ScopeMiddleware
-
-app.add_middleware(ScopeMiddleware)
+app.add_middleware(RequestMiddleware)
 
 # ── Routers ────────────────────────────────────────────────────────────────────
-from app.api.routes import auth, transactions, budgets, imports, recurring, people, rules, review, chat, settings as settings_routes, anomalies, reports, internal, unsubscribe, inbound, telegram as telegram_routes, cash as cash_routes, home, goals, alerts as alert_routes, onboarding
+from app.api.routes import auth, transactions, budgets, imports, recurring, people, rules, review, chat, settings as settings_routes, anomalies, reports, internal, unsubscribe, inbound, telegram as telegram_routes, cash as cash_routes, home, goals, alerts as alert_routes, onboarding, account
 
 app.include_router(auth.router)
 app.include_router(transactions.router)
@@ -126,6 +116,7 @@ app.include_router(home.router)
 app.include_router(goals.router)
 app.include_router(alert_routes.router)
 app.include_router(onboarding.router)
+app.include_router(account.router)
 
 # Payments router loaded defensively: if the Razorpay SDK or its transitive
 # dependencies fail to import (e.g. a packaging issue on a fresh deploy),

@@ -23,6 +23,7 @@ from app.schemas.rules import RuleCreate, RuleList, RuleResponse, RuleUpdate, ch
 from app.services.detection import run_detection
 from app.services.keys import merchant_key
 from app.services.rules import upsert_rule
+from app.services import activity
 
 router = APIRouter(prefix="/api/rules", tags=["rules"])
 
@@ -78,5 +79,6 @@ def update_rule(rule_id: uuid.UUID, payload: RuleUpdate, current_user: User = De
 @router.delete("/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_rule(rule_id: uuid.UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     db.delete(_owned(db, current_user, rule_id))
+    activity.record(db, current_user, "deleted", {"what": "rule"})
     db.commit()
     run_detection(db, current_user)

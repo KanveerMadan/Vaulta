@@ -14,6 +14,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.ratelimit import per_ip
 from app.core.database import get_db
 from app.core.scope import find_user
 from app.services.report_email import read_unsubscribe_token
@@ -47,11 +48,11 @@ def _unsubscribe(token: str, db: Session) -> HTMLResponse:
                                  f'<a href="{escape(settings_url)}">Change email settings</a>.', 200)
 
 
-@router.get("/unsubscribe")
+@router.get("/unsubscribe", dependencies=[Depends(per_ip("unsubscribe", 30, 60))])
 def unsubscribe_page(token: str = Query(max_length=200), db: Session = Depends(get_db)):
     return _unsubscribe(token, db)
 
 
-@router.post("/unsubscribe")
+@router.post("/unsubscribe", dependencies=[Depends(per_ip("unsubscribe", 30, 60))])
 def unsubscribe_one_click(token: str = Query(max_length=200), db: Session = Depends(get_db)):
     return _unsubscribe(token, db)

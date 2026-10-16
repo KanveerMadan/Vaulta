@@ -15,9 +15,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import secrets
-import time
 import uuid
-from collections import defaultdict, deque
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Optional
@@ -28,12 +26,14 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.config import settings
 from app.models.telegram import TelegramEntry, TelegramLinkCode
+from app.core import ratelimit
 from app.core.scope import find_user
 from app.models.user import User
 from app.schemas.transaction import CATEGORIES, ManualTransactionCreate
-from app.services import analytics, cash, chat, telegram, transaction_service
+from app.services import activity, analytics, cash, chat, telegram, transaction_service
 from app.services.chat_tools import inr
 from app.services.quick_add import parse_quick_add
+from app.core.logs import user_ref
 
 logger = logging.getLogger(__name__)
 
@@ -53,19 +53,9 @@ HELP = ("Send an expense like \"150 auto cash\" or \"1.2k groceries yesterday\" 
 PHOTO = ("I don't read photos here, so your bill stays private. Use Scan bill on the Vaulta dashboard: "
          "the photo is read on your phone and never uploaded.")
 
-# ponytail: per-process limiter; with several API instances each allows RATE_LIMIT. Move to the DB if that matters.
-_recent: dict[int, deque] = defaultdict(deque)
-
-
 def rate_limited(chat_id: int) -> bool:
-    now = time.monotonic()
-    q = _recent[chat_id]
-    while q and now - q[0] > RATE_WINDOW_SECONDS:
-        q.popleft()
-    if len(q) >= RATE_LIMIT:
-        return True
-    q.append(now)
-    return False
+    """RATE_LIMIT updates per chat per RATE_WINDOW_SECONDS, shared by every API worker (app/core/ratelimit.py)."""
+    return not ratelimit.hit("telegram", chat_id, RATE_LIMIT, RATE_WINDOW_SECONDS)
 
 
 # ── Linking ───────────────────────────────────────────────────────────────────
@@ -94,12 +84,14 @@ def redeem(db: Session, code: str, chat_id: int) -> Optional[User]:
     db.execute(text("SELECT vaulta_release_telegram_chat(:c)"), {"c": chat_id})   # one account per chat
     db.expire(user, ["telegram_chat_id"])
     user.telegram_chat_id = chat_id
+    activity.record(db, user, "telegram_linked")
     db.commit()
     return user
 
 
 def unlink(db: Session, user: User) -> None:
     user.telegram_chat_id = None
+    activity.record(db, user, "telegram_unlinked")
     db.commit()
 
 
@@ -323,7 +315,7 @@ def handle_update(db: Session, update: dict) -> None:
         elif msg:
             _message(db, chat_id, msg)
     except telegram.TelegramError as e:
-        logger.warning(f"telegram: reply failed chat={chat_id}: {e}")
+        logger.warning(f"telegram: reply failed chat={user_ref(chat_id)}: {e.__class__.__name__}")
 
 
 def send_weekly_summary(db: Session, user: User, report) -> bool:

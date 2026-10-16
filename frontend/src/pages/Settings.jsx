@@ -81,6 +81,69 @@ function ResumeSetup() {
   );
 }
 
+const ACTIVITY = {
+  sign_in: "Signed in",
+  export: "Exported your data",
+  deleted: (d) => `Deleted ${d?.what || "an item"}`,
+  telegram_linked: "Linked Telegram",
+  telegram_unlinked: "Unlinked Telegram",
+  address_regenerated: "Got a new forwarding address",
+  settings_changed: (d) => `Changed settings${d?.fields?.length ? `: ${d.fields.map((f) => f.replaceAll("_", " ")).join(", ")}` : ""}`,
+  profile_changed: "Changed your profile",
+};
+const describe = (e) => (typeof ACTIVITY[e.kind] === "function" ? ACTIVITY[e.kind](e.detail) : ACTIVITY[e.kind] || e.kind);
+const when = (iso) => new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+
+function YourData() {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { data: events } = useApi("/api/activity", refreshKey);
+  const download = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await api.get("/api/export", { responseType: "blob", timeout: 120000 });
+      const name = /filename="([^"]+)"/.exec(res.headers["content-disposition"] || "")?.[1] || "vaulta-export.zip";
+      const url = URL.createObjectURL(res.data);
+      const a = Object.assign(document.createElement("a"), { href: url, download: name });
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      setError(err?.response?.status === 429 ? "You've exported a lot this hour. Try again later." : "Couldn't export your data. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="card p-5 space-y-3" aria-labelledby="your-data-title">
+      <h2 id="your-data-title" className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Your data</h2>
+      <p className="text-sm text-ink-600">
+        Download everything Vaulta holds about you as a zip: one JSON file and a CSV for each kind of record. It's built
+        when you ask and isn't kept afterwards.
+      </p>
+      {error && <p className="text-sm text-danger" role="alert">{error}</p>}
+      <button onClick={download} disabled={busy} className="btn-secondary">{busy ? "Preparing…" : "Export my data"}</button>
+      <h3 className="text-sm font-medium text-ink-900 pt-2">Activity</h3>
+      {!events ? <p className="text-xs text-ink-400">Loading…</p> : events.length === 0 ? (
+        <p className="text-xs text-ink-500">Nothing yet. Sign-ins, exports, deletions, Telegram links and settings changes appear here.</p>
+      ) : (
+        <ul className="divide-y divide-sage-50 text-sm" aria-label="Account activity">
+          {events.slice(0, 20).map((e, i) => (
+            <li key={i} className="py-1.5 flex justify-between gap-4">
+              <span className="text-ink-700">{describe(e)}</span>
+              <time dateTime={e.at} className="text-ink-500 text-xs shrink-0">{when(e.at)}</time>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function DeleteEverything() {
   const navigate = useNavigate();
   const [typed, setTyped] = useState("");
@@ -174,6 +237,8 @@ export default function Settings() {
           </div>
         ))}
       </section>
+
+      <YourData />
 
       <DeleteEverything />
     </div>

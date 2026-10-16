@@ -7,7 +7,7 @@ bind_user(db, user) makes `user` the current user, for two things at once:
   - field encryption (app/core/crypto.py): their data key is unwrapped and every Encrypted column uses it.
 It is called by get_current_user for each request
 and, in internal jobs (reports, alerts, demo reset, inbound email, Telegram), once per user before touching their
-data. ScopeMiddleware gives each request its own scope; outside a request (scripts, tests) the first bind creates one.
+data. RequestMiddleware (app/core/logs.py) gives each request its own scope; outside a request (scripts, tests) the first bind creates one.
 
 FastAPI runs sync dependencies and endpoints in separate threadpool calls, each with a copy of the request's
 context, so the scope is a mutable object set once per request by the middleware rather than a value set by the
@@ -17,6 +17,7 @@ dependency (which the endpoint would not see).
 from __future__ import annotations
 
 import uuid
+from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Optional
 
@@ -95,18 +96,14 @@ def current_cipher() -> UserCipher:
     return scope.cipher
 
 
-class ScopeMiddleware:
-    """A fresh, empty scope for every request (pure ASGI, so it wraps the whole request including dependencies)."""
-
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, scope, receive, send):
-        token = _scope.set(_Scope())
-        try:
-            await self.app(scope, receive, send)
-        finally:
-            _scope.reset(token)
+@contextmanager
+def request_scope():
+    """A fresh, empty scope for one request (app/core/logs.py RequestMiddleware wraps every request in it)."""
+    token = _scope.set(_Scope())
+    try:
+        yield
+    finally:
+        _scope.reset(token)
 
 
 @event.listens_for(Session, "before_flush")
@@ -131,7 +128,8 @@ LOOKUP_FIELDS = ("id", "firebase_uid", "inbound_token_hash", "telegram_chat_id",
 def find_user(db: Session, field: str, value):
     """The user whose `field` equals `value`, bound as the current user; None if there is none."""
     from app.models.user import User
-    assert field in LOOKUP_FIELDS, field
+    if field not in LOOKUP_FIELDS:
+        raise ValueError(f"find_user: unknown field {field}")
     if field == "id":
         user_id = value
     else:

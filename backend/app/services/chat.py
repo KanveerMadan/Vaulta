@@ -20,12 +20,13 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.core import clock
+from app.core import clock, ratelimit
 from app.core.demo import is_demo
 from app.models.chat import ChatAction, ChatMessage
 from app.models.user import User
 from app.services import llm
 from app.services.chat_tools import ACTION_TOOLS, READ_TOOLS, TOOL_SCHEMAS, ToolError, execute, llm_safe, propose, table_for
+from app.core.logs import user_ref
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,6 @@ DEMO_PER_MINUTE = 3
 DEMO_PER_SESSION = 20          # per 2-hour demo session
 DEMO_PER_DAY = 300             # whole demo account
 DEMO_ACTION_NOTE = "The demo is read-only, so this can't be applied. Sign up to do this with your own money."
-_demo_sent: dict[str, list[float]] = {}
 
 SYSTEM_PROMPT = """You are Vaulta's assistant for one user's personal finances in India.
 Today is {today}.
@@ -69,18 +69,15 @@ def _hash(token: str) -> str:
 
 
 def _check_demo_limits(db: Session, user: User) -> None:
-    # ponytail: in-process per-visitor counts; with several API workers each allows the limit
-    now = time.monotonic()
-    sent = [t for t in _demo_sent.get(user.demo_session, []) if now - t < 7200]
-    if len(sent) >= DEMO_PER_SESSION:
+    # Per visitor (demo session), shared by every API worker (app/core/ratelimit.py)
+    if not ratelimit.hit("demo-chat-session", user.demo_session, DEMO_PER_SESSION, 7200):
         raise ChatLimit("That's the end of the demo's questions for this visit. Sign up to keep asking about your own money.")
-    if sum(1 for t in sent if now - t < 60) >= DEMO_PER_MINUTE:
+    if not ratelimit.hit("demo-chat-minute", user.demo_session, DEMO_PER_MINUTE, 60):
         raise ChatLimit("That's a lot of questions at once. Try again in a minute.")
     day = db.query(ChatMessage.id).filter(ChatMessage.user_id == user.id, ChatMessage.role == "user",
                                           ChatMessage.created_at >= datetime.now(timezone.utc) - timedelta(days=1)).count()
     if day >= DEMO_PER_DAY:
         raise ChatLimit("The demo has answered a lot of questions today. Try again tomorrow, or sign up.")
-    _demo_sent[user.demo_session] = sent + [now]
 
 
 def _check_limits(db: Session, user: User) -> None:
@@ -176,7 +173,7 @@ def handle_message(db: Session, user: User, message: str, session_id: Optional[u
         if reply is None:
             reply = "I couldn't work that out in a few steps. Could you ask it more specifically?"
     except llm.LLMError as e:
-        logger.warning(f"chat: LLM unavailable for user={user.id}: {e}")
+        logger.warning(f"chat: LLM unavailable for user={user_ref(user.id)}: {e.__class__.__name__}")
         timed_out = str(e) == "timeout"
         reply = ("That took too long to answer. Please try again, or ask something narrower." if timed_out
                  else "I can't reach the AI service right now. Your dashboard and reports still work.")

@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#F4F6F3" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0B0E0C" media="(prefers-color-scheme: dark)" />
-    <script>
-      // Apply the saved theme before first paint (no flash). Values: "light" | "dark"; absent = follow the system.
-      try { var t = localStorage.getItem('vaulta-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t } catch (e) {}
-    </script>
+    <script src="/theme-init.js"></script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />

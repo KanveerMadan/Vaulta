@@ -23,6 +23,8 @@ assert parsed.hostname in ("localhost", "127.0.0.1"), "browser tests only run ag
 # Fresh database
 name = parsed.path.lstrip("/")
 admin = urlunparse(parsed._replace(path="/postgres"))
+# browser-test launcher: runs the developer's own interpreter on a local database
+# nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
 subprocess.run([PY, "-c", f"""
 import psycopg2
 c = psycopg2.connect({admin!r}); c.autocommit = True
@@ -36,6 +38,8 @@ cur.execute("DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'va
 APP_URL = urlunparse(parsed._replace(netloc=f"vaulta_app@{parsed.netloc.split('@')[-1]}"))
 
 import secrets  # noqa: E402
+# browser-test launcher: runs the developer's own interpreter on a local database
+# nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
 pem = subprocess.run([PY, "-c", """
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -59,10 +63,17 @@ env = {
     "BACKEND_CORS_ORIGINS": "http://localhost:4173",
     "GROQ_API_KEY": "fake", "GROQ_API_URL": "http://127.0.0.1:8002/v1/chat/completions",
     "INBOUND_DOMAIN": "vaulta.test",
+    "DEMO_SESSIONS_PER_IP": "100000",   # every browser test starts its demo from 127.0.0.1
     "TELEGRAM_BOT_TOKEN": "0:e2e", "TELEGRAM_BOT_USERNAME": "VaultaTestBot", "TELEGRAM_WEBHOOK_SECRET": "e2e",
     "RESEND_API_KEY": "", "EMAIL_FROM": "", "RAZORPAY_KEY_ID": "", "RAZORPAY_KEY_SECRET": "",
 }
+# browser-test launcher: runs the developer's own interpreter on a local database
+# nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
 subprocess.run([PY, "-m", "alembic", "upgrade", "head"], cwd=REPO, env=env, check=True)
+# browser-test launcher: runs the developer's own interpreter on a local database
+# nosemgrep: python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args
 subprocess.run([PY, "-m", "app.services.demo"], cwd=REPO / "backend", env=env, check=True)   # as a deploy would
 os.chdir(REPO / "backend")
+# browser-test launcher: runs the developer's own interpreter on a local database
+# nosemgrep: python.lang.security.audit.dangerous-os-exec-tainted-env-args.dangerous-os-exec-tainted-env-args
 os.execve(PY, [PY, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8001"], env)

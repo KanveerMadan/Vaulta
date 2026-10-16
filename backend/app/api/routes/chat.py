@@ -19,6 +19,7 @@ from app.models.chat import ChatMessage
 from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatResponse, ConfirmRequest, ConfirmResponse, HistoryItem
 from app.services import chat
+from app.services import activity
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -57,4 +58,5 @@ def clear_history(session_id: Optional[uuid.UUID] = Query(default=None), user: U
     if session_id:
         q = q.filter(ChatMessage.session_id == session_id)
     q.delete(synchronize_session=False)
+    activity.record(db, user, "deleted", {"what": "chat history"})
     db.commit()

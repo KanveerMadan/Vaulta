@@ -135,7 +135,7 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
 
     user = find_user(db, "razorpay_subscription_id", subscription_id)
     if not user:
-        logger.warning(f"Webhook for unknown subscription_id={subscription_id}")
+        logger.warning("Webhook for an unknown subscription")
         return WebhookAck()
 
     if event == "subscription.activated":

@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
 from fastapi import Depends, HTTPException, Request, status
@@ -24,11 +25,19 @@ def init_firebase():
 init_firebase()
 
 
-def verify_firebase_token(token: str) -> dict:
-    """Verify a Firebase ID token and return the decoded payload."""
+SIGNED_OUT = "Your session was signed out. Sign in again."
+
+
+def verify_firebase_token(token: str, check_revoked: bool = False) -> dict:
+    """
+    Verify a Firebase ID token and return the decoded payload. With check_revoked, also ask Firebase whether the
+    user's sessions were revoked (signed out everywhere, password changed) or the account disabled: one extra call,
+    made on sensitive routes only (get_sensitive_user).
+    """
     try:
-        decoded = firebase_auth.verify_id_token(token)
-        return decoded
+        return firebase_auth.verify_id_token(token, check_revoked=check_revoked)
+    except (firebase_auth.RevokedIdTokenError, firebase_auth.UserDisabledError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=SIGNED_OUT)
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -57,6 +66,10 @@ def _demo_user(request: Request, token: str, db: Session) -> User:
     return user
 
 
+# Failed sign-ins (bad, expired or forged tokens) per client IP before answering 429
+BAD_TOKENS_PER_IP, BAD_TOKEN_WINDOW = 30, 600
+
+
 def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
@@ -67,10 +80,32 @@ def get_current_user(
     then returns the matching User row from our DB (creates one if first login).
     A server-issued demo token ("demo.…") instead gives the shared read-only demo user.
     """
-    token = credentials.credentials
+    return _authenticate(request, credentials.credentials, db, check_revoked=False)
+
+
+def get_sensitive_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    """get_current_user, plus a revocation check with Firebase: for delete, export, unlink, settings changes."""
+    return _authenticate(request, credentials.credentials, db, check_revoked=True)
+
+
+def _authenticate(request: Request, token: str, db: Session, check_revoked: bool) -> User:
+    from app.core import ratelimit
+    try:
+        return _user_for_token(request, token, db, check_revoked)
+    except HTTPException as e:
+        if e.status_code == status.HTTP_401_UNAUTHORIZED:
+            ratelimit.check("bad-token", ratelimit.client_ip(request), BAD_TOKENS_PER_IP, BAD_TOKEN_WINDOW)
+        raise
+
+
+def _user_for_token(request: Request, token: str, db: Session, check_revoked: bool) -> User:
     if token.startswith("demo."):
         return _demo_user(request, token, db)
-    payload = verify_firebase_token(token)
+    payload = verify_firebase_token(token, check_revoked=check_revoked)
 
     firebase_uid = payload["uid"]
     if firebase_uid == DEMO_UID:
@@ -95,6 +130,18 @@ def get_current_user(
         db.refresh(user)
 
     bind_user(db, user)
-    if db.is_modified(user):            # a data key was just created for an existing user
+    _note_sign_in(db, user, payload.get("auth_time"))
+    if db.is_modified(user) or db.new:  # a data key was just created, or a sign-in recorded
         db.commit()
     return user
+
+
+def _note_sign_in(db: Session, user: User, auth_time) -> None:
+    """A token from a newer Firebase sign-in than the last one seen: record it in the activity log."""
+    from app.services.activity import record
+    if not isinstance(auth_time, (int, float)):
+        return
+    signed_in = datetime.fromtimestamp(auth_time, tz=timezone.utc)
+    if user.last_sign_in_at is None or signed_in > user.last_sign_in_at:
+        user.last_sign_in_at = signed_in
+        record(db, user, "sign_in")

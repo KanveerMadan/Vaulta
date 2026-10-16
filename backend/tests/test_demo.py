@@ -10,7 +10,7 @@ import pytest
 from fastapi.routing import APIRoute
 
 from app.core import clock
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, get_sensitive_user
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.main import app
@@ -19,7 +19,7 @@ from app.models.goal import Goal
 from app.models.report import Report
 from app.models.transaction import Budget, Transaction
 from app.services import chat, demo, llm
-from tests.conftest import as_user
+from tests.conftest import as_user, reset_rate_limits
 
 TODAY = date(2024, 6, 28)
 
@@ -33,7 +33,7 @@ NO_SESSION = {
 @pytest.fixture(autouse=True)
 def frozen(monkeypatch):
     monkeypatch.setattr(clock, "today", lambda: TODAY)
-    chat._demo_sent.clear()
+    reset_rate_limits()
 
 
 @pytest.fixture
@@ -100,7 +100,7 @@ def test_bad_tokens(client, demo_headers):
 
 
 def _uses_session(dependant) -> bool:
-    return any(d.call is get_current_user or _uses_session(d) for d in dependant.dependencies)
+    return any(d.call in (get_current_user, get_sensitive_user) or _uses_session(d) for d in dependant.dependencies)
 
 
 def _fill(path: str) -> str:

@@ -28,6 +28,7 @@ from app.models.user import User
 from app.schemas.transaction import CATEGORIES
 from app.services import analytics
 from app.services.goals import add_entry, create_goal
+from app.services import activity
 
 router = APIRouter(prefix="/api/goals", tags=["goals"])
 
@@ -113,6 +114,7 @@ def update_goal(goal_id: uuid.UUID, payload: GoalUpdate, current_user: User = De
 @router.delete("/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_goal(goal_id: uuid.UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     db.delete(_owned(db, current_user, goal_id))
+    activity.record(db, current_user, "deleted", {"what": "goal"})
     db.commit()
 
 
@@ -135,6 +137,7 @@ def remove_entry(goal_id: uuid.UUID, entry_id: uuid.UUID, current_user: User = D
     if entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entry not found.")
     db.delete(entry)
+    activity.record(db, current_user, "deleted", {"what": "goal entry"})
     db.commit()
     db.refresh(goal)
     return _view(db, goal)

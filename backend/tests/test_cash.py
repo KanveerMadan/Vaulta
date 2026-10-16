@@ -9,7 +9,7 @@ import pytest
 from app.core.database import SessionLocal
 from app.models.user import User
 from app.services import cash, llm, telegram, telegram_bot
-from tests.conftest import as_user, user_session
+from tests.conftest import as_user, user_session, reset_rate_limits
 from tests.test_import_batch import row
 
 ALICE, BOB = as_user("alice"), as_user("bob")
@@ -135,7 +135,7 @@ def test_telegram_cash_command_and_weekly_reminder(client, monkeypatch):
         assert telegram_bot.send_cash_reminder(db, user) is True
         assert telegram_bot.send_cash_reminder(db, user) is False     # once per week end
     assert sent[0][1]["text"] == "₹600 cash unaccounted this week. What happened to it?"
-    telegram_bot._recent.clear()
+    reset_rate_limits()
     with SessionLocal() as db:
         telegram_bot.handle_update(db, {"message": {"message_id": 1, "chat": {"id": 555, "type": "private"}, "text": "/cash"}})
         assert "Cash in hand (expected): ₹600" in sent[-1][1]["text"] and "₹600 isn't logged yet" in sent[-1][1]["text"]

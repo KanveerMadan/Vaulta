@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { test, expect, checkLayout, newAccount, signIn, signedInWithData, callApi } from './fixtures'
+import { test, expect, API, checkLayout, newAccount, signIn, signedInWithData, callApi } from './fixtures'
 
 const STATEMENT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../fixtures/statements/hdfc.csv')
 const menu = async (page, testInfo, name) => {
@@ -329,5 +329,41 @@ test('Money Wrapped: story, privacy toggles and the share image', async ({ page,
   expect(bytes.subarray(1, 4).toString()).toBe('PNG')
   expect(bytes.length).toBeGreaterThan(20_000)
   await page.keyboard.press('Escape')
+  // test: a UUID from the API
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   await expect(page).toHaveURL(new RegExp(`/reports/${annual.id}$`))
+})
+
+test('your data: export a zip, see it in Activity, then delete everything', async ({ page, request }, testInfo) => {
+  const account = await signedInWithData(page, request)
+  await menu(page, testInfo, 'Settings')
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Export my data' }).click(),
+  ])
+  expect(download.suggestedFilename()).toMatch(/^vaulta-export-\d{4}-\d{2}-\d{2}\.zip$/)
+  const zip = await download.createReadStream().then(async (s) => { const c = []; for await (const x of s) c.push(x); return Buffer.concat(c) })
+  expect(zip.subarray(0, 2).toString()).toBe('PK')                              // a real zip
+  expect(zip.includes(Buffer.from('vaulta-export/data.json'))).toBe(true)
+  const activity = page.getByRole('list', { name: 'Account activity' })
+  await expect(activity.getByText('Exported your data')).toBeVisible()
+  await checkLayout(page, testInfo)
+
+  await page.getByLabel('Type DELETE to confirm').fill('DELETE')
+  await page.getByRole('button', { name: 'Delete my account and data' }).click()
+  await page.waitForURL('**/welcome')
+  const res = await request.get(`${API}/api/transactions`, { headers: { Authorization: `Bearer ${account.token}` } })
+  expect((await res.json()).total).toBe(0)                                     // a fresh, empty account if the token is reused
+})
+
+test('the app is served with the strict Content-Security-Policy', async ({ page }) => {
+  const res = await page.goto('/welcome')
+  const csp = res.headers()['content-security-policy']
+  expect(csp).toContain("frame-ancestors 'none'")
+  expect(csp).toContain("object-src 'none'")
+  const script = csp.split(';').find((d) => d.trim().startsWith('script-src'))
+  expect(script).not.toContain("'unsafe-inline'")
+  expect(script).not.toContain("'unsafe-eval'")
+  expect(res.headers()['x-content-type-options']).toBe('nosniff')
+  expect(res.headers()['x-frame-options']).toBe('DENY')
 })

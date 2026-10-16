@@ -51,12 +51,14 @@ PLAINTEXT_OK = {
     "gmail_confirmations": {"link", "code"},                                         # Gmail's confirmation link
     "cash_declarations": {"reason"}, "telegram_link_codes": {"code_hash"}, "telegram_entries": {"status"},
     "review_dismissals": set(), "goal_entries": set(),
+    "activity_log": {"kind", "detail"},                                              # event names, field names only
+    "rate_limits": {"bucket"},                                                       # keyed hash
 }
 
 
 def test_every_text_column_is_encrypted_or_justified():
     for table in Base.metadata.sorted_tables:
-        if table.name == "households":
+        if table.name == "households":   # unused stub (name only, no user data)
             continue
         for col in table.columns:
             if isinstance(col.type, (crypto.Encrypted, Enum)) or not isinstance(col.type, (String, Text, JSON)):

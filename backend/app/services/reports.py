@@ -260,7 +260,7 @@ def write_narrative(report: dict) -> tuple[str, str]:
             return text, "llm"
         logger.info("report narrative rejected: number not in report")
     except llm.LLMError as e:
-        logger.warning(f"report narrative unavailable: {e}")
+        logger.warning(f"report narrative unavailable: {e.__class__.__name__}")
     return template_narrative(report), "template"
 
 

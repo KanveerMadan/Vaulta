@@ -58,6 +58,9 @@ COVERED = {
     ("GET", "/api/reports"),
     ("GET", "/api/reports/{report_id}"),
     ("POST", "/api/reports/generate"),
+    # tests/test_account.py::test_export_and_activity_are_per_user
+    ("GET", "/api/export"),
+    ("GET", "/api/activity"),
     # tests/test_inbound.py::test_addresses_are_per_user
     ("GET", "/api/inbound"),
     ("POST", "/api/inbound/regenerate"),

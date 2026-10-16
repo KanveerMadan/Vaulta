@@ -66,7 +66,7 @@ def create_subscription(customer_email: str, customer_name: str | None = None) -
             },
         })
     except Exception as e:
-        logger.error(f"Razorpay subscription creation failed: {e}")
+        logger.error(f"Razorpay subscription creation failed: {e.__class__.__name__}")
         raise RazorpayError(f"Failed to create subscription: {e}") from e
 
     return subscription
@@ -95,5 +95,5 @@ def fetch_subscription(subscription_id: str) -> dict:
     try:
         return client.subscription.fetch(subscription_id)
     except Exception as e:
-        logger.error(f"Failed to fetch Razorpay subscription {subscription_id}: {e}")
+        logger.error(f"Failed to fetch Razorpay subscription: {e.__class__.__name__}")
         raise RazorpayError(f"Failed to fetch subscription: {e}") from e

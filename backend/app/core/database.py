@@ -57,7 +57,7 @@ def wait_for_db(max_delay: float = 30.0) -> None:
             db_ready.set()
             logger.info("Database connection OK")
         except Exception as e:
-            logger.warning(f"Database unreachable ({e.__class__.__name__}: {e}); retrying in {delay:.0f}s")
+            logger.warning(f"Database unreachable ({e.__class__.__name__}); retrying in {delay:.0f}s")
             time.sleep(delay)
             delay = min(delay * 2, max_delay)
 

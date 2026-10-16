@@ -32,6 +32,7 @@ from app.models.transaction_source import (
     TransactionDirection,
 )
 from app.models.user import User
+from app.core.logs import user_ref
 
 logger = logging.getLogger(__name__)
 
@@ -361,7 +362,7 @@ def ingest_or_match_transaction(
                 return existing.transaction, existing, True
             raise
 
-        logger.info(f"Matched new evidence to existing transaction: user={user.id}, tier={tier}, txn={matched_txn.id}")
+        logger.info(f"Matched new evidence to existing transaction: user={user_ref(user.id)}, tier={tier}, txn={matched_txn.id}")
         return matched_txn, source_record, True
 
     # No match — this becomes a new canonical transaction.
@@ -422,5 +423,5 @@ def ingest_or_match_transaction(
             return existing.transaction, existing, True
         raise
 
-    logger.info(f"New canonical transaction created: user={user.id}, txn={new_txn.id}")
+    logger.info(f"New canonical transaction created: user={user_ref(user.id)}, txn={new_txn.id}")
     return new_txn, source_record, False
