@@ -144,7 +144,8 @@ def test_unsubscribe(client, monkeypatch, outbox):
     assert (s["email_monthly"], s["email_weekly"], s["reports_monthly"]) == (False, True, True)
     assert client.post(f"/unsubscribe?token={weekly}").status_code == 200        # one-click
     assert client.get("/api/settings", headers=USER).json()["email_weekly"] is False
-    assert client.get(f"/unsubscribe?token={monthly[:-1]}0").status_code == 400  # tampered
+    tampered = monthly[:-1] + ("1" if monthly[-1] == "0" else "0")              # always a different last character
+    assert client.get(f"/unsubscribe?token={tampered}").status_code == 400
     assert client.get("/unsubscribe?token=nonsense").status_code == 400
     forged = monthly.replace(":monthly:", ":annual:")
     assert client.get(f"/unsubscribe?token={forged}").status_code == 400
