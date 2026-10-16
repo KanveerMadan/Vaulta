@@ -301,3 +301,45 @@ def test_a_login_already_gone_counts_as_deleted(client, monkeypatch):
     monkeypatch.setattr(firebase_auth, "delete_user", gone)
     client.get("/auth/me", headers=USER)
     assert client.delete("/auth/me", headers=USER).status_code == 204 and _pending() == []
+
+
+# ── App Check (step 5) ────────────────────────────────────────────────────────
+
+APP_CHECKED = [("POST", "/auth/demo", None), ("POST", "/auth/password-reset-requested", {"email": "a@test.local"}),
+               ("POST", "/api/import/batch", {"rows": []}), ("POST", "/api/chat", {"message": "hi"})]
+
+
+@pytest.fixture
+def enforcing(monkeypatch):
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "APP_CHECK_ENFORCE", True)
+    monkeypatch.setattr(settings, "APP_CHECK_DEBUG_TOKEN", "debug-token-for-tests")
+
+
+def test_app_check_is_enforced_on_bot_targets(client, monkeypatch, enforcing):
+    from firebase_admin import app_check
+    monkeypatch.setattr(app_check, "verify_token", lambda token: (_ for _ in ()).throw(ValueError("bad")))
+    for method, path, body in APP_CHECKED:
+        for headers in ({}, {"X-Firebase-AppCheck": "forged"}):
+            res = client.request(method, path, json=body, headers={**USER, **headers})
+            assert res.status_code == 401 and res.json()["code"] == "app_check_failed", (path, headers)
+    ok = {"X-Firebase-AppCheck": "debug-token-for-tests"}
+    assert client.post("/auth/demo", headers=ok).status_code == 200
+    assert client.get("/api/transactions", headers=USER).status_code == 401                  # creating the account needs it too
+    assert client.get("/api/transactions", headers={**USER, **ok}).status_code == 200
+    assert client.get("/api/transactions", headers=USER).status_code == 200                  # existing accounts: ordinary reads don't
+
+
+def test_production_verifies_real_tokens_and_never_accepts_the_debug_one(client, monkeypatch, enforcing):
+    from app.core.config import settings
+    from firebase_admin import app_check
+    calls = []
+    monkeypatch.setattr(app_check, "verify_token", lambda token: calls.append(token) or {"sub": "app"})
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    assert client.post("/auth/demo", headers={"X-Firebase-AppCheck": "debug-token-for-tests"}).status_code == 200
+    assert calls == ["debug-token-for-tests"]                     # verified with Firebase like any token, not trusted
+
+
+def test_monitor_mode_logs_but_lets_requests_through(client, caplog):
+    assert client.post("/auth/demo").status_code == 200
+    assert "missing or invalid token on /auth/demo (monitor mode)" in caplog.text

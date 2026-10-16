@@ -10,6 +10,12 @@ api.interceptors.request.use(async (config) => {
   const demo = useAuthStore.getState().demoToken
   const user = demo ? null : (await import('./firebase')).auth.currentUser
   if (user && config.recent) await (await import('./reauth')).ensureRecentLogin(user)   // sensitive: see lib/reauth.js
+  const { APP_CHECKED, appCheckToken } = await import('./appcheck')
+  // A signed-in user's request may be the one that creates their Vaulta account, which needs App Check
+  if (user || APP_CHECKED.some((re) => re.test(config.url.split('?')[0]))) {
+    const token = await appCheckToken()
+    if (token) config.headers['X-Firebase-AppCheck'] = token
+  }
   if (user) config.headers.Authorization = `Bearer ${await user.getIdToken()}`
   else if (demo) config.headers.Authorization = `Bearer ${demo}`
   return config

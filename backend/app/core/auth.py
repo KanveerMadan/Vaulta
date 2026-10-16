@@ -191,6 +191,8 @@ def _user_for_token(request: Request, token: str, db: Session, check_revoked: bo
         from app.services.activity import record
         if deletion.is_pending(db, firebase_uid):     # deleted account, login not yet gone: don't open a new one
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="This account has been deleted.")
+        from app.core import appcheck
+        appcheck.check(request)                       # creating an account: bots are refused here (when enforcing)
         user = User(firebase_uid=firebase_uid, email=email, full_name=name)
         bind_user(db, user)             # gives the new user an id and a data key
         db.add(user)

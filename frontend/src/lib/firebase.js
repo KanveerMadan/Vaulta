@@ -10,7 +10,7 @@ const firebaseConfig = {
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-const app = initializeApp(firebaseConfig)
+export const app = initializeApp(firebaseConfig)
 // Without a popup resolver here, Auth doesn't load Google's sign-in helper (apis.google.com) for
 // every visitor; it's passed only when someone actually signs in with Google.
 export const auth = initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] })

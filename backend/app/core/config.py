@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     # Sensitive actions need a real sign-in this recent (seconds). Browser tests shorten it to test the prompt.
     RECENT_LOGIN_SECONDS: int = 300
 
+    # Firebase App Check (app/core/appcheck.py): enforce once the console is set up (docs/go-live.md)
+    APP_CHECK_ENFORCE: bool = False
+    APP_CHECK_DEBUG_TOKEN: str = ""      # never in production
+
     # New demo sessions per client IP per 10 minutes. Generous: mobile carriers put many people behind one address.
     DEMO_SESSIONS_PER_IP: int = 30
 
@@ -150,6 +154,8 @@ class Settings(BaseSettings):
             problems.append("SECURITY_CONTACT_EMAIL must be set (it is published in /.well-known/security.txt)")
         if self.TELEGRAM_BOT_TOKEN and len(self.TELEGRAM_WEBHOOK_SECRET) < MIN_SECRET_LENGTH:
             problems.append(f"TELEGRAM_WEBHOOK_SECRET must be at least {MIN_SECRET_LENGTH} characters when the bot is configured")
+        if self.APP_CHECK_DEBUG_TOKEN:
+            problems.append("APP_CHECK_DEBUG_TOKEN must not be set in production")
         if not 60 <= self.RECENT_LOGIN_SECONDS <= 600:
             problems.append("RECENT_LOGIN_SECONDS must be between 60 and 600 in production (default 300)")
         if self.MASTER_KEY_PREVIOUS and self.MASTER_KEY_PREVIOUS == self.MASTER_KEY:

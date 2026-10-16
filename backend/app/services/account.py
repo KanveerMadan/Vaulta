@@ -81,7 +81,7 @@ def note_reset_completed(db: Session, user) -> None:
     if requested is None:
         return
     valid_after_ms = firebase_auth.get_user(user.firebase_uid).tokens_valid_after_timestamp or 0
-    if valid_after_ms / 1000 >= requested.timestamp():
+    if valid_after_ms // 1000 >= int(requested.timestamp()):     # Firebase keeps whole seconds
         user.tokens_revoked_at = datetime.fromtimestamp(valid_after_ms / 1000, tz=timezone.utc)
         activity.record(db, user, "password_reset_completed")
     user.password_reset_requested_at = None

@@ -72,8 +72,11 @@ export async function accountExists(request, email) {
   return ((await res.json()).users || []).length > 0
 }
 
+// App Check's debug token, as the e2e build sends it (the browser-test API enforces App Check)
+export const APP_CHECK = { 'X-Firebase-AppCheck': 'e2e-app-check-debug-token' }
+
 export async function callApi(request, account, method, path, data) {
-  const res = await request.fetch(`${API}${path}`, { method, data, headers: { Authorization: `Bearer ${account.token}` } })
+  const res = await request.fetch(`${API}${path}`, { method, data, headers: { Authorization: `Bearer ${account.token}`, ...APP_CHECK } })
   expect(res.ok(), `${method} ${path}: ${res.status()} ${await res.text()}`).toBeTruthy()
   return res.status() === 204 ? null : res.json()
 }

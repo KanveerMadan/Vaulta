@@ -3,7 +3,7 @@
 import { chromium, request } from '@playwright/test'
 import { mkdirSync, renameSync, readdirSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { newAccount, seedData } from './fixtures.js'
+import { APP_CHECK, newAccount, seedData } from './fixtures.js'
 
 const APP = 'http://localhost:4173'
 const OUT = fileURLToPath(new URL('../../docs/design/captures/', import.meta.url))
@@ -15,7 +15,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function account(r, withData) {
   const a = await newAccount(r)
-  await r.get('http://127.0.0.1:8001/auth/me', { headers: { Authorization: `Bearer ${a.token}` } })
+  await r.get('http://127.0.0.1:8001/auth/me', { headers: { Authorization: `Bearer ${a.token}`, ...APP_CHECK } })
   if (withData) await seedData(r, a)
   return a
 }

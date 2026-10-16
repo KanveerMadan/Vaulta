@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
+from app.core.appcheck import require_app_check
 from app.core.database import get_db
 from app.core.ratelimit import per_user
 from app.core.subscription import require_active_subscription
@@ -25,7 +26,7 @@ router = APIRouter(prefix="/api/import", tags=["import"])
 Fingerprint = Path(pattern=r"^[0-9a-f]{64}$")
 
 
-@router.post("/batch", response_model=ImportBatchResult, dependencies=[Depends(per_user("import", 60, 3600))])
+@router.post("/batch", response_model=ImportBatchResult, dependencies=[Depends(require_app_check), Depends(per_user("import", 60, 3600))])
 def import_batch(
     payload: ImportBatch,
     current_user: User = Depends(get_current_user),

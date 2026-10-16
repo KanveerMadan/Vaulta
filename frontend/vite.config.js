@@ -16,7 +16,7 @@ export const PROD_API = connectSrc.find((o) => o.startsWith('https://') && !o.en
 function localHeaders(env) {
   const csp = headers['Content-Security-Policy']
     .replace(PROD_API, new URL(env.VITE_API_BASE_URL).origin)
-    .replace('https://identitytoolkit.googleapis.com https://securetoken.googleapis.com', new URL(env.VITE_FIREBASE_AUTH_EMULATOR).origin)
+    .replace('https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://content-firebaseappcheck.googleapis.com', new URL(env.VITE_FIREBASE_AUTH_EMULATOR).origin)
     // Firebase frames the auth domain; against the emulator it frames the emulator itself
     .replace('https://vaulta-a3d7a.firebaseapp.com', `http://${env.VITE_FIREBASE_AUTH_DOMAIN} ${new URL(env.VITE_FIREBASE_AUTH_EMULATOR).origin}`)
     .replace('; upgrade-insecure-requests', '')

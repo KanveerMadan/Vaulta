@@ -1,6 +1,6 @@
 // Phase 6.5 sign-in flows against the Firebase Auth emulator: email verification, password reset, linking Google
 // and a password to one account, re-authentication for sensitive actions, signing out everywhere, deleting the login.
-import { test, expect, API, checkLayout, newAccount, signIn, signInToken, signedInWithData, emulatorEmails, callApi } from './fixtures'
+import { test, expect, API, APP_CHECK, checkLayout, newAccount, signIn, signInToken, signedInWithData, emulatorEmails, callApi } from './fixtures'
 
 const uniqueEmail = (tag) => `${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@vaulta.test`
 const STRONG = 'correct-horse-battery'
@@ -18,7 +18,7 @@ test('sign-up needs a confirmed email before importing', async ({ page, request 
 
   // the server refuses data until the address is confirmed, whatever the UI shows
   const token = await signInToken(request, email, STRONG)
-  const refused = await request.post(`${API}/api/budgets`, { data: { category: 'Travel', monthly_limit: '100' }, headers: { Authorization: `Bearer ${token}` } })
+  const refused = await request.post(`${API}/api/budgets`, { data: { category: 'Travel', monthly_limit: '100' }, headers: { Authorization: `Bearer ${token}`, ...APP_CHECK } })
   expect(refused.status()).toBe(403)
   expect((await refused.json()).code).toBe('email_unverified')
   await page.goto('/transactions')
@@ -184,4 +184,16 @@ test('Google and a password sign in to one account', async ({ page, request }, t
   await expect(page.getByRole('button', { name: /^Remove/ })).toHaveCount(0)    // never the last method
   const kinds = (await callApi(request, { token: await signInToken(request, account.email, account.password) }, 'GET', '/api/activity')).map((e) => e.kind)
   expect(kinds).toEqual(expect.arrayContaining(['method_unlinked', 'signed_out_everywhere']))
+})
+
+test('App Check: the API refuses bot-target routes without a token from the app', async ({ request }) => {
+  const account = await newAccount(request)
+  await callApi(request, account, 'GET', '/auth/me')
+  const body = { rows: [{ date: '2024-06-01', description_raw: 'SWIGGY', amount: '100.00', direction: 'debit', reference: null,
+    source_type: 'bank_csv', source_label: 'HDFC Bank' }] }
+  const bare = await request.post(`${API}/api/import/batch`, { data: body, headers: { Authorization: `Bearer ${account.token}` } })
+  expect(bare.status()).toBe(401)
+  expect((await bare.json()).code).toBe('app_check_failed')
+  expect((await request.post(`${API}/auth/demo`)).status()).toBe(401)
+  await callApi(request, account, 'POST', '/api/import/batch', body)               // the app's token: accepted
 })

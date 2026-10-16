@@ -71,3 +71,8 @@ def test_app_exits_at_startup_in_production_without_secrets(tmp_path):
                          env=env, capture_output=True, text=True)
     assert res.returncode == 1
     assert "Config failed to load" in res.stderr and "SECRET_KEY" in res.stderr
+
+
+def test_production_refuses_an_app_check_debug_token():
+    with pytest.raises(ValidationError, match="APP_CHECK_DEBUG_TOKEN"):
+        make(**{**PROD, "APP_CHECK_DEBUG_TOKEN": "x"})

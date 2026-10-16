@@ -83,7 +83,7 @@ app.add_middleware(
     allow_credentials=False,             # auth is a bearer header, never cookies
     expose_headers=["X-Request-ID", "Retry-After", "Content-Disposition"],
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Firebase-AppCheck"],
 )
 
 # ── Request wrapper (app/core/logs.py), outermost: request id, user scope, security headers, body limit,
