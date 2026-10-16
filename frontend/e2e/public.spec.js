@@ -11,10 +11,10 @@ test('landing → demo → home renders every card', async ({ page }, testInfo) 
   await expect(page.getByText("You're viewing a demo with sample data.")).toBeVisible()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 30_000 })
   await expect(page.getByTestId('outlook')).toContainText('On pace for')
-  for (const title of ['Budgets', 'Upcoming · 14 days', 'Needs attention', 'Coverage', 'Recent transactions']) {
+  for (const title of ['Budgets', 'Coming up', 'Needs attention', 'Coverage', 'Recent transactions']) {
     await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
   }
-  await expect(page.getByText('Statements ·').first()).toBeVisible()
+  await expect(page.getByText('Statements', { exact: true })).toBeVisible()
   await page.getByText('How is this worked out?').click()
   await expect(page.getByTestId('safe-explanation')).toContainText('overall budget')
   await checkLayout(page, testInfo)

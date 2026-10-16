@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import api from "./api";
 
-export const rupees = (v) => `₹${Number(v).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+import { formatINR } from "./money";
+
+/** ₹1,20,000 (see lib/money.js). */
+export const rupees = (v) => formatINR(v);
 
 export const shortDay = (iso) =>
   new Date(`${String(iso).slice(0, 10)}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });

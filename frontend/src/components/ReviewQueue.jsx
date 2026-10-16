@@ -27,7 +27,7 @@ export function ReviewCard({ card, onAnswered, large = false }) {
       <div className="flex flex-wrap gap-2">
         {card.options.map((o) => (
           <button key={o.value} onClick={() => answer(o.value)} disabled={busy}
-            className={`text-sm px-3 py-2 rounded-lg disabled:opacity-50 ${o.value === "skip" ? "text-ink-400 hover:text-ink-700" : "bg-forest-50 text-forest-700 hover:bg-forest-100"}`}>
+            className={o.value === "skip" ? "btn-quiet h-9 text-muted" : "btn-secondary h-9"}>
             {o.label}
           </button>
         ))}

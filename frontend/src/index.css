@@ -85,7 +85,7 @@
   .btn-dark { @apply btn; background: rgb(var(--inverse)); color: rgb(var(--on-inverse)); }
 
   .input {
-    width: 100%; min-height: 40px; padding: .5rem .75rem;
+    width: 100%; min-width: 0; min-height: 40px; padding: .5rem .75rem;
     background: rgb(var(--surface)); color: rgb(var(--ink));
     border: 1px solid rgb(var(--line-strong)); border-radius: var(--r-sm);
     font-size: .9375rem; font-weight: 400; transition: border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
@@ -195,3 +195,18 @@ dialog.sheet::backdrop { background: rgb(var(--inverse) / .38); animation: fade-
   .finish-row { animation: rise 420ms var(--ease-out) both; animation-delay: calc(150ms + var(--i) * 110ms); }
 }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Home outlook: recurring payments still due this month */
+.outlook-due { background: repeating-linear-gradient(135deg, rgb(var(--accent) / .55) 0 4px, rgb(var(--accent) / .25) 4px 7px); }
+
+/* Keyboard hint */
+.kbd { display: inline-block; min-width: 1.25rem; padding: 0 .3rem; margin: 0 .15rem; border: 1px solid rgb(var(--line-strong)); border-bottom-width: 2px;
+  border-radius: 4px; font: 500 .7rem/1.2rem var(--font-mono); text-align: center; color: rgb(var(--ink-2)); background: rgb(var(--surface)); }
+
+/* Command palette (src/components/CommandPalette.jsx) */
+dialog.palette {
+  padding: 0; margin: 12dvh auto auto; width: min(36rem, calc(100% - 1.5rem)); border: 1px solid rgb(var(--line));
+  border-radius: var(--r-lg); background: rgb(var(--surface)); color: rgb(var(--ink)); box-shadow: var(--elev-3); overflow: hidden;
+}
+dialog.palette[open] { animation: sheet-up var(--dur) var(--ease-out); }
+dialog.palette::backdrop { background: rgb(var(--inverse) / .3); }

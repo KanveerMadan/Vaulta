@@ -116,7 +116,7 @@ function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit
                   <>
                     <td className="px-2 py-1 whitespace-nowrap text-ink-600" data-label="Date">{r.date.slice(0, 10)}</td>
                     <td className="px-2 py-1 text-ink-800 max-w-[14rem] truncate" title={r.description_raw} data-label="Merchant">{r.description_raw}</td>
-                    <td className="px-2 py-1 text-right font-mono whitespace-nowrap" data-label="Amount">₹{Number(r.amount).toLocaleString("en-IN")}</td>
+                    <td className="px-2 py-1 text-right num whitespace-nowrap" data-label="Amount">₹{Number(r.amount).toLocaleString("en-IN")}</td>
                   </>
                 )}
                 <td data-label="Type" className={`px-2 py-1 whitespace-nowrap ${r.direction === "credit" ? "text-safe" : "text-ink-600"}`}>
@@ -155,7 +155,7 @@ function Result({ result, onAnother, onClose }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
         {stats.map(([label, value]) => (
           <div key={label} className="bg-surface rounded-lg p-2.5 border border-sage-100">
-            <p className="font-mono text-lg font-semibold text-ink-900">{value}</p>
+            <p className="num font-display text-lg font-semibold text-ink-900">{value}</p>
             <p className="text-xs text-ink-400 mt-0.5 leading-tight">{label}</p>
           </div>
         ))}

@@ -65,7 +65,7 @@ export default function SubscriptionBanner() {
         key: data.razorpay_key_id,
         subscription_id: data.subscription_id,
         name: "Vaulta",
-        description: "Vaulta Monthly — ₹99/month",
+        description: "Vaulta Monthly, ₹99/month",
         theme: { color: "#2d6a4f" },
         handler: function () {
           // Webhook updates subscription_status asynchronously;
@@ -103,7 +103,7 @@ export default function SubscriptionBanner() {
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-sm text-forest-800">
-            You're on the free tier — last 30 days of data only.
+            You're on the free tier: the last 30 days of data only.
           </p>
         </div>
         <button
@@ -111,7 +111,7 @@ export default function SubscriptionBanner() {
           disabled={subscribing}
           className="btn-primary text-sm py-1.5 px-4 shrink-0 disabled:opacity-50"
         >
-          {subscribing ? "Loading..." : "Subscribe — ₹99/mo"}
+          {subscribing ? "Loading..." : "Subscribe for ₹99/mo"}
         </button>
       </div>
     );
@@ -134,7 +134,7 @@ export default function SubscriptionBanner() {
           <p className={`text-sm ${expired ? "text-danger" : "text-ink-700"}`}>
             {expired
               ? "Your payment is overdue. Update your payment method to continue using Vaulta."
-              : `Payment failed — you have ${remaining} left before access is restricted.`}
+              : `Payment failed. You have ${remaining} left before access is restricted.`}
           </p>
         </div>
         <button
@@ -165,7 +165,7 @@ export default function SubscriptionBanner() {
           disabled={subscribing}
           className="btn-primary text-sm py-1.5 px-4 shrink-0 disabled:opacity-50"
         >
-          {subscribing ? "Loading..." : "Resubscribe — ₹99/mo"}
+          {subscribing ? "Loading..." : "Resubscribe for ₹99/mo"}
         </button>
       </div>
     );

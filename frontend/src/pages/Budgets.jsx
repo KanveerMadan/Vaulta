@@ -63,7 +63,7 @@ export default function Budgets() {
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       <div>
-        <h1 className="font-display text-2xl font-semibold text-ink-900">Budgets</h1>
+        <h1 className="font-display text-display-s text-ink">Budgets</h1>
         <p className="text-sm text-ink-500 mt-1">
           Monthly limits. Spending here is real spending only: transfers, failed payments and money lent don't count,
           and refunds are subtracted.

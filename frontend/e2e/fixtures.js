@@ -94,13 +94,16 @@ export async function signedInWithData(page, request) {
 export async function checkLayout(page, testInfo) {
   if (testInfo.project.name !== 'mobile') return
   await page.waitForTimeout(150)
-  const issues = await page.evaluate(() => {
+  // Compare with the device width, not innerWidth: on a phone the browser widens the layout
+  // viewport to fit overflowing content, so innerWidth would grow along with the bug.
+  const device = testInfo.project.use.viewport.width
+  const issues = await page.evaluate((width) => {
     const out = []
     const doc = document.scrollingElement
-    if (doc.scrollWidth > window.innerWidth + 1) {
-      const wide = [...document.querySelectorAll('body *')].filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1)
+    if (doc.scrollWidth > width + 1 || window.innerWidth > width + 1) {
+      const wide = [...document.querySelectorAll('body *')].filter((el) => el.getBoundingClientRect().right > width + 1)
         .slice(0, 3).map((el) => `${el.tagName}.${String(el.className).slice(0, 60)}`)
-      out.push(`page scrolls sideways (${doc.scrollWidth}px > ${window.innerWidth}px): ${wide.join(' | ')}`)
+      out.push(`page wider than the ${width}px screen (${Math.max(doc.scrollWidth, window.innerWidth)}px): ${wide.join(' | ')}`)
     }
     for (const el of document.querySelectorAll('button, a[href], select, input, textarea, summary, [role="button"]')) {
       const style = getComputedStyle(el)
@@ -115,6 +118,6 @@ export async function checkLayout(page, testInfo) {
       }
     }
     return out
-  })
+  }, device)
   expect(issues, `${page.url()}\n${issues.join('\n')}`).toEqual([])
 }

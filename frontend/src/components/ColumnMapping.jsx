@@ -47,7 +47,7 @@ export default function ColumnMapping({ table, initialMapping, sourceType, onCon
             <tr>
               {table.header.map((h, i) => (
                 <th key={i} className="px-2 py-1.5 text-left font-medium text-ink-600 whitespace-nowrap">
-                  <span className="text-ink-300 mr-1">{i + 1}</span>{h || "—"}
+                  <span className="text-ink-300 mr-1">{i + 1}</span>{h || `Column ${i + 1}`}
                 </th>
               ))}
             </tr>
@@ -73,7 +73,7 @@ export default function ColumnMapping({ table, initialMapping, sourceType, onCon
               value={mapping[key] ?? ""}
               onChange={(e) => set(key, e.target.value === "" ? null : Number(e.target.value))}
             >
-              <option value="">— not in this file —</option>
+              <option value="">Not in this file</option>
               {table.header.map((h, i) => (
                 <option key={i} value={i}>{i + 1}. {h || `Column ${i + 1}`}</option>
               ))}

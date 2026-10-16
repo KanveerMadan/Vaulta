@@ -87,7 +87,7 @@ function EmailTest({ state, onStart }) {
   }
   return (
     <p className="text-sm text-ink-600" role="status">
-      Waiting for your test… Send any email from your inbox to the address above (or set up the Gmail forward — its
+      Waiting for your test… Send any email from your inbox to the address above (or set up the Gmail forward; its
       confirmation email counts too). This checks for it every few seconds.
     </p>
   );
@@ -126,7 +126,7 @@ function ImportHistory({ state, save }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-ink-600">
-        Import the last 3–6 months so Vaulta can spot your recurring payments, the people you pay and what's normal for you.
+        Import the last 3 to 6 months so Vaulta can spot your recurring payments, the people you pay and what's normal for you.
         Statements are read on this device; only the rows you confirm are sent.
       </p>
       {lines.length > 0 && (

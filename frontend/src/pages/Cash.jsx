@@ -35,7 +35,7 @@ export default function Cash() {
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       <div>
-        <h1 className="font-display text-2xl font-semibold text-ink-900">Cash</h1>
+        <h1 className="font-display text-display-s text-ink">Cash</h1>
         <p className="text-sm text-ink-500 mt-1">
           ATM withdrawals move money into your cash wallet (not spending). Cash you log as spent is spending.
           Whatever came out but isn't logged shows as unaccounted.
@@ -44,7 +44,7 @@ export default function Cash() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[["Cash in hand (expected)", w.balance], ["Withdrawn", w.withdrawn], ["Received", w.received], ["Spent", w.spent]].map(([k, v]) => (
-          <div key={k} className="card p-4"><p className="text-xs text-ink-400">{k}</p><p className="font-mono text-lg font-semibold">{rupees(v)}</p></div>
+          <div key={k} className="card p-4"><p className="text-xs text-ink-400">{k}</p><p className="num text-lg font-semibold">{rupees(v)}</p></div>
         ))}
       </div>
       <p className="text-xs text-ink-500">
@@ -92,7 +92,7 @@ export default function Cash() {
                 {items.map((t, i) => (
                   <li key={i} className="flex justify-between gap-2">
                     <span className="truncate">{shortDay(t.date)} · {t.merchant}{t.category ? ` · ${t.category}` : ""}</span>
-                    <span className="font-mono">{rupees(t.amount)}</span>
+                    <span className="num">{rupees(t.amount)}</span>
                   </li>
                 ))}
               </ul>

@@ -20,6 +20,15 @@ describe("wording", () => {
     expect(hits).toEqual([]);
   });
 
+  it("uses no em or en dashes in interface copy", () => {
+    const hits = files("src")
+      .filter((f) => /\.jsx$|trust\.js$/.test(f))
+      .flatMap((f) => readFileSync(f, "utf8").split("\n").map((line, i) => [f, i + 1, line]))
+      .filter(([, , line]) => /[\u2013\u2014]/.test(line) && !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(line))
+      .map(([f, n]) => `${f}:${n}`);
+    expect(hits).toEqual([]);
+  });
+
   it("states exactly the five trust claims", () => {
     expect(TRUST.map((t) => t.claim)).toEqual([
       "Statements are processed on your device and never uploaded.",

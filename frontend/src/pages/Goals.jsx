@@ -79,10 +79,10 @@ function GoalCard({ goal, onChanged }) {
         <div className="h-full bg-forest-400 rounded-full" style={{ width: `${pct}%` }} />
       </div>
       <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-        <div><dt className="text-xs text-ink-400">Saved</dt><dd className="font-mono">{rupees(goal.saved)}</dd></div>
-        <div><dt className="text-xs text-ink-400">Still needed</dt><dd className="font-mono">{rupees(goal.remaining)}</dd></div>
-        <div><dt className="text-xs text-ink-400">Needed a month</dt><dd className="font-mono">{rupees(goal.required_monthly)}</dd></div>
-        <div><dt className="text-xs text-ink-400">At your pace</dt><dd>{goal.projected_date ? longDay(goal.projected_date) : "—"}</dd></div>
+        <div><dt className="text-xs text-ink-400">Saved</dt><dd className="num">{rupees(goal.saved)}</dd></div>
+        <div><dt className="text-xs text-ink-400">Still needed</dt><dd className="num">{rupees(goal.remaining)}</dd></div>
+        <div><dt className="text-xs text-ink-400">Needed a month</dt><dd className="num">{rupees(goal.required_monthly)}</dd></div>
+        <div><dt className="text-xs text-ink-400">At your pace</dt><dd>{goal.projected_date ? longDay(goal.projected_date) : "Not yet"}</dd></div>
       </dl>
       {goal.estimate && (
         <p className="text-xs text-ink-500 bg-sage-50 rounded-lg px-3 py-2">
@@ -109,7 +109,7 @@ function GoalCard({ goal, onChanged }) {
               <li key={e.id} className="flex items-center justify-between gap-3 py-1">
                 <span className="text-ink-600">{longDay(e.date)}</span>
                 <span className="flex items-center gap-2">
-                  <span className="font-mono">{rupees(e.amount)}</span>
+                  <span className="num">{rupees(e.amount)}</span>
                   <button onClick={() => run(() => api.delete(`/api/goals/${goal.id}/entries/${e.id}`))}
                     className="text-ink-300 hover:text-danger px-2" aria-label={`Remove ${rupees(e.amount)} on ${longDay(e.date)}`}>✕</button>
                 </span>
@@ -131,11 +131,11 @@ export default function Goals() {
   const refresh = () => setRefreshKey((k) => k + 1);
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      <h1 className="font-display text-2xl text-ink-900">Goals</h1>
+      <h1 className="font-display text-display-s text-ink">Goals</h1>
       <p className="text-sm text-ink-500">Record money as you set it aside. Contributions are separate from your transactions, so they never change your spending.</p>
       {error && <p className="text-sm text-danger">{error}</p>}
       {data && data.items.length === 0 && (
-        <p className="card p-5 text-sm text-ink-500">No goals yet. Add one below — a laptop, a trip, an emergency fund.</p>
+        <p className="card p-5 text-sm text-ink-500">No goals yet. Add one below: a laptop, a trip, an emergency fund.</p>
       )}
       {data?.items.map((g) => <GoalCard key={g.id} goal={g} onChanged={refresh} />)}
       <NewGoal onSaved={refresh} />

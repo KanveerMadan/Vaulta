@@ -1,132 +1,116 @@
-import { useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { ArrowsSplit, Trash } from "@phosphor-icons/react";
 import api from "../lib/api";
 import SplitModal from "./SplitModal";
-import { rupees } from "../lib/format";
+import Money from "../ui/Money";
+import { formatINR } from "../lib/money";
 import { CATEGORIES, KINDS, kindsFor } from "../lib/categories";
 import { updateTransaction, deleteTransaction } from "../lib/transactions";
+import { toast } from "../lib/toast";
 
-export default function TransactionRow({ txn, onChanged, onRuleLearned }) {
+const COUNTED = new Set(["spend", "income", "refund"]);
+const day = (iso) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+
+/**
+ * One transaction. Category and kind edits show at once and roll back if the server says no.
+ * `selected` (transactions page) highlights the row; the ref exposes editCategory() for the `e` shortcut.
+ */
+const TransactionRow = forwardRef(function TransactionRow({ txn, onChanged, onRuleLearned, selected = false, compact = false }, ref) {
   const atm = txn.cash_flow === "withdrawal";
   const name = txn.merchant_clean || (atm ? "ATM withdrawal" : txn.merchant_raw);
-  const isCredit = txn.direction === "credit";
-  const counted = txn.kind === "spend" || txn.kind === "income" || txn.kind === "refund";
-  const [editing, setEditing] = useState(false);
-  const [editingKind, setEditingKind] = useState(false);
+  const [local, setLocal] = useState({ category: txn.category, kind: txn.kind });
+  const [editing, setEditing] = useState(null); // "category" | "kind" | null
   const [splitting, setSplitting] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
+  const categoryButton = useRef(null);
+  useImperativeHandle(ref, () => ({ editCategory: () => setEditing("category") }), []);
+  useEffect(() => { setLocal({ category: txn.category, kind: txn.kind }); }, [txn.category, txn.kind]);
 
-  const act = async (fn) => {
-    setBusy(true);
-    setError(null);
+  const flow = local.kind === "transfer" || atm ? "transfer" : txn.direction === "credit" ? "in" : "out";
+  const counted = COUNTED.has(local.kind);
+
+  const change = async (field, value) => {
+    const before = local[field];
+    setEditing(null);
+    if (value === before) return;
+    setLocal((l) => ({ ...l, [field]: value }));                    // optimistic
     try {
-      await fn();
-      setEditing(false);
-      setEditingKind(false);
+      const res = await updateTransaction(txn.id, { [field]: field === "category" ? value || null : value });
+      if (res.rule_applied) onRuleLearned?.(res.rule_applied);
       onChanged?.();
     } catch (err) {
-      setError(err?.response?.data?.detail || "Couldn't save that change.");
-    } finally {
-      setBusy(false);
+      setLocal((l) => ({ ...l, [field]: before }));                 // roll back
+      toast({ tone: "danger", message: err?.response?.data?.detail && typeof err.response.data.detail === "string"
+        ? err.response.data.detail : `Couldn't change ${name}. Nothing was saved.` });
     }
   };
+  const unsplit = async () => { await api.delete(`/api/transactions/${txn.id}/split`); onChanged?.(); };
+  const remove = async () => {
+    if (!window.confirm(`Delete ${name}, ${formatINR(txn.amount)}?`)) return;
+    try { await deleteTransaction(txn.id); onChanged?.(); } catch { toast({ tone: "danger", message: "Couldn't delete that." }); }
+  };
 
-  const update = async (changes) => {
-    const res = await updateTransaction(txn.id, changes);
-    if (res.rule_applied) onRuleLearned?.(res.rule_applied);
-  };
-  const setCategory = (category) => act(() => update({ category: category || null }));
-  const setKind = (kind) => act(() => update({ kind }));
-  const unsplit = () => act(() => api.delete(`/api/transactions/${txn.id}/split`));
-  const remove = () => {
-    if (window.confirm(`Delete ${txn.merchant_clean || txn.merchant_raw}, ₹${txn.amount}?`)) act(() => deleteTransaction(txn.id));
-  };
+  const select = (field, options) => (
+    <select autoFocus defaultValue={field === "category" ? local.category || "" : local.kind}
+      onChange={(e) => change(field, e.target.value)} onBlur={() => setEditing(null)}
+      onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setEditing(null); categoryButton.current?.focus(); } }}
+      className="input h-8 min-h-0 py-0 text-micro w-auto" aria-label={field === "category" ? "Category" : "Kind"}>
+      {options}
+    </select>
+  );
 
   return (
-    <div className="py-2.5 border-b border-sage-50 last:border-0">
-    <div className="flex items-center gap-3">
-      <div className="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center text-ink-500 text-sm shrink-0">
-        {(name || "?")[0].toUpperCase()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-ink-900 truncate">
-          {name}
-        </p>
-        <div className="text-xs text-ink-400 flex items-center gap-1">
-          {editing ? (
-            <select
-              autoFocus
-              disabled={busy}
-              defaultValue={txn.category || ""}
-              onChange={(e) => setCategory(e.target.value)}
-              onBlur={() => !busy && setEditing(false)}
-              className="border border-sage-200 rounded px-1 py-0.5 text-xs bg-surface text-ink-700"
-              aria-label="Category"
-            >
-              <option value="">Uncategorized</option>
-              {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-            </select>
-          ) : (
-            <button onClick={() => setEditing(true)} className="hover:text-forest-600 hover:underline" title="Change category">
-              {txn.category || "Uncategorized"}
-            </button>
-          )}
-          <span>·</span>
-          {editingKind ? (
-            <select
-              autoFocus
-              disabled={busy}
-              defaultValue={txn.kind}
-              onChange={(e) => setKind(e.target.value)}
-              onBlur={() => !busy && setEditingKind(false)}
-              className="border border-sage-200 rounded px-1 py-0.5 text-xs bg-surface text-ink-700"
-              aria-label="Kind"
-            >
-              {kindsFor(txn.direction).map(([value, k]) => <option key={value} value={value}>{k.label}</option>)}
-            </select>
-          ) : (
-            <button onClick={() => setEditingKind(true)} title="Change what this transaction is"
-              className={`hover:text-forest-600 hover:underline ${counted ? "" : "text-gold"}`}>
-              {atm ? "Cash withdrawal" : KINDS[txn.kind]?.label ?? txn.kind}
-            </button>
-          )}
-          <span>·</span>
-          <span>
-            {new Date(txn.transaction_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-          </span>
-          {txn.source === "manual" && <span className="text-ink-300">· added by you</span>}
-        </div>
-        {error && <p className="text-xs text-danger mt-0.5">{error}</p>}
-      </div>
-      <p className={`font-mono text-sm font-medium shrink-0 ${
-        !counted ? "text-ink-400" : isCredit ? "text-safe" : "text-ink-800"
-      }`}>
-        {txn.kind === "transfer" ? "↔" : isCredit ? "+" : "-"}
-        ₹{Math.abs(txn.amount).toLocaleString("en-IN")}
-      </p>
-      {(txn.kind === "spend" || txn.kind === "income") && !txn.is_split && (
-        <button onClick={() => setSplitting(true)} disabled={busy} className="text-xs text-ink-300 hover:text-forest-600 shrink-0">Split</button>
-      )}
-      {txn.source === "manual" && (
-        <button onClick={remove} disabled={busy} className="p-1 text-ink-300 hover:text-danger shrink-0" aria-label="Delete transaction">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      )}
-    </div>
-    {txn.is_split && (
-      <div className="ml-12 mt-1.5 space-y-0.5 text-xs text-ink-500">
-        {txn.splits.map((part) => (
-          <div key={part.id} className="flex justify-between">
-            <span>↳ {part.category || "Uncategorized"}</span>
-            <span className="font-mono">{rupees(part.amount)}</span>
+    <div className={`group py-3 ${compact ? "" : "px-2 -mx-2"} rounded-sm transition-colors duration-fast ${selected ? "bg-accent-tint/70" : ""}`}
+      data-selected={selected || undefined}>
+      <div className="flex items-center gap-3">
+        <span aria-hidden className="w-9 h-9 rounded-sm bg-sunken text-ink-2 flex items-center justify-center font-display font-semibold shrink-0">
+          {(name || "?")[0].toUpperCase()}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[15px] font-medium text-ink truncate">{name}</p>
+          <div className="text-micro text-muted flex items-center gap-1.5 flex-wrap">
+            {editing === "category" ? select("category", <><option value="">Uncategorized</option>{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</>) : (
+              <button ref={categoryButton} onClick={() => setEditing("category")} title="Change category" className="hover:text-accent-text hover:underline">
+                {local.category || "Uncategorized"}
+              </button>
+            )}
+            <span aria-hidden>·</span>
+            {editing === "kind" ? select("kind", kindsFor(txn.direction).map(([v, k]) => <option key={v} value={v}>{k.label}</option>)) : (
+              <button onClick={() => setEditing("kind")} title="Change what this transaction is"
+                className={`hover:text-accent-text hover:underline ${counted ? "" : "text-warn"}`}>
+                {atm ? "Cash withdrawal" : KINDS[local.kind]?.label ?? local.kind}
+              </button>
+            )}
+            <span aria-hidden>·</span>
+            <span>{day(txn.transaction_date)}</span>
+            {txn.source === "manual" && <span>· added by you</span>}
           </div>
-        ))}
-        <button onClick={unsplit} disabled={busy} className="text-ink-400 hover:text-danger">Unsplit</button>
+        </div>
+        <Money value={txn.amount} flow={flow} className={`text-[15px] font-semibold shrink-0 ${counted ? "" : "text-muted"}`} />
+        <div className="flex items-center shrink-0 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:group-focus-within:opacity-100 transition-opacity duration-fast">
+          {(local.kind === "spend" || local.kind === "income") && !txn.is_split && (
+            <button onClick={() => setSplitting(true)} className="btn-quiet h-8 px-2 text-micro text-muted" aria-label={`Split ${name}`} title="Split">
+              <ArrowsSplit size={15} aria-hidden />
+            </button>
+          )}
+          {txn.source === "manual" && (
+            <button onClick={remove} className="btn-quiet h-8 px-2 text-muted hover:text-danger" aria-label="Delete transaction"><Trash size={15} /></button>
+          )}
+        </div>
       </div>
-    )}
-    {splitting && <SplitModal txn={txn} onClose={() => setSplitting(false)} onSaved={onChanged} />}
+      {txn.is_split && (
+        <div className="ml-12 mt-2 space-y-0.5 text-micro text-ink-2">
+          {txn.splits.map((part) => (
+            <div key={part.id} className="flex justify-between">
+              <span>↳ {part.category || "Uncategorized"}</span>
+              <Money value={part.amount} />
+            </div>
+          ))}
+          <button onClick={unsplit} className="text-muted hover:text-danger">Unsplit</button>
+        </div>
+      )}
+      {splitting && <SplitModal txn={txn} onClose={() => setSplitting(false)} onSaved={onChanged} />}
     </div>
   );
-}
+});
+
+export default TransactionRow;

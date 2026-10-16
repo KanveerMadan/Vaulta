@@ -38,7 +38,7 @@ const SOURCES = [
   {
     id: "manual",
     label: "Manual Entry",
-    description: "Log cash spending or anything that doesn't show up in a statement — a quick add, no file needed.",
+    description: "Log cash spending or anything that doesn't show up in a statement. A quick add, no file needed.",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -107,7 +107,7 @@ const PRIVACY_ROWS = [
   { can: "Read transaction amounts and merchant names", cannot: "Access your bank login or UPI PIN" },
   { can: "Categorize your spending automatically", cannot: "Store your account number or balance" },
   { can: "Show you patterns in your spending", cannot: "Show raw bank narrations or UPI IDs to the AI" },
-  { can: "Receive only the rows you confirm after previewing them", cannot: "See your statement file — it is read on your device" },
+  { can: "Receive only the rows you confirm after previewing them", cannot: "See your statement file: it is read on your device" },
 ];
 
 function PrivacyTable() {
@@ -158,9 +158,9 @@ export default function Connect() {
 
       {/* Page header */}
       <div>
-        <h1 className="font-display text-2xl font-semibold text-ink-900">Connect your accounts</h1>
+        <h1 className="font-display text-display-s text-ink">Connect your accounts</h1>
         <p className="text-ink-500 mt-1 text-sm">
-          Upload a bank or UPI statement to get started — it takes 30 seconds, and we detect the source automatically.
+          Upload a bank or UPI statement to get started. It takes 30 seconds, and we detect the source automatically.
         </p>
       </div>
 

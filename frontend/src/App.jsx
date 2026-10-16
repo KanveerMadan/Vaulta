@@ -14,6 +14,7 @@ import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Cash from './pages/Cash'
 import Review from './pages/Review'
+import Transactions from './pages/Transactions'
 import Goals from './pages/Goals'
 import Security from './pages/Security'
 import Layout from './components/Layout'
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/cash" element={<Cash />} />
           <Route path="/review" element={<Review />} />
+          <Route path="/transactions" element={<Transactions />} />
           <Route path="/goals" element={<Goals />} />
         </Route>
       </Route>

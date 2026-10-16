@@ -12,6 +12,7 @@ describe('formatINR', () => {
     expect(formatINR('649.00')).toBe('₹649')
     expect(formatINR(0.5)).toBe('₹0.50')
     expect(formatINR(649, { decimals: 2 })).toBe('₹649.00')
+    expect(formatINR(1829.56, { decimals: 0 })).toBe('₹1,830')
   })
   it('uses a real minus sign', () => {
     expect(formatINR(-2200)).toBe('−₹2,200')

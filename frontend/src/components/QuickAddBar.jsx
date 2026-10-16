@@ -41,7 +41,7 @@ export default function QuickAddBar({ onAdded }) {
           value={text}
           onChange={(e) => { setText(e.target.value); setError(null); }}
           placeholder='Quick add: "150 auto cash", "1.2k groceries dmart yesterday"'
-          className="flex-1 border border-sage-200 rounded-lg px-3 py-2 text-sm"
+          className="input flex-1"
           aria-label="Quick add a transaction"
         />
         <button type="button" onClick={() => setEditing(parsed || {})} className="btn-ghost text-sm px-3">
@@ -51,7 +51,7 @@ export default function QuickAddBar({ onAdded }) {
       </form>
       {parsed && (
         <div className="flex items-center gap-2 flex-wrap text-xs">
-          <span className={`font-mono font-semibold ${parsed.direction === "credit" ? "text-safe" : "text-ink-900"}`}>
+          <span className={`num font-semibold ${parsed.direction === "credit" ? "text-safe" : "text-ink-900"}`}>
             {parsed.direction === "credit" ? "+" : "−"}₹{Number(parsed.amount).toLocaleString("en-IN")}
           </span>
           <span className="text-ink-800">{parsed.merchant}</span>

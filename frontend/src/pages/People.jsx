@@ -94,7 +94,7 @@ export default function People() {
   return (
     <div className="max-w-4xl mx-auto space-y-5">
       <div>
-        <h1 className="font-display text-2xl font-semibold text-ink-900">People</h1>
+        <h1 className="font-display text-display-s text-ink">People</h1>
         <p className="text-sm text-ink-500 mt-1">
           Everyone you pay or get paid by over UPI. Tag someone once and it applies to all their transactions.
           Mark a payment as lent or borrowed from its transaction row to track who owes whom.

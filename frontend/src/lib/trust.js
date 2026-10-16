@@ -3,7 +3,7 @@
 export const TRUST = [
   {
     claim: "Statements are processed on your device and never uploaded.",
-    how: "CSV, Excel, PDF and photo statements are read in your browser (the PDF reader and the text recognition run on your device). Vaulta shows you the rows it found, and only the rows you confirm are sent — as dates, descriptions and amounts, never the file.",
+    how: "CSV, Excel, PDF and photo statements are read in your browser (the PDF reader and the text recognition run on your device). Vaulta shows you the rows it found, and only the rows you confirm are sent, as dates, descriptions and amounts, never the file.",
   },
   {
     claim: "Account numbers, balances and passwords are never stored.",
@@ -11,7 +11,7 @@ export const TRUST = [
   },
   {
     claim: "Raw alert emails are never stored.",
-    how: "Forwarded bank alerts are read in memory on arrival. Vaulta keeps the transaction it found (date, description with personal details masked, amount) and a note of which bank sent it and when — or, for Gmail's forwarding confirmation, just its link and code. The email itself and the rest of its text are discarded, and attachments are dropped before the email reaches Vaulta.",
+    how: "Forwarded bank alerts are read in memory on arrival. Vaulta keeps the transaction it found (date, description with personal details masked, amount) and a note of which bank sent it and when (or, for Gmail's forwarding confirmation, just its link and code). The email itself and the rest of its text are discarded, and attachments are dropped before the email reaches Vaulta.",
   },
   {
     claim: "The AI never sees bank narrations or UPI IDs.",

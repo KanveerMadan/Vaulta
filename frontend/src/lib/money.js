@@ -9,7 +9,7 @@ export function formatINR(value, { decimals = 'auto' } = {}) {
   if (!Number.isFinite(n)) return '₹0'
   const abs = Math.abs(n)
   const rounded = Math.round(abs * 100) / 100
-  const usePaise = decimals === 2 || (decimals === 'auto' && rounded % 1 !== 0)
+  const usePaise = decimals === 2 || (decimals === 'auto' && rounded % 1 !== 0)   // decimals: 'auto' | 0 | 2
   const body = usePaise ? paise.format(rounded) : whole.format(Math.round(rounded))
   return `${n < 0 ? '−' : ''}₹${body}`
 }

@@ -7,13 +7,16 @@ import { useAuthStore } from '../store/authStore'
 import ChatPanel from './ChatPanel'
 import AlertsBell from './AlertsBell'
 import { useFinanceStore } from '../store/financeStore'
-import { ChartPieSlice, ChatCircleText, Flag, GearSix, House, List, Money, Newspaper, Plugs, Repeat, SignOut, SlidersHorizontal, Users, X } from '@phosphor-icons/react'
+import { ChartPieSlice, ChatCircleText, Flag, GearSix, House, List, ListBullets, MagnifyingGlass, Money, Newspaper, Plugs, Repeat, SignOut, SlidersHorizontal, Users, X } from '@phosphor-icons/react'
 import ThemeSwitch from '../ui/ThemeSwitch'
 import Wordmark from '../ui/Wordmark'
 import { useMedia } from '../lib/useMedia'
+import { useCommandPalette } from '../lib/commands'
+import CommandPalette from './CommandPalette'
 
 const NAV = [
   { to: '/', label: 'Home', end: true, icon: House },
+  { to: '/transactions', label: 'Transactions', icon: ListBullets },
   { to: '/budgets', label: 'Budgets', icon: ChartPieSlice },
   { to: '/goals', label: 'Goals', icon: Flag },
   { to: '/cash', label: 'Cash', icon: Money },
@@ -57,6 +60,7 @@ export default function Layout() {
     if (onboarding?.status === 'new') navigate('/onboarding', { replace: true })
   }, [onboarding, navigate])
 
+  const openPalette = useCommandPalette((st) => st.open)
   const desktop = useMedia('(min-width: 1024px)')   // render one shell, so the bell polls once
   const who = demoToken ? 'Demo account' : user?.displayName || user?.email
 
@@ -98,6 +102,7 @@ export default function Layout() {
           </button>
           <Wordmark className="ml-1" />
           <div className="ml-auto flex items-center gap-1">
+            <button onClick={openPalette} aria-label="Search and commands" className="w-11 h-11 flex items-center justify-center rounded-sm text-ink-2 hover:bg-sunken"><MagnifyingGlass size={19} /></button>
             <AlertsBell />
           </div>
         </div>
@@ -117,6 +122,9 @@ export default function Layout() {
             <Wordmark />
             <AlertsBell />
           </div>
+          <button onClick={openPalette} className="mb-4 flex items-center gap-2 rounded-sm border border-line bg-canvas px-3 h-9 text-sm text-muted hover:border-line-strong">
+            <MagnifyingGlass size={16} aria-hidden /><span className="flex-1 text-left">Search or jump to</span><kbd className="kbd">⌘K</kbd>
+          </button>
           <nav aria-label="Main" className="flex-1 overflow-y-auto">{navList}</nav>
           <div className="pt-3 mt-3 border-t border-line space-y-3">
             <ThemeSwitch compact />
@@ -132,6 +140,7 @@ export default function Layout() {
         </main>
         <ChatPanel />
       </div>
+      <CommandPalette />
       {!chatOpen && (
         <button onClick={() => setChatOpen(true)} aria-label="Ask the assistant"
           className="xl:hidden fixed bottom-4 right-4 z-40 btn-primary rounded-full shadow-3 h-12 px-5">

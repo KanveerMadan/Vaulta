@@ -38,7 +38,7 @@ function SeriesRow({ s, onChange }) {
           </span>
         )}
         {s.user_status !== "confirmed" && <span className="text-xs text-ink-400">detected</span>}
-        <span className="ml-auto font-mono text-sm text-ink-900">{rupees(s.typical_amount)}</span>
+        <span className="ml-auto num text-sm text-ink-900">{rupees(s.typical_amount)}</span>
       </div>
       <div className="flex items-center gap-2 flex-wrap text-xs text-ink-500">
         <span>{CADENCE[s.cadence]}</span>
@@ -80,14 +80,14 @@ export default function Recurring() {
   return (
     <div className="max-w-4xl mx-auto space-y-5">
       <div>
-        <h1 className="font-display text-2xl font-semibold text-ink-900">Recurring & subscriptions</h1>
+        <h1 className="font-display text-display-s text-ink">Recurring & subscriptions</h1>
         <p className="text-sm text-ink-500 mt-1">Detected from payments that repeat on a schedule.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="card p-5">
           <p className="text-xs font-medium text-ink-400 uppercase tracking-widest">Committed per month</p>
-          <p className="font-mono text-2xl font-semibold text-ink-900 mt-2">{rupees(data.monthly_committed)}</p>
+          <p className="num text-2xl font-semibold text-ink-900 mt-2">{rupees(data.monthly_committed)}</p>
         </div>
         <div className="card p-5 sm:col-span-2">
           <p className="text-xs font-medium text-ink-400 uppercase tracking-widest mb-2">Upcoming in the next 14 days</p>
@@ -96,7 +96,7 @@ export default function Recurring() {
               {data.upcoming.map((s) => (
                 <li key={s.id} className="flex justify-between">
                   <span className="text-ink-700">{day(s.next_expected)} · {s.name}</span>
-                  <span className="font-mono">{rupees(s.typical_amount)}</span>
+                  <span className="num">{rupees(s.typical_amount)}</span>
                 </li>
               ))}
             </ul>
@@ -106,7 +106,7 @@ export default function Recurring() {
 
       {review.length > 0 && (
         <div className="card p-4 text-sm text-ink-700">
-          Marked for review: {review.map((s) => s.name).join(", ")} — {rupees(review.reduce((t, s) => t + Number(s.monthly_amount), 0))}/month.
+          Marked for review: {review.map((s) => s.name).join(", ")}: {rupees(review.reduce((t, s) => t + Number(s.monthly_amount), 0))}/month.
         </div>
       )}
 

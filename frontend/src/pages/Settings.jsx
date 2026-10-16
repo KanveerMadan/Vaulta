@@ -5,7 +5,7 @@ import { useApi } from "../lib/format";
 import TelegramLink from "../components/TelegramLink";
 
 const REPORTS = [
-  ["weekly", "Weekly", "Monday–Sunday, on Sunday at 7 pm"],
+  ["weekly", "Weekly", "Monday to Sunday, sent Sunday at 7 pm"],
   ["monthly", "Monthly", "the previous month, on the 1st at 9 am"],
   ["annual", "Yearly", "with Money Wrapped, on 1 January at 9 am"],
 ];
@@ -132,7 +132,7 @@ export default function Settings() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
-      <h1 className="font-display text-2xl font-semibold text-ink-900">Settings</h1>
+      <h1 className="font-display text-display-s text-ink">Settings</h1>
       {saveError && <p className="text-sm text-danger">{saveError}</p>}
 
       <ResumeSetup />
