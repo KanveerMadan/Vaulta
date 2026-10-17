@@ -1,0 +1,10 @@
+# gitleaks' default rules, plus one narrow exception.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "ml/data/teacher_cache.jsonl keys: SHA-256 of model|prompt version|merchant name (ml/teacher.py), not secrets"
+condition = "AND"
+paths = ['''^ml/data/teacher_cache\.jsonl$''']
+regexTarget = "secret"
+regexes = ['''^[0-9a-f]{64}$''']
