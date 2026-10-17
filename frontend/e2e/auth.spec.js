@@ -93,7 +93,7 @@ test('sign out of all devices ends a second browser\'s session too', async ({ pa
   await second.getByPlaceholder('you@example.com').fill(account.email)            // and it returns to /transactions
   await second.getByPlaceholder('••••••••').fill(account.password)
   await second.getByRole('button', { name: 'Log in' }).click()
-  await expect(second).toHaveURL(/\/transactions$/)
+  await expect(second).toHaveURL(/\/transactions$/, { timeout: 20_000 })   // signing in again is slow on CI's WebKit
 
   // a third, reloaded afterwards: Firebase itself sees the revoked session, signs it out, login brings it back
   guard.allow(/status of 400/)
@@ -102,7 +102,7 @@ test('sign out of all devices ends a second browser\'s session too', async ({ pa
   await p3.getByPlaceholder('you@example.com').fill(account.email)                 // right here, not a fresh /login
   await p3.getByPlaceholder('••••••••').fill(account.password)
   await p3.getByRole('button', { name: 'Log in' }).click()
-  await expect(p3).toHaveURL(/\/goals$/)
+  await expect(p3).toHaveURL(/\/goals$/, { timeout: 20_000 })
   await other.close()
   await third.close()
 })
