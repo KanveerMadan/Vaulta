@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { useApi } from '../lib/format'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
@@ -34,6 +34,11 @@ export default function Layout() {
   const [readOnly, setReadOnly] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const { chatOpen, setChatOpen } = useFinanceStore()
+  const { pathname, hash } = useLocation()
+  const navType = useNavigationType()
+
+  // a new page opens at its top (back/forward keep the browser's own position; #links scroll to their target)
+  useEffect(() => { if (navType !== 'POP' && !hash) window.scrollTo(0, 0) }, [pathname, hash, navType])
 
   useEffect(() => {
     const show = (e) => setReadOnly(e.detail || "The demo is read-only.")

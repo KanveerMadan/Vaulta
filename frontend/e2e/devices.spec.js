@@ -3,7 +3,7 @@
 // without WebGL, sticky headers, a focused field under the keyboard, and the installed (standalone) app.
 // Baselines: e2e/devices.spec.js-snapshots/<screen>-<device>-<os>.png (update with --update-snapshots).
 import { fileURLToPath } from 'node:url'
-import { test, expect, checkLayout, isTouch, newAccount, callApi, seedData, signIn, openMenu, openChatPanel, finishSetup } from './fixtures'
+import { test, expect, checkLayout, isTouch, newAccount, callApi, seedData, signIn, openMenu, openChatPanel, finishSetup, centre } from './fixtures'
 
 const STATEMENT = fileURLToPath(new URL('../../fixtures/statements/hdfc.csv', import.meta.url))
 const SNAP = { maxDiffPixelRatio: 0.02, animations: 'disabled', fullPage: false }
@@ -144,6 +144,7 @@ test('guided tour and getting-started checklist', async ({ page, request }, test
   const card = page.getByTestId('tour').getByRole('dialog')
   await expect(card).toHaveAccessibleName('Add anything in one line')
   await settle(page)
+  await centre(page, 'quick-add')     // settle() resizes masked blocks: put the step back where the tour put it
   // the card (or, on phones, the bottom sheet) is fully on screen and its buttons are big enough to tap
   const box = await card.boundingBox()
   const [w, h] = await page.evaluate(() => [document.documentElement.clientWidth, document.documentElement.clientHeight])

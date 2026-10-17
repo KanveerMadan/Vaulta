@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import api from "../lib/api";
+import { saveTour } from "../lib/tour";
 
 // The guided tour of the home page (Phase 8). Its place is kept on the server (/api/tour), so it resumes on any device;
 // Settings and the "?" button replay it. Each step points at an element marked data-tour="<id>" and says something
@@ -22,7 +22,10 @@ function useTargetRect(id, step) {
     const t = setTimeout(measure, reduced() ? 0 : 350);         // after the smooth scroll settles
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, { passive: true });
-    return () => { cancelAnimationFrame(raf); clearTimeout(t); window.removeEventListener("resize", measure); window.removeEventListener("scroll", measure); };
+    // content arriving above the target (the page's data) moves it without a scroll or resize
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(measure) : null;
+    ro?.observe(document.body);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); ro?.disconnect(); window.removeEventListener("resize", measure); window.removeEventListener("scroll", measure); };
   }, [id, step]);
   return rect;
 }
@@ -43,7 +46,7 @@ export default function GuidedTour({ steps, start = 0, onFinish }) {
   const go = useCallback((next) => {
     if (next >= steps.length) { onFinish("done"); return; }
     setI(next);
-    api.patch("/api/tour", { step: next }).catch(() => {});
+    saveTour({ step: next });
   }, [steps.length, onFinish]);
 
   // focus the card on every step, keep Tab inside it, arrows move, Escape skips

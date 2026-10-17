@@ -1,7 +1,7 @@
 // Visual snapshots of key screens, light and dark, desktop and 360px (the project sets the viewport).
 // Figures and dates depend on the day the data was seeded, so they are masked; layout,
 // typography and colour are what these guard. Update with: npx playwright test e2e/visual.spec.js --update-snapshots
-import { test, expect, newAccount, signIn, seedData, callApi } from './fixtures'
+import { test, expect, newAccount, signIn, seedData, callApi, centre } from './fixtures'
 
 const SNAP = { maxDiffPixelRatio: 0.015, animations: 'disabled', fullPage: false }
 const dynamic = (page) => [page.locator('.num'), page.locator('[data-value]'), page.locator('time'), page.getByTestId('outlook')]
@@ -58,6 +58,7 @@ for (const scheme of ['light', 'dark']) {
       const card = page.getByTestId('tour').getByRole('dialog')
       await expect(card).toHaveAccessibleName('Add anything in one line')
       await settle(page)
+      await centre(page, 'quick-add')     // settle() resizes masked blocks: put the step back where the tour put it
       const inPage = [page.locator('main .num'), page.locator('main [data-value]'), page.locator('main time'), page.locator('main [data-testid="outlook"]')]
       await expect(page).toHaveScreenshot(`tour-${scheme}.png`, { ...SNAP, mask: inPage })      // never over the tour itself
       await page.keyboard.press('Escape')

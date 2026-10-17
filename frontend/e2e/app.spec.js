@@ -289,8 +289,10 @@ test('subcategory, tags, tag filter and why this category', async ({ page, reque
   await expect(list.getByRole('listitem')).toHaveCount(3)
   const row = list.getByRole('listitem').first()
   await row.getByTitle('Change category').click()
+  const saved = page.waitForResponse((r) => r.request().method() === 'PATCH' && r.url().includes('/api/transactions/'))
   await row.getByLabel('Category').selectOption('entertainment.music_streaming')
   await expect(row.getByTitle('Change category')).toHaveText('Entertainment › Music & audio')
+  await saved                                                            // "why" is read from the saved row
   const more = async () => { if (page.viewportSize().width < 640) await row.getByRole('button', { name: /^More for / }).click() }
   await more()
   await row.getByRole('button', { name: /^Why .* is filed here$/ }).click()

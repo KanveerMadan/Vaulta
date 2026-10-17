@@ -8,14 +8,20 @@ const ALLOWED_ORIGINS = new Set(['http://localhost:4173', API, EMULATOR])
 
 export const test = base.extend({
   // Every page in every test: no console errors, no uploads, nothing sent anywhere but the app, the API and Firebase auth
-  guard: [async ({ page }, use) => {
+  guard: [async ({ page, browserName }, use) => {
     const problems = []
     const allowed = []   // console messages a test expects (e.g. the 403 a demo write produces)
     const origins = new Set(ALLOWED_ORIGINS)   // + origins a test opts into (guard.allowOrigin), each documented there
     page.on('console', (msg) => {
       if (msg.type() === 'error' && !allowed.some((re) => re.test(msg.text()))) problems.push(`console: ${msg.text()}`)
     })
-    page.on('pageerror', (err) => problems.push(`page error: ${err.message}`))
+    page.on('pageerror', (err) => {
+      // Playwright's WebKit reports an API call cut off by leaving the page as "<url> due to access control checks",
+      // even when the app caught it. Ignored for WebKit and our own API only; Chromium and Firefox still catch real
+      // CORS failures, and the API's CORS is tested directly (backend tests).
+      if (browserName === 'webkit' && err.message.includes(`${new URL(API).host}/`) && err.message.endsWith('due to access control checks.')) return
+      problems.push(`page error: ${err.message}`)
+    })
     page.on('request', (req) => {
       const url = new URL(req.url())
       if (['data:', 'blob:'].includes(url.protocol)) return
@@ -129,10 +135,16 @@ export async function signIn(page, account, { reauth = true } = {}) {
       await expect(prompt).toBeHidden()
     })
   }
-  await page.goto('/login')
-  await page.getByPlaceholder('you@example.com').fill(account.email)
-  await page.getByPlaceholder('••••••••').fill(account.password)
-  await page.getByRole('button', { name: 'Log in' }).click()
+  // One more try if the page never even asked the auth emulator: on CI, WebKit has once stalled starting Firebase Auth
+  // (no request left the page). A sign-in that is refused fails the test as before.
+  for (let attempt = 0; ; attempt++) {
+    await page.goto('/login')
+    await page.getByPlaceholder('you@example.com').fill(account.email)
+    await page.getByPlaceholder('••••••••').fill(account.password)
+    const asked = page.waitForRequest(/accounts:signInWithPassword/, { timeout: 15000 }).then(() => true, () => false)
+    await page.getByRole('button', { name: 'Log in' }).click()
+    if (await asked || attempt) break
+  }
   await page.waitForURL((url) => !url.pathname.startsWith('/login'))
   // and the page it lands on has rendered and loaded its data: a test that navigates away while chunks or API calls
   // are still in flight makes WebKit report them as errors from the page it leaves ("Importing a module script
@@ -197,4 +209,12 @@ export async function checkLayout(page, testInfo) {
     return out
   }, device)
   expect(issues, `${page.url()}\n${issues.join('\n')}`).toEqual([])
+}
+
+// Scroll a tour target to the middle at once and wait two frames, so the spotlight and page sit the same way every run.
+export async function centre(page, id) {
+  await page.evaluate((id) => new Promise((done) => {
+    document.querySelector(`[data-tour="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'instant' })
+    requestAnimationFrame(() => requestAnimationFrame(done))
+  }), id)
 }

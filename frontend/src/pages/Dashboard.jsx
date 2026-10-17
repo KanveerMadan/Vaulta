@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, CalendarBlank, CaretLeft, CaretRight, CheckCircle, ClipboardText, Plugs, Receipt, TrendUp, Warning } from "@phosphor-icons/react";
 import api from "../lib/api";
@@ -11,7 +11,7 @@ import QuickAddBar from "../components/QuickAddBar";
 import GuidedTour from "../components/GuidedTour";
 import GettingStarted from "../components/GettingStarted";
 import SamplesBanner from "../components/SamplesBanner";
-import { tourSteps } from "../lib/tour";
+import { saveTour, tourSteps } from "../lib/tour";
 import { ReviewCard } from "../components/ReviewQueue";
 import TransactionRow from "../components/TransactionRow";
 import { ruleToast } from "../lib/ruleToast";
@@ -236,11 +236,14 @@ function useTour({ demo, onboarding, ready }) {
   const navigate = useNavigate();
   const [state, setState] = useState({ open: false, start: 0 });
   const replay = location.state?.tour;
+  const decided = useRef(false);       // resume / first run is decided once per visit: a skip isn't undone by a late reply
   useEffect(() => {
     if (demo || !ready || !onboarding) return undefined;
     let alive = true;
     api.get("/api/tour").then(async ({ data }) => {
       if (!alive || !data.available) return;
+      if (!replay && decided.current) return;
+      decided.current = true;
       if (replay) {
         await api.patch("/api/tour", { status: "active" });
         if (!alive) return;
@@ -255,7 +258,7 @@ function useTour({ demo, onboarding, ready }) {
     }).catch(() => {});
     return () => { alive = false; };
   }, [demo, ready, onboarding, replay, navigate]);
-  const finish = (status) => { setState({ open: false, start: 0 }); api.patch("/api/tour", { status }).catch(() => {}); };
+  const finish = (status) => { setState({ open: false, start: 0 }); saveTour({ status }); };
   return { ...state, finish };
 }
 

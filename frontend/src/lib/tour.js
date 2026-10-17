@@ -1,4 +1,9 @@
+import api from "./api";
 import { formatINR } from "./money";
+
+// Saves of the tour's place go one after another, so a quick back-and-forth can't land out of order on the server.
+let saving = Promise.resolve();
+export const saveTour = (changes) => (saving = saving.then(() => api.patch("/api/tour", changes).catch(() => {})));
 
 // The guided tour's steps (components/GuidedTour.jsx), written for the user's own numbers.
 
