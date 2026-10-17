@@ -7,7 +7,7 @@ import { useAuthStore } from '../store/authStore'
 import ChatPanel from './ChatPanel'
 import AlertsBell from './AlertsBell'
 import { useFinanceStore } from '../store/financeStore'
-import { ChartPieSlice, ChatCircleText, Flag, GearSix, House, List, ListBullets, MagnifyingGlass, Money, Newspaper, Plugs, Repeat, SignOut, SlidersHorizontal, Users, X } from '@phosphor-icons/react'
+import { ChartPieSlice, ChatCircleText, Flag, GearSix, House, List, ListBullets, MagnifyingGlass, Money, Newspaper, Plugs, Repeat, SignOut, SlidersHorizontal, Question, Users, X } from '@phosphor-icons/react'
 import ThemeSwitch from '../ui/ThemeSwitch'
 import Wordmark from '../ui/Wordmark'
 import { useMedia } from '../lib/useMedia'
@@ -45,6 +45,14 @@ export default function Layout() {
     const t = setTimeout(() => setReadOnly(null), 5000)
     return () => clearTimeout(t)
   }, [readOnly])
+
+  // "?": replay the guided tour on the home page (components/GuidedTour.jsx); there's no tour in the demo
+  const tourButton = (size) => demoToken ? null : (
+    <button onClick={() => navigate('/', { state: { tour: Date.now() } })} aria-label="Take the tour" title="Take the tour"
+      data-tour="help" className={`${size} flex items-center justify-center rounded-sm text-ink-2 hover:bg-sunken`}>
+      <Question size={19} aria-hidden />
+    </button>
+  )
 
   // On purpose: PrivateRoute sends a leaving user to the landing page (an ended session would go to /login)
   const handleLogout = async () => {
@@ -105,6 +113,7 @@ export default function Layout() {
           <Wordmark className="ml-1" />
           <div className="ml-auto flex items-center gap-1">
             <button onClick={openPalette} aria-label="Search and commands" className="w-11 h-11 flex items-center justify-center rounded-sm text-ink-2 hover:bg-sunken"><MagnifyingGlass size={19} /></button>
+            {tourButton('w-11 h-11')}
             <AlertsBell />
           </div>
         </div>
@@ -122,7 +131,7 @@ export default function Layout() {
         {desktop && <aside className="hidden lg:flex flex-col sticky top-0 h-dvh border-r border-line bg-surface px-3 py-4">
           <div className="flex items-center justify-between px-2 mb-4">
             <Wordmark />
-            <AlertsBell />
+            <div className="flex items-center">{tourButton('w-9 h-9')}<AlertsBell /></div>
           </div>
           <button onClick={openPalette} className="mb-4 flex items-center gap-2 rounded-sm border border-line bg-canvas px-3 h-9 text-sm text-muted hover:border-line-strong">
             <MagnifyingGlass size={16} aria-hidden /><span className="flex-1 text-left">Search or jump to</span><kbd className="kbd">⌘K</kbd>

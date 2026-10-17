@@ -1,6 +1,6 @@
 // Automated accessibility checks (axe, WCAG 2.0/2.1/2.2 A and AA) on every page, in light and dark.
 import AxeBuilder from '@axe-core/playwright'
-import { test, expect, newAccount, signIn, seedData, callApi } from './fixtures'
+import { test, expect, newAccount, signIn, seedData, callApi, finishSetup } from './fixtures'
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
@@ -34,7 +34,7 @@ for (const scheme of ['light', 'dark']) {
     test('sign in again prompt', async ({ page, request }) => {
       const account = await newAccount(request)
       await callApi(request, account, 'GET', '/auth/me')
-      await callApi(request, account, 'PATCH', '/api/onboarding', { status: 'done', step: 'finish' })
+      await finishSetup(request, account)
       await signIn(page, account, { reauth: false })
       await page.goto('/settings')
       await page.getByRole('heading', { name: 'Settings' }).waitFor()

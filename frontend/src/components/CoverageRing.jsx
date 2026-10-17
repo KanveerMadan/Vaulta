@@ -9,12 +9,12 @@ const PART_LABELS = {
 }
 
 /** The coverage meter: a ring that fills as sources connect, with the parts that make it up. */
-export function Ring({ percent, size = 168, stroke = 10, label = true }) {
+export function Ring({ percent, size = 168, stroke = 10, label = true, ariaLabel = 'Tracking coverage', caption = 'covered' }) {
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}
-      role="progressbar" aria-label="Tracking coverage" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+      role="progressbar" aria-label={ariaLabel} aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden="true">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgb(var(--sunken))" strokeWidth={stroke} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgb(var(--accent))" strokeWidth={stroke} strokeLinecap="round"
@@ -23,7 +23,7 @@ export function Ring({ percent, size = 168, stroke = 10, label = true }) {
       {label && (
         <div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
           <span className="num font-display font-semibold text-ink leading-none" style={{ fontSize: size * 0.24 }}>{percent}<span className="text-muted" style={{ fontSize: size * 0.12 }}>%</span></span>
-          <span className="text-micro text-muted mt-1">covered</span>
+          <span className="text-micro text-muted mt-1">{caption}</span>
         </div>
       )}
     </div>

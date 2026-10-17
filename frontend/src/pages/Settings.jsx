@@ -105,6 +105,25 @@ const ACTIVITY = {
 const describe = (e) => (typeof ACTIVITY[e.kind] === "function" ? ACTIVITY[e.kind](e.detail) : ACTIVITY[e.kind] || e.kind);
 const when = (iso) => new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 
+/** Replay the guided tour; bring back the getting-started checklist after hiding it. */
+function GettingStartedSettings() {
+  const navigate = useNavigate();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { data } = useApi("/api/checklist", refreshKey);
+  if (data && !data.available) return null;                   // the demo has neither
+  const restore = async () => { await api.patch("/api/checklist", { dismissed: false }); setRefreshKey((k) => k + 1); };
+  return (
+    <section className="card p-5 space-y-3" aria-labelledby="getting-started-settings">
+      <h2 id="getting-started-settings" className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Getting started</h2>
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => navigate("/", { state: { tour: Date.now() } })} className="btn-secondary">Replay the tour</button>
+        {data?.dismissed && <button onClick={restore} className="btn-secondary">Show the getting-started list</button>}
+      </div>
+      {data && !data.dismissed && <p className="text-sm text-ink-500">The getting-started list is on your home page ({data.done} of {data.total} done).</p>}
+    </section>
+  );
+}
+
 function YourData() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -212,6 +231,8 @@ export default function Settings() {
       {saveError && <p className="text-sm text-danger">{saveError}</p>}
 
       <ResumeSetup />
+
+      <GettingStartedSettings />
 
       <section className="card p-5 space-y-2">
         <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">AI chat</h2>

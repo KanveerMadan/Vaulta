@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, CalendarBlank, CaretLeft, CaretRight, CheckCircle, ClipboardText, Plugs, Receipt, TrendUp, Warning } from "@phosphor-icons/react";
 import api from "../lib/api";
 import { shortDay, useApi } from "../lib/format";
@@ -8,6 +8,9 @@ import { useFinanceStore } from "../store/financeStore";
 import { useAuthStore } from "../store/authStore";
 import SubscriptionBanner from "../components/SubscriptionBanner";
 import QuickAddBar from "../components/QuickAddBar";
+import GuidedTour from "../components/GuidedTour";
+import GettingStarted from "../components/GettingStarted";
+import { tourSteps } from "../lib/tour";
 import { ReviewCard } from "../components/ReviewQueue";
 import TransactionRow from "../components/TransactionRow";
 import { ruleToast } from "../lib/ruleToast";
@@ -226,6 +229,35 @@ function PeriodTotals() {
   );
 }
 
+/** Whether to show the tour now: resumed, replayed (location state from the "?" button or Settings), or first time after setup. */
+function useTour({ demo, onboarding, ready }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [state, setState] = useState({ open: false, start: 0 });
+  const replay = location.state?.tour;
+  useEffect(() => {
+    if (demo || !ready || !onboarding) return undefined;
+    let alive = true;
+    api.get("/api/tour").then(async ({ data }) => {
+      if (!alive || !data.available) return;
+      if (replay) {
+        await api.patch("/api/tour", { status: "active" });
+        if (!alive) return;
+        setState({ open: true, start: 0 });
+        navigate(".", { replace: true, state: {} });                     // a reload doesn't replay it again
+      } else if (data.status === "active") {
+        setState({ open: true, start: data.step });
+      } else if (data.status === "new" && ["done", "skipped"].includes(onboarding.status)) {
+        await api.patch("/api/tour", { status: "active" });
+        if (alive) setState({ open: true, start: 0 });
+      }
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [demo, ready, onboarding, replay, navigate]);
+  const finish = (status) => { setState({ open: false, start: 0 }); api.patch("/api/tour", { status }).catch(() => {}); };
+  return { ...state, finish };
+}
+
 export default function Dashboard() {
   const thisMonth = monthKey(new Date());
   const [month, setMonth] = useState(thisMonth);
@@ -238,9 +270,16 @@ export default function Dashboard() {
   const txns = txnPage?.items ?? null;
   const { data: onboarding } = useApi("/api/onboarding", 0);
   const refresh = () => setRefreshKey((k) => k + 1);
+  const tour = useTour({ demo, onboarding, ready: Boolean(home && txns !== null && current) });
+  const setChatOpen = useFinanceStore((s) => s.setChatOpen);
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {                                   // /?ask=1 (the checklist's "Ask the assistant") opens the chat
+    if (params.get("ask")) { setChatOpen(true); setParams({}, { replace: true }); }
+  }, [params, setParams, setChatOpen]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      {tour.open && <GuidedTour steps={tourSteps(home, txns?.length ?? 0)} start={tour.start} onFinish={tour.finish} />}
       {!demo && <SubscriptionBanner />}
       {onboarding?.status === "active" && (
         <Link to="/onboarding" className="flex items-center justify-between gap-3 rounded-md border border-accent-line bg-accent-tint/60 px-4 py-3 text-sm text-ink hover:bg-accent-tint">
@@ -274,21 +313,21 @@ export default function Dashboard() {
       ) : (
         <>
           <div className="grid md:grid-cols-[1.3fr_1fr] gap-10 md:gap-14 items-start">
-            {current ? <SafeToSpend safe={home.safe_to_spend} /> : <PeriodTotals />}
+            <div data-tour="safe">{current ? <SafeToSpend safe={home.safe_to_spend} /> : <PeriodTotals />}</div>
             <Outlook outlook={home.outlook} current={current} />
           </div>
 
           {current && (
             <div className="grid gap-3">
-              <AskBar />
-              <QuickAddBar onAdded={refresh} />
+              <div data-tour="ask"><AskBar /></div>
+              <div data-tour="quick-add"><QuickAddBar onAdded={refresh} /></div>
             </div>
           )}
 
           <div className="grid lg:grid-cols-[1.4fr_1fr] gap-x-12 gap-y-8 items-start">
             <div className="space-y-8 min-w-0">
-              <Attention attention={home.attention} onAnswered={refresh} />
-              <Panel title={current ? "Recent transactions" : `Transactions in ${monthLabel(month)}`}
+              <div data-tour="attention"><Attention attention={home.attention} onAnswered={refresh} /></div>
+              <div data-tour="recent"><Panel title={current ? "Recent transactions" : `Transactions in ${monthLabel(month)}`}
                 action={<Link to="/transactions" className="text-micro font-medium text-accent-text hover:underline">All transactions</Link>}>
                 {txns === null ? <SkeletonRows rows={5} /> : txns.length ? (
                   <div className="divide-y divide-line">
@@ -299,9 +338,10 @@ export default function Dashboard() {
                     {current ? "No transactions yet. Add one above, forward your bank alerts, or" : "Nothing recorded in this month."}
                   </Empty>
                 )}
-              </Panel>
+              </Panel></div>
             </div>
             <div className="space-y-8 min-w-0">
+              {current && !demo && <GettingStarted refreshKey={refreshKey} />}
               <Panel title="Budgets" action={<Link to="/budgets" className="text-micro font-medium text-accent-text hover:underline">{home.budgets.categories.length || home.budgets.overall ? "Edit" : "Set limits"}</Link>}>
                 {home.budgets.overall || home.budgets.categories.length ? (
                   <div className="space-y-4">
@@ -312,7 +352,7 @@ export default function Dashboard() {
                 ) : <Empty icon={ClipboardText} to="/budgets" cta="Set monthly limits">No budgets yet. Limits drive the bars here and the safe-to-spend figure.</Empty>}
               </Panel>
               {current && <Upcoming items={home.upcoming} />}
-              <Coverage coverage={home.coverage} cashBalance={home.cash_balance} />
+              <div data-tour="coverage"><Coverage coverage={home.coverage} cashBalance={home.cash_balance} /></div>
               {current && <PeriodTotals />}
             </div>
           </div>

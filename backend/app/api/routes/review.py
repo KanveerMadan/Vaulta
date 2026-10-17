@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
 from app.core.database import get_db
+from app.services import getting_started
 from app.models.user import User
 from app.schemas.review import ReviewAnswer, ReviewCardResponse, ReviewQueue
 from app.services.review import answer_card, build_cards
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/api/review", tags=["review"])
 @router.get("", response_model=ReviewQueue)
 def get_queue(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     cards = build_cards(db, current_user)
+    getting_started.note_opened(db, current_user, "review")      # a getting-started checklist item
     return ReviewQueue(count=len(cards), items=[ReviewCardResponse.model_validate(c, from_attributes=True) for c in cards])
 
 

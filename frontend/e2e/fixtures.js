@@ -106,7 +106,13 @@ export async function seedData(request, account) {
   r(daysAgo(9), 'ATW-512345XXXXXX6789-S1ANMU12-BANGALORE', '2000.00')
   await callApi(request, account, 'POST', '/api/import/batch', { rows })
   await callApi(request, account, 'POST', '/api/budgets', { category: 'Food & Dining', monthly_limit: '6000' })
+  await finishSetup(request, account)
+}
+
+/** Setup finished and the guided tour already seen (it starts by itself after setup; e2e/tour.spec.js covers it). */
+export async function finishSetup(request, account) {
   await callApi(request, account, 'PATCH', '/api/onboarding', { status: 'done', step: 'finish' })
+  await callApi(request, account, 'PATCH', '/api/tour', { status: 'skipped' })
 }
 
 /**

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import StatementUpload from "../components/StatementUpload";
 import ManualEntryModal from "../components/ManualEntryModal";
@@ -143,7 +143,8 @@ function PrivacyTable() {
 // ─────────────────────────────────────────────
 
 export default function Connect() {
-  const [showUpload, setShowUpload] = useState(false);
+  const [params] = useSearchParams();
+  const [showUpload, setShowUpload] = useState(params.get("do") === "import");   // deep link from the checklist
   const [showManual, setShowManual] = useState(false);
 
   const sources = SOURCES;
@@ -183,7 +184,7 @@ export default function Connect() {
         ))}
       </div>
 
-      <InboundCard />
+      <div id="forwarding" className="scroll-mt-20"><InboundCard /></div>
 
       {/* Privacy table */}
       <PrivacyTable />

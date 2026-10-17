@@ -1,6 +1,6 @@
 // Phase 6.5 sign-in flows against the Firebase Auth emulator: email verification, password reset, linking Google
 // and a password to one account, re-authentication for sensitive actions, signing out everywhere, deleting the login.
-import { test, expect, API, APP_CHECK, checkLayout, newAccount, signIn, signInToken, signedInWithData, emulatorEmails, callApi } from './fixtures'
+import { test, expect, API, APP_CHECK, checkLayout, newAccount, signIn, signInToken, signedInWithData, emulatorEmails, callApi, finishSetup } from './fixtures'
 
 const uniqueEmail = (tag) => `${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@vaulta.test`
 const STRONG = 'correct-horse-battery'
@@ -165,7 +165,7 @@ test('Google and a password sign in to one account', async ({ page, request }, t
   const account = await newAccount(request)
   await callApi(request, account, 'GET', '/auth/me')
   await callApi(request, account, 'POST', '/api/budgets', { category: 'Travel', monthly_limit: '4321' })
-  await callApi(request, account, 'PATCH', '/api/onboarding', { status: 'done', step: 'finish' })
+  await finishSetup(request, account)
 
   expect(await googleSignIn(page, account.email)).toBe(account.uid)              // Firebase links: same account
   await page.waitForURL((u) => !u.pathname.startsWith('/login'))

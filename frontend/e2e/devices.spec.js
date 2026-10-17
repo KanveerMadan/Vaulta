@@ -3,7 +3,7 @@
 // without WebGL, sticky headers, a focused field under the keyboard, and the installed (standalone) app.
 // Baselines: e2e/devices.spec.js-snapshots/<screen>-<device>-<os>.png (update with --update-snapshots).
 import { fileURLToPath } from 'node:url'
-import { test, expect, checkLayout, isTouch, newAccount, callApi, seedData, signIn, openMenu, openChatPanel } from './fixtures'
+import { test, expect, checkLayout, isTouch, newAccount, callApi, seedData, signIn, openMenu, openChatPanel, finishSetup } from './fixtures'
 
 const STATEMENT = fileURLToPath(new URL('../../fixtures/statements/hdfc.csv', import.meta.url))
 const SNAP = { maxDiffPixelRatio: 0.02, animations: 'disabled', fullPage: false }
@@ -106,7 +106,7 @@ test('home, transactions, chat, sticky header, keyboard', async ({ page, request
 test('import preview', async ({ page, request }, testInfo) => {
   const a = await newAccount(request)
   await callApi(request, a, 'GET', '/auth/me')
-  await callApi(request, a, 'PATCH', '/api/onboarding', { status: 'done' })
+  await finishSetup(request, a)
   await signIn(page, a)
   await openMenu(page)
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Connect', exact: true }).click()

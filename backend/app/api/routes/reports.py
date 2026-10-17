@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
 from app.core.database import get_db
+from app.services import getting_started
 from app.models.report import Report
 from app.models.user import User
 from app.services import reports
@@ -68,6 +69,7 @@ def get_report(report_id: uuid.UUID, current_user: User = Depends(get_current_us
     r = db.query(Report).filter(Report.id == report_id, Report.user_id == current_user.id).first()
     if r is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found.")
+    getting_started.note_opened(db, current_user, "report")      # a getting-started checklist item
     return _detail(r)
 
 

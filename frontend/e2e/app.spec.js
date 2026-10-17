@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { test, expect, accountExists, checkLayout, openMenu, openChatPanel, isTouch, newAccount, signIn, signedInWithData, callApi } from './fixtures'
+import { test, expect, accountExists, checkLayout, openMenu, openChatPanel, isTouch, newAccount, signIn, signedInWithData, callApi, finishSetup } from './fixtures'
 
 const STATEMENT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../fixtures/statements/hdfc.csv')
 const menu = async (page, testInfo, name) => {
@@ -65,7 +65,11 @@ test('sign up → onboarding, all four steps', async ({ page, request }, testInf
   await expect(page.getByRole('heading', { name: "You're set up." })).toBeVisible()
   await expect(page.getByText('What Vaulta does from here')).toBeVisible()
   await page.getByRole('button', { name: 'Go to home' }).click()
-  await expect(page.getByText('Safe to spend today')).toBeVisible()
+  await expect(page.getByText('Safe to spend today').first()).toBeVisible()
+  // the guided tour starts by itself once setup is finished (e2e/tour.spec.js walks through it)
+  await expect(page.getByRole('dialog', { name: 'Safe to spend today' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('tour')).toHaveCount(0)
   await page.reload()
   await expect(page).not.toHaveURL(/onboarding/)                // done: not sent back
 })
@@ -73,7 +77,7 @@ test('sign up → onboarding, all four steps', async ({ page, request }, testInf
 test('statement import: file → preview → confirm → transactions appear', async ({ page, request }, testInfo) => {
   const account = await newAccount(request)
   await callApi(request, account, 'GET', '/auth/me')
-  await callApi(request, account, 'PATCH', '/api/onboarding', { status: 'done' })
+  await finishSetup(request, account)
   await signIn(page, account)
   await menu(page, testInfo, 'Connect')
   await page.getByRole('button', { name: /upload/i }).first().click()

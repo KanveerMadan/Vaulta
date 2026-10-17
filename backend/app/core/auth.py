@@ -56,6 +56,7 @@ UNVERIFIED_WRITES_ALLOWED = {
     ("POST", "/api/account/reauth-failed"), ("POST", "/api/account/sign-out-everywhere"),
     ("POST", "/api/account/password"), ("POST", "/api/account/sign-in-methods/linked"),
     ("DELETE", "/api/account/sign-in-methods/{provider}"),
+    ("PATCH", "/api/tour"), ("PATCH", "/api/checklist"),   # getting around the app, before the address is confirmed
 }
 UNVERIFIED_READS_BLOCKED = {("GET", "/api/inbound")}   # shows (and creates) the forwarding address
 EMAIL_UNVERIFIED = "Verify your email address first: open the link we sent you, then try again."

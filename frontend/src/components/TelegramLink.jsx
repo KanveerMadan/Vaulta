@@ -24,7 +24,7 @@ export default function TelegramLink() {
   const setWeekly = async (weekly) => { await api.patch("/api/telegram", { weekly }); reload(); };
 
   return (
-    <section className="card p-5 space-y-3">
+    <section id="telegram" className="card p-5 space-y-3 scroll-mt-20">
       <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Telegram</h2>
       <p className="text-xs text-ink-500">
         Log expenses and ask questions from Telegram. Messages you send to the bot pass through Telegram.

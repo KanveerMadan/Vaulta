@@ -22,7 +22,7 @@ from app.core.database import get_db
 from app.models.inbound import InboundEvent
 from app.models.transaction import Transaction
 from app.models.user import User
-from app.services import coverage
+from app.services import coverage, getting_started
 from app.services.review import build_cards
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
@@ -72,7 +72,9 @@ class OnboardingUpdate(BaseModel):
 
 def _state(db: Session, user: User) -> dict:
     # accounts that already had data before onboarding existed aren't sent through it (Settings → Resume setup)
-    first = "new" if user.onboarding is not None or db.query(Transaction.id).filter(Transaction.user_id == user.id).first() is None \
+    # (the tour and checklist share users.onboarding but don't count as having started setup)
+    started = bool(set(user.onboarding or {}) - set(getting_started.KEYS))
+    first = "new" if started or db.query(Transaction.id).filter(Transaction.user_id == user.id).first() is None \
         else "skipped"
     return {"step": "basics", "status": first, "income": None, "payday": None, "banks": [], "upi_apps": [],
             "basics_done": False, "test_started_at": None, **(user.onboarding or {})}
