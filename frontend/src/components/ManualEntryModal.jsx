@@ -1,6 +1,7 @@
 import Sheet from "../ui/Sheet";
 import { useState } from "react";
-import { CATEGORIES } from "../lib/categories";
+import { isSubcategory } from "../lib/categories";
+import CategorySelect from "./CategorySelect";
 import { addManualTransaction } from "../lib/transactions";
 
 const today = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD, local
@@ -24,7 +25,7 @@ export default function ManualEntryModal({ initial = {}, onClose, onSaved }) {
         date: form.date,
         amount: String(form.amount).trim(),
         merchant: form.merchant.trim(),
-        category: form.category || null,
+        ...(isSubcategory(form.category) ? { subcategory: form.category } : { category: form.category || null }),
         direction: form.direction,
         payment_method: form.payment_method,
         notes: form.notes.trim() || null,
@@ -70,10 +71,8 @@ export default function ManualEntryModal({ initial = {}, onClose, onSaved }) {
         <div className="grid grid-cols-2 gap-3">
           <label className="text-sm text-ink-700 space-y-1">
             <span>Category</span>
-            <select className={input} value={form.category} onChange={set("category")}>
-              <option value="">Auto-detect</option>
-              {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-            </select>
+            <CategorySelect className={input} value={form.category} empty="Auto-detect"
+              onChange={(v) => setForm((f) => ({ ...f, category: v }))} />
           </label>
           <label className="text-sm text-ink-700 space-y-1">
             <span>Paid by</span>

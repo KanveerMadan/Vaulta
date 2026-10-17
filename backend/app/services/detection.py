@@ -37,6 +37,7 @@ from app.services.anomalies import sync_anomalies
 from app.services.cash import classify as classify_cash
 from app.services.recurring import sync_series
 from app.services.rules import apply_rules
+from app.services.categories import custom_subcategories
 
 # ── Tunable thresholds (listed in the Phase 2 report) ─────────────────────────
 TRANSFER_WINDOW = timedelta(days=3)
@@ -68,6 +69,7 @@ class Ctx:
     txns: list[Transaction]
     locked: set[tuple[uuid.UUID, str]]
     review_transfer_ids: list[uuid.UUID] = field(default_factory=list)
+    custom: dict = field(default_factory=dict)   # the user's own subcategories (services/categories.py)
 
     def is_locked(self, txn: Transaction, f: str) -> bool:
         return (txn.id, f) in self.locked
@@ -76,9 +78,11 @@ class Ctx:
         if not self.is_locked(txn, "kind"):
             txn.kind = kind
 
-    def set_category(self, txn: Transaction, category: Optional[str]) -> None:
+    def set_category(self, txn: Transaction, category: Optional[str], subcategory: Optional[str] = None) -> None:
+        """Category and subcategory move together: a user edit locks both (transaction_service.update_transaction)."""
         if not self.is_locked(txn, "category"):
             txn.category = category
+            txn.subcategory = subcategory
 
     def auto_kind(self, txn: Transaction, *kinds: TransactionKind) -> bool:
         """True if detection may still decide this transaction's kind and it's currently one of `kinds`."""
@@ -116,7 +120,7 @@ def references(txn: Transaction) -> set[str]:
 def _reset(ctx: Ctx) -> None:
     for t in ctx.txns:
         ctx.set_kind(t, default_kind(t))
-        ctx.set_category(t, t.auto_category)
+        ctx.set_category(t, t.auto_category, t.auto_subcategory)
         t.transfer_group_id = None
         t.refund_of_id = None
 
@@ -185,7 +189,7 @@ def _refunds(ctx: Ctx) -> None:
             d = max(originals, key=lambda t: t.transaction_date)  # most recent purchase
             remaining[d.id] = remaining.get(d.id, d.amount) - c.amount
             c.refund_of_id = d.id
-            ctx.set_category(c, d.category)
+            ctx.set_category(c, d.category, d.subcategory)
             if not c.merchant_clean:
                 c.merchant_clean = d.merchant_clean
 
@@ -272,7 +276,7 @@ def load_context(db: Session, user: User) -> Ctx:
     locked = {
         (tid, f) for tid, f in db.query(Correction.transaction_id, Correction.field).filter(Correction.user_id == user.id)
     }
-    return Ctx(txns=txns, locked=locked)
+    return Ctx(txns=txns, locked=locked, custom=custom_subcategories(db, user.id))
 
 
 def run_detection(db: Session, user: User, today: Optional[date] = None) -> Ctx:

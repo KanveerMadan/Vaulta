@@ -20,6 +20,8 @@ from sqlalchemy.orm import Session
 from app.core.auth import get_current_user
 from app.core.database import get_db
 from app.models.transaction import Budget
+from app.core import clock
+from app.services import analytics, categories
 from app.models.user import User
 from app.services.budgets import create_or_reactivate
 from app.schemas.budget import BudgetCreate, BudgetUpdate, BudgetResponse, BudgetListResponse
@@ -56,14 +58,20 @@ def list_budgets(
         .all()
     )
 
-    # Sum of per-category limits (excludes the overall cap if set)
-    category_budgets = [b for b in budgets if b.category is not None]
+    # Sum of per-category limits (excludes the overall cap, and subcategory budgets, which sit inside their group's)
+    category_budgets = [b for b in budgets if b.category is not None and b.subcategory is None]
     total = sum(b.monthly_limit for b in category_budgets) if category_budgets else None
 
     return BudgetListResponse(
         items=[BudgetResponse.model_validate(b) for b in budgets],
         total_monthly_limit=total,
     )
+
+
+@router.get("/status")
+def budget_status(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """This month's budgets vs spending, subcategory budgets included (analytics.budget_status)."""
+    return analytics.budget_status(db, current_user.id, clock.today())
 
 
 @router.post("", response_model=BudgetResponse, status_code=status.HTTP_201_CREATED)
@@ -79,9 +87,13 @@ def create_budget(
     - `category: "Food & Dining"` sets a per-category limit.
     - Only one active budget per category per user (unique constraint enforced at DB level).
     """
-    budget = create_or_reactivate(db, current_user, payload.category, payload.monthly_limit)
+    if payload.subcategory and (payload.category is None or
+                                categories.group_of(db, current_user.id, payload.subcategory) != payload.category):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="That subcategory isn't in this category.")
+    budget = create_or_reactivate(db, current_user, payload.category, payload.monthly_limit, payload.subcategory)
     if budget is None:
-        category_label = payload.category or "overall"
+        category_label = payload.subcategory or payload.category or "overall"
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"An active budget for '{category_label}' already exists. Use PATCH to update it.",

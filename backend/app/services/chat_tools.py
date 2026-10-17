@@ -27,7 +27,7 @@ from app.models.person import Person
 from app.models.transaction import Budget, KIND_DIRECTIONS, Transaction, TransactionKind
 from app.models.user import User
 from app.schemas.transaction import CATEGORIES, ManualTransactionCreate, TransactionUpdate
-from app.services import analytics, cash, transaction_service
+from app.services import analytics, cash, categories, transaction_service
 from app.services.budgets import create_or_reactivate
 from app.services.detection import run_detection
 from app.services.goals import add_entry, create_goal, find_goal
@@ -142,6 +142,8 @@ def search_transactions(db: Session, user: User, args: dict) -> dict:
         q = q.filter(Transaction.category == _category(args["category"]))
     if args.get("merchant"):
         q = q.filter(Transaction.merchant_clean.in_(merchants_containing(db, user.id, args["merchant"])))
+    if args.get("tag"):
+        q = q.filter(Transaction.id.in_(categories.transaction_ids_with_tag(db, user.id, str(args["tag"]))))
     if args.get("min_amount") is not None:
         q = q.filter(Transaction.amount >= _amount(args["min_amount"], "min_amount"))
     if args.get("max_amount") is not None:
@@ -157,9 +159,11 @@ def search_transactions(db: Session, user: User, args: dict) -> dict:
                          Transaction.id.in_(narrations), Transaction.person_id.in_(person_ids)))
     limit = max(1, min(int(args.get("limit") or 20), MAX_SEARCH_RESULTS))
     rows = q.order_by(Transaction.transaction_date.desc()).limit(limit).all()
+    custom = categories.custom_subcategories(db, user.id)
     return {"count": len(rows), "transactions": [
         {"id": str(t.id), "date": t.transaction_date.date().isoformat(), "merchant": _label(t, people),
-         "category": t.category, "amount": analytics.money(t.amount), "direction": t.direction.value, "kind": t.kind.value}
+         "category": t.category, "subcategory": categories.label(t.subcategory, custom), "tags": t.tags,
+         "amount": analytics.money(t.amount), "direction": t.direction.value, "kind": t.kind.value}
         for t in rows]}
 
 
@@ -418,7 +422,8 @@ def _fn(name: str, description: str, properties: dict, required: tuple = ()) -> 
 
 
 _DATE = {"type": "string", "description": "YYYY-MM-DD"}
-_GROUP = {"type": "string", "enum": ["category", "merchant", "person", "day", "week", "month"]}
+_GROUP = {"type": "string", "enum": ["category", "subcategory", "tag", "merchant", "person", "day", "week", "month"],
+          "description": "tag: totals per tag (a transaction with two tags counts under both)"}
 _MONTH = {"type": "string", "description": "YYYY-MM (default: this month)"}
 
 TOOL_SCHEMAS = [
@@ -438,7 +443,8 @@ TOOL_SCHEMAS = [
     _fn("goal_status", "Savings goals: saved so far, required per month, on track or behind, projected date.", {}),
     _fn("search_transactions", "Find transactions. All filters optional.",
         {"query": {"type": "string"}, "start": _DATE, "end": _DATE, "category": {"type": "string"},
-         "merchant": {"type": "string"}, "min_amount": {"type": "number"}, "max_amount": {"type": "number"},
+         "merchant": {"type": "string"}, "tag": {"type": "string", "description": "one of the user's tags"},
+         "min_amount": {"type": "number"}, "max_amount": {"type": "number"},
          "limit": {"type": "integer", "description": f"max {MAX_SEARCH_RESULTS}"}}),
     _fn("what_if_reduce", "Savings from cutting a category or merchant by a percentage.",
         {"category_or_merchant": {"type": "string"}, "percent": {"type": "number"}, "horizon_months": {"type": "integer"}},

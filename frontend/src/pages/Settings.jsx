@@ -4,6 +4,7 @@ import api from "../lib/api";
 import { useApi } from "../lib/format";
 import TelegramLink from "../components/TelegramLink";
 import SecuritySettings from "../components/SecuritySettings";
+import CustomSubcategories from "../components/CustomSubcategories";
 
 const REPORTS = [
   ["weekly", "Weekly", "Monday to Sunday, sent Sunday at 7 pm"],
@@ -250,6 +251,8 @@ export default function Settings() {
           </div>
         ))}
       </section>
+
+      <CustomSubcategories />
 
       <SecuritySettings />
 

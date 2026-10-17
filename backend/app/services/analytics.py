@@ -25,15 +25,17 @@ from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from app.core import clock
+from app.models.category import Tag, TransactionTag
 from app.models.goal import Goal
 from app.models.person import Person
 from app.models.recurring import RecurringSeries
 from app.models.transaction import Budget, Transaction, TransactionKind
+from app.services.categories import custom_subcategories, label as subcategory_label
 from app.services.people import balances
 from app.services.recurring import series_key
 
 ZERO = Decimal("0.00")
-GroupBy = Literal["category", "merchant", "person", "day", "week", "month"]
+GroupBy = Literal["category", "subcategory", "tag", "merchant", "person", "day", "week", "month"]
 
 NET_SPEND = case(
     (Transaction.kind == TransactionKind.spend, Transaction.amount),
@@ -83,6 +85,8 @@ def spend_summary(db: Session, user_id: uuid.UUID, start: date, end: date, group
         "week": func.date(func.date_trunc("week", Transaction.transaction_date)),
         "month": func.date(func.date_trunc("month", Transaction.transaction_date)),
     }
+    keys["subcategory"] = Transaction.subcategory
+    keys["tag"] = TransactionTag.tag_id
     key = keys[group_by]
     q = (
         db.query(key.label("key"), func.sum(NET_SPEND).label("total"), func.count(SPEND_COUNT).label("count"))
@@ -91,14 +95,27 @@ def spend_summary(db: Session, user_id: uuid.UUID, start: date, end: date, group
     )
     if group_by == "person":
         q = q.filter(Transaction.person_id.isnot(None))
+    if group_by == "tag":
+        # a transaction counts once under each of its tags, so tag totals can add up to more than the total.
+        # A split part counts under its parent's tags.
+        owner = func.coalesce(Transaction.split_parent_id, Transaction.id)
+        q = q.join(TransactionTag, TransactionTag.transaction_id == owner)
     rows = q.all()
     names = {}
     if group_by == "person":
         names = {p.id: p.display_name for p in db.query(Person).filter(Person.user_id == user_id)}
+    if group_by == "tag":
+        names = {t.id: t.name for t in db.query(Tag).filter(Tag.user_id == user_id)}
+    if group_by == "subcategory":
+        custom = custom_subcategories(db, user_id)
 
     def label(k):
         if group_by == "category":
             return k or "Uncategorized"
+        if group_by == "subcategory":
+            return subcategory_label(k, custom) or "No subcategory"
+        if group_by == "tag":
+            return names.get(k, "Unknown tag")
         if group_by == "merchant":
             return k or "Unknown merchant"
         if group_by == "person":
@@ -176,9 +193,10 @@ def savings_rate(db: Session, user_id: uuid.UUID, start: date, end: date) -> dic
 # ── Budgets ───────────────────────────────────────────────────────────────────
 
 def active_budgets(db: Session, user_id: uuid.UUID) -> dict[Optional[str], Decimal]:
-    """{category: monthly limit}; the None key is the overall cap."""
+    """{category: monthly limit}; the None key is the overall cap. Subcategory budgets: budget_status."""
     return {b.category: b.monthly_limit
-            for b in db.query(Budget).filter(Budget.user_id == user_id, Budget.is_active.is_(True))}
+            for b in db.query(Budget).filter(Budget.user_id == user_id, Budget.is_active.is_(True),
+                                             Budget.subcategory.is_(None))}
 
 
 def budget_status(db: Session, user_id: uuid.UUID, month: date) -> dict:
@@ -195,6 +213,13 @@ def budget_status(db: Session, user_id: uuid.UUID, month: date) -> dict:
                 "over": used > limit}
 
     categories = [line(c, limit, spent.get(c, ZERO)) for c, limit in sorted(budgets.items(), key=lambda kv: kv[0] or "") if c]
+    sub_budgets = db.query(Budget).filter(Budget.user_id == user_id, Budget.is_active.is_(True), Budget.subcategory.isnot(None)).all()
+    if sub_budgets:
+        custom = custom_subcategories(db, user_id)
+        sub_spent = {g["key"]: g["total"] for g in spend_summary(db, user_id, start, end, "subcategory")["groups"]}
+        for b in sorted(sub_budgets, key=lambda b: (b.category, subcategory_label(b.subcategory, custom) or "")):
+            categories.append({**line(subcategory_label(b.subcategory, custom) or b.subcategory, b.monthly_limit,
+                                      sub_spent.get(b.subcategory, ZERO)), "group": b.category, "subcategory": b.subcategory})
     return {
         "month": start.isoformat()[:7], "days_left": days_left, "total_spend": money(total_spend),
         "overall": line(None, budgets[None], total_spend) if None in budgets else None,

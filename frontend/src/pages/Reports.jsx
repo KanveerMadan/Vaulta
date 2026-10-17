@@ -86,9 +86,16 @@ function ReportView({ report }) {
         </Block>
       </div>
 
+      {d.tags?.length > 0 && (
+        <Block title="By tag" className="mt-10">
+          <ListOf items={d.tags} render={(t) => <><span className="text-ink truncate">#{t.name}</span><Money value={t.amount} className="text-ink-2 shrink-0" /></>} />
+          <p className="mt-2 text-micro text-muted">A transaction with two tags counts under both.</p>
+        </Block>
+      )}
+
       {budgets.length > 0 && (
         <Block title="Budgets" className="mt-10">
-          <div className="space-y-4">{budgets.map((b) => <Meter key={b.category} label={b.category} spent={Number(b.spent)} limit={Number(b.limit)} />)}</div>
+          <div className="space-y-4">{budgets.map((b) => <Meter key={b.subcategory || b.category} label={b.group ? `${b.group} › ${b.category}` : b.category} spent={Number(b.spent)} limit={Number(b.limit)} />)}</div>
         </Block>
       )}
 

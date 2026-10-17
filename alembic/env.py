@@ -46,6 +46,7 @@ from app.models.cash import CashDeclaration  # noqa: F401
 from app.models.activity import ActivityEvent  # noqa: F401
 from app.models.ratelimit import RateLimit  # noqa: F401
 from app.models.deletion import PendingAuthDeletion  # noqa: F401
+from app.models.category import CustomSubcategory, Tag, TransactionTag  # noqa: F401
 # Phase 2+: import new models here as they're created
 
 # ── Config ────────────────────────────────────────────────────────────────────

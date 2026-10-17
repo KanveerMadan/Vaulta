@@ -103,7 +103,7 @@ async def coded_error(_request, exc: CodedError):
 
 
 # ── Routers ────────────────────────────────────────────────────────────────────
-from app.api.routes import auth, transactions, budgets, imports, recurring, people, rules, review, chat, settings as settings_routes, anomalies, reports, internal, unsubscribe, inbound, telegram as telegram_routes, cash as cash_routes, home, goals, alerts as alert_routes, onboarding, account
+from app.api.routes import auth, transactions, budgets, imports, recurring, people, rules, review, chat, settings as settings_routes, anomalies, reports, internal, unsubscribe, inbound, telegram as telegram_routes, cash as cash_routes, home, goals, alerts as alert_routes, onboarding, account, categories
 
 app.include_router(auth.router)
 app.include_router(transactions.router)
@@ -127,6 +127,7 @@ app.include_router(goals.router)
 app.include_router(alert_routes.router)
 app.include_router(onboarding.router)
 app.include_router(account.router)
+app.include_router(categories.router)
 
 # Payments router loaded defensively: if the Razorpay SDK or its transitive
 # dependencies fail to import (e.g. a packaging issue on a fresh deploy),

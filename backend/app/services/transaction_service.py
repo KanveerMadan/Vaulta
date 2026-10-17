@@ -31,6 +31,7 @@ from app.schemas.transaction import (
     CategorySummary,
 )
 from app.schemas.imports import ImportRow, ImportBatchResult
+from app.services import categories
 from app.services.merchant_normalizer import normalize
 from app.core import clock
 from app.services import analytics
@@ -128,6 +129,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
         merchant_clean = normalized.merchant_clean if confident else None
         nature = _row_nature(row, merchant_clean)
         category = _category_from_nature(nature, normalized.category if confident else None)
+        subcategory = normalized.subcategory if confident and category == normalized.category else None
 
         if "T" in row.date:
             raw_timestamp = datetime.fromisoformat(row.date).replace(tzinfo=IST)
@@ -148,6 +150,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
                 merchant_raw=row.description_raw,
                 merchant_clean=merchant_clean,
                 category=category,
+                subcategory=subcategory,
                 transaction_nature=nature,
                 kind=TransactionKind.transfer if row.type == "transfer" else None,
                 legacy_source_enum=TransactionSource.csv,
@@ -194,6 +197,16 @@ def create_manual_transaction(db: Session, user: User, payload: ManualTransactio
     normalized = normalize(payload.merchant)
     confident = normalized.confidence >= 0.5
     nature = TransactionNature.expense if payload.direction == "debit" else TransactionNature.income
+    if payload.subcategory:
+        category = categories.group_of(db, user.id, payload.subcategory)
+        if category is None or (payload.category and payload.category != category):
+            raise categories.CategoryError("Unknown subcategory for that category.")
+        subcategory = payload.subcategory
+    elif payload.category:
+        category, subcategory = payload.category, None
+    else:
+        category = normalized.category if confident else None
+        subcategory = normalized.subcategory if confident else None
     txn, _record, _matched = ingest_or_match_transaction(
         db,
         user,
@@ -204,7 +217,8 @@ def create_manual_transaction(db: Session, user: User, payload: ManualTransactio
         idempotency_key=hashlib.sha256(f"manual|{payload.client_id.lower()}".encode()).hexdigest(),
         merchant_raw=payload.merchant,
         merchant_clean=normalized.merchant_clean if confident else payload.merchant,
-        category=payload.category or (normalized.category if confident else None),
+        category=category,
+        subcategory=subcategory,
         transaction_nature=nature,
         legacy_source_enum=TransactionSource.manual,
         raw_date=date.fromisoformat(payload.date),
@@ -242,6 +256,31 @@ def record_correction(db: Session, txn: Transaction, field: str, new_value: Opti
     txn.user_corrected = "true"
 
 
+def _rule_value(t: Transaction, field: str):
+    return (t.category, t.subcategory) if field == "category" else getattr(t, field)
+
+
+def _category_edit(db: Session, txn: Transaction, payload: TransactionUpdate) -> tuple[Optional[str], Optional[str]]:
+    """(category, subcategory) after the edit. A subcategory sets its group; a new group keeps the subcategory only
+    if it belongs to that group."""
+    fields = payload.model_fields_set
+    custom = categories.custom_subcategories(db, txn.user_id)
+    category = payload.category if "category" in fields else txn.category
+    if "subcategory" in fields:
+        subcategory = payload.subcategory
+        if subcategory:
+            group = categories.group_of(db, txn.user_id, subcategory, custom)
+            if group is None:
+                raise categories.CategoryError("Unknown subcategory.")
+            if "category" in fields and payload.category != group:
+                raise categories.CategoryError(f"That subcategory is in {group}, not {payload.category}.")
+            category = group
+    else:
+        same_group = categories.group_of(db, txn.user_id, txn.subcategory, custom) == category
+        subcategory = txn.subcategory if same_group else None
+    return category, subcategory
+
+
 def update_transaction(db: Session, txn: Transaction, payload: TransactionUpdate) -> tuple[Transaction, Optional[dict]]:
     """
     Apply the user's edits, learn a rule if the edit makes one, re-run
@@ -255,26 +294,32 @@ def update_transaction(db: Session, txn: Transaction, payload: TransactionUpdate
                 f"Allowed: {', '.join(k.value for k, d in KIND_DIRECTIONS.items() if txn.direction.value in d)}."
             )
         record_correction(db, txn, "kind", payload.kind)
-    if "category" in payload.model_fields_set:
-        record_correction(db, txn, "category", payload.category)
-    if "notes" in payload.model_fields_set:
+    fields = payload.model_fields_set
+    if "category" in fields or "subcategory" in fields:
+        category, subcategory = _category_edit(db, txn, payload)
+        record_correction(db, txn, "category", category)
+        record_correction(db, txn, "subcategory", subcategory)   # the pair is locked together (detection.Ctx)
+    if "notes" in fields:
         txn.notes = payload.notes
+    if "tags" in fields:
+        categories.set_tags(db, txn.user, txn, payload.tags)
+        categories.delete_unused_tags(db, txn.user_id)
     db.flush()  # the session doesn't autoflush; learning reads these corrections
 
     rule = None
-    for field in ("category", "kind"):
+    for field in ("category", "subcategory", "kind"):
         if field in payload.model_fields_set:
             rule = learn_from(db, txn, field) or rule
     db.commit()
     before = {}
     if rule:
-        before = {t.id: getattr(t, rule.field) for t in db.query(Transaction).filter(Transaction.user_id == txn.user_id)
+        before = {t.id: _rule_value(t, rule.field) for t in db.query(Transaction).filter(Transaction.user_id == txn.user_id)
                   if merchant_key(t) == rule.merchant_key and t.id != txn.id}
     run_detection(db, txn.user)
     db.refresh(txn)
     if not rule:
         return txn, None
-    changed = sum(1 for t in db.query(Transaction).filter(Transaction.id.in_(list(before))) if getattr(t, rule.field) != before[t.id])
+    changed = sum(1 for t in db.query(Transaction).filter(Transaction.id.in_(list(before))) if _rule_value(t, rule.field) != before[t.id])
     return txn, {"rule_id": rule.id, "merchant": rule.merchant_label, "field": rule.field,
                  "value": rule.value, "applied_count": changed}
 
@@ -351,6 +396,8 @@ def get_transactions(
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     person_id: Optional[uuid.UUID] = None,
+    subcategory: Optional[str] = None,
+    tag: Optional[str] = None,
 ) -> TransactionListResponse:
     # Split parts are listed under their parent (TransactionResponse.splits)
     query = db.query(Transaction).filter(Transaction.user_id == user.id, Transaction.split_parent_id.is_(None))
@@ -367,6 +414,10 @@ def get_transactions(
         query = query.filter(Transaction.transaction_date <= date_to)
     if person_id:
         query = query.filter(Transaction.person_id == person_id)
+    if subcategory:
+        query = query.filter(Transaction.subcategory == subcategory)
+    if tag:
+        query = query.filter(Transaction.id.in_(categories.transaction_ids_with_tag(db, user.id, tag)))
 
     total = query.count()
     items = (
@@ -377,6 +428,9 @@ def get_transactions(
         .all()
     )
 
+    tags = categories.tag_names_for(db, user.id, [t.id for t in items])
+    for t in items:
+        t._tags = tags.get(t.id, [])
     return TransactionListResponse(
         items=[TransactionResponse.model_validate(t) for t in items],
         total=total,

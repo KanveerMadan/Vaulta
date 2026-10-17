@@ -11,13 +11,11 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 from app.models.transaction import TransactionKind, TransactionSource, TransactionNature
-from app.services.merchant_normalizer import _PATTERNS
+from app.services import taxonomy
 
-# Every category the normalizer can assign, plus the ones set by nature or
-# by hand. frontend/src/lib/categories.js lists the same names.
-CATEGORIES = frozenset({category for _, _, category, _ in _PATTERNS}) | {
-    "Sent to People", "Received from People", "Transfers", "Cash", "Misc cash", "Other",
-}
+# Every category (taxonomy group, services/taxonomy.py). frontend/src/lib/categories.js reads the same taxonomy.
+CATEGORIES = taxonomy.GROUP_NAMES
+SUBCATEGORY_PATTERN = r"^([a-z_]+\.[a-z_]+|custom:[0-9a-f-]{36})$"
 
 
 class TransactionBase(BaseModel):
@@ -75,6 +73,8 @@ class TransactionResponse(TransactionBase):
     is_split: bool = False
     split_parent_id: Optional[uuid.UUID] = None
     splits: List[SplitPart] = []
+    subcategory: Optional[str] = None
+    tags: List[str] = []
     created_at: datetime
     updated_at: datetime
 
@@ -108,6 +108,7 @@ class ManualTransactionCreate(BaseModel):
     direction: Literal["debit", "credit"] = "debit"
     merchant: str = Field(min_length=1, max_length=100)
     category: Optional[str] = None
+    subcategory: Optional[str] = Field(default=None, pattern=SUBCATEGORY_PATTERN)
     payment_method: Literal["cash", "online"] = "cash"
     notes: Optional[str] = Field(default=None, max_length=500)
 
@@ -145,8 +146,11 @@ class TransactionUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     category: Optional[str] = None
+    # A taxonomy id or "custom:<uuid>"; sets the category to its group. null clears it (the group stays).
+    subcategory: Optional[str] = Field(default=None, pattern=SUBCATEGORY_PATTERN)
     kind: Optional[Kind] = None
     notes: Optional[str] = Field(default=None, max_length=500)
+    tags: Optional[List[str]] = Field(default=None, max_length=10)
 
     @field_validator("category")
     @classmethod
@@ -159,6 +163,8 @@ class TransactionUpdate(BaseModel):
             raise ValueError("Nothing to update")
         if "kind" in self.model_fields_set and self.kind is None:
             raise ValueError("kind can't be cleared")
+        if "tags" in self.model_fields_set and self.tags is None:
+            raise ValueError("send tags: [] to remove them all")
         return self
 
 

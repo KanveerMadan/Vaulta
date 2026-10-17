@@ -8,7 +8,7 @@ from sqlalchemy import (
     Enum as SAEnum, Index, UniqueConstraint, JSON, text
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import object_session, relationship
 
 from app.core.crypto import Encrypted, EncryptedJSON, Searchable
 from app.core.database import Base
@@ -84,6 +84,10 @@ class Transaction(Base):
     # What the system assigned at import (normalizer / nature); detection
     # resets `category` to this before re-applying its own overrides
     auto_category = Column(String, nullable=True)
+    # Optional second level (services/taxonomy.py): a taxonomy id ("food.delivery") or "custom:<uuid>". Always inside
+    # `category`'s group. auto_subcategory is what the system assigned, like auto_category.
+    subcategory = Column(String(64), nullable=True)
+    auto_subcategory = Column(String(64), nullable=True)
 
     # What kind of money movement this is (expense / income / peer payment / self-transfer).
     # Defaults to "expense" at the DB level for backfill safety — all rows ingested before
@@ -146,6 +150,13 @@ class Transaction(Base):
         "Transaction", foreign_keys=[split_parent_id], order_by="Transaction.amount.desc()",
         cascade="all, delete-orphan", passive_deletes=True,
     )
+    @property
+    def tags(self) -> list[str]:
+        """Tag names (models/category.py). Lists prefetch them into _tags (transaction_service.get_transactions)."""
+        if "_tags" not in self.__dict__:
+            from app.services.categories import tag_names_for
+            self._tags = tag_names_for(object_session(self), self.user_id, [self.id]).get(self.id, [])
+        return self._tags
 
     __table_args__ = (
         UniqueConstraint("user_id", "idempotency_key", name="uq_transaction_user_idempotency"),
@@ -155,6 +166,9 @@ class Transaction(Base):
         Index("ix_transactions_user_nature", "user_id", "transaction_nature"),
         Index("ix_transactions_user_kind", "user_id", "kind"),
     )
+
+    # Split parts go with their parent by ON DELETE CASCADE, so a flush that deletes both may find a part already gone
+    __mapper_args__ = {"confirm_deleted_rows": False}
 
     def __repr__(self) -> str:
         return f"<Transaction {self.id} | {self.merchant_clean} | ₹{self.amount} | {self.transaction_date.date()}>"
@@ -170,8 +184,10 @@ class Budget(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
-    # NULL category = total monthly budget; specific string = per-category limit
+    # NULL category = total monthly budget; specific string = per-category (group) limit
     category = Column(String, nullable=True)
+    # Set for a budget on one subcategory of `category` (services/taxonomy.py)
+    subcategory = Column(String(64), nullable=True)
 
     # Monthly limit in INR (DECIMAL, always)
     monthly_limit = Column(Numeric(precision=12, scale=2), nullable=False)
@@ -189,7 +205,7 @@ class Budget(Base):
         # One ACTIVE budget per category per user; inactive (deleted) rows don't
         # block re-creating it. COALESCE so the overall cap (NULL) is unique too.
         Index("uq_budgets_user_category_active", "user_id", func.coalesce(text("category"), text("''")),
-              unique=True, postgresql_where=text("is_active")),
+              func.coalesce(text("subcategory"), text("''")), unique=True, postgresql_where=text("is_active")),
         Index("ix_budgets_user_active", "user_id", "is_active"),
     )
 

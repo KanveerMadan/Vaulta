@@ -243,8 +243,9 @@ def test_linking_is_logged_only_when_firebase_confirms_it(client, monkeypatch):
     assert client.post("/api/account/sign-in-methods/linked", json={"method": "google.com"}, headers=USER).json()["code"] == "not_linked"
     fake.users["alice"] = ["password", "google.com"]
     assert client.post("/api/account/sign-in-methods/linked", json={"method": "google.com"}, headers=USER).status_code == 204
-    assert client.get("/api/activity", headers=USER).json()[0] == {"kind": "method_linked", "detail": {"method": "google.com"},
-                                                                   "at": client.get("/api/activity", headers=USER).json()[0]["at"]}
+    # (a sign-in can be logged in the same moment, so look for the event rather than at the first row)
+    linked = [e for e in client.get("/api/activity", headers=USER).json() if e["kind"] == "method_linked"]
+    assert [e["detail"] for e in linked] == [{"method": "google.com"}]
 
 
 # ── Delete everything deletes the login (step 4) ──────────────────────────────

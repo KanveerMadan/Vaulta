@@ -14,10 +14,12 @@ from sqlalchemy.orm import Session
 from app.models.correction import Correction
 from app.models.rule import Rule
 from app.models.transaction import KIND_DIRECTIONS, Transaction, TransactionKind
+from app.services.categories import group_of
+from app.services.taxonomy import GROUP_NAMES
 from app.services.keys import merchant_key
 
 LEARN_AFTER = 2          # consistent corrections needed (listed in the Phase 2 report)
-RULE_FIELDS = ("category", "kind")
+RULE_FIELDS = ("category", "subcategory", "kind")
 
 
 def apply_rules(ctx, rules: list[Rule]) -> None:
@@ -28,7 +30,12 @@ def apply_rules(ctx, rules: list[Rule]) -> None:
         key = merchant_key(t)
         category = by_key.get((key, "category"))
         if category:
-            ctx.set_category(t, category.value)
+            # the value is a group ("Food & Dining") or a subcategory ("food.delivery" / "custom:<uuid>")
+            group = group_of(None, None, category.value, ctx.custom)
+            if group:
+                ctx.set_category(t, group, category.value)
+            elif category.value in GROUP_NAMES:
+                ctx.set_category(t, category.value)   # else: a deleted custom subcategory; nothing to apply
         kind_rule = by_key.get((key, "kind"))
         if kind_rule:
             kind = TransactionKind(kind_rule.value)
@@ -37,9 +44,13 @@ def apply_rules(ctx, rules: list[Rule]) -> None:
 
 
 def learn_from(db: Session, txn: Transaction, field: str) -> Optional[Rule]:
-    """Create/update a rule if this correction makes LEARN_AFTER consistent ones for the merchant."""
+    """
+    Create/update a rule if this correction makes LEARN_AFTER consistent ones for the merchant. Consistent
+    subcategories make a category rule whose value is the subcategory (apply_rules derives the group).
+    """
     if field not in RULE_FIELDS or txn.person_id is not None:
         return None
+    rule_field = "category" if field == "subcategory" else field
     key = merchant_key(txn)
     if not key:
         return None
@@ -57,9 +68,9 @@ def learn_from(db: Session, txn: Transaction, field: str) -> Optional[Rule]:
     if len(recent) < LEARN_AFTER or len({c.new_value for c in recent}) != 1 or recent[0].new_value is None:
         return None
     value = recent[0].new_value
-    rule = db.query(Rule).filter(Rule.user_id == txn.user_id, Rule.merchant_key == key, Rule.field == field).first()
+    rule = db.query(Rule).filter(Rule.user_id == txn.user_id, Rule.merchant_key == key, Rule.field == rule_field).first()
     if rule is None:
-        rule = Rule(user_id=txn.user_id, merchant_key=key, field=field, origin="learned",
+        rule = Rule(user_id=txn.user_id, merchant_key=key, field=rule_field, origin="learned",
                     merchant_label=(txn.merchant_clean or key.title())[:100], value=value)
         db.add(rule)
     elif rule.value == value:

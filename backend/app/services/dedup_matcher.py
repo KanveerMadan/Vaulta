@@ -254,6 +254,7 @@ def _enrich_canonical_transaction(
     merchant_raw: str,
     merchant_clean: Optional[str],
     category: Optional[str],
+    subcategory: Optional[str] = None,
 ) -> None:
     """
     Section 4: "fields with better data quality from the new source UPDATE the
@@ -264,9 +265,9 @@ def _enrich_canonical_transaction(
     if not txn.merchant_clean and merchant_clean:
         txn.merchant_clean = merchant_clean
     if not txn.auto_category and category:
-        txn.auto_category = category
+        txn.auto_category, txn.auto_subcategory = category, subcategory
     if not txn.category and category:
-        txn.category = category
+        txn.category, txn.subcategory = category, subcategory
 
 
 def ingest_or_match_transaction(
@@ -281,6 +282,7 @@ def ingest_or_match_transaction(
     merchant_raw: str,
     merchant_clean: Optional[str] = None,
     category: Optional[str] = None,
+    subcategory: Optional[str] = None,
     transaction_nature: TransactionNature = TransactionNature.expense,
     kind: Optional[TransactionKind] = None,
     legacy_source_enum: TransactionSource = TransactionSource.csv,
@@ -330,7 +332,7 @@ def ingest_or_match_transaction(
     now = datetime.now(timezone.utc)
 
     if matched_txn is not None:
-        _enrich_canonical_transaction(matched_txn, merchant_raw, merchant_clean, category)
+        _enrich_canonical_transaction(matched_txn, merchant_raw, merchant_clean, category, subcategory)
         db.add(matched_txn)
 
         source_record = TransactionSourceRecord(
@@ -382,6 +384,8 @@ def ingest_or_match_transaction(
         merchant_clean=merchant_clean,
         category=category,
         auto_category=category,
+        subcategory=subcategory,
+        auto_subcategory=subcategory,
         transaction_nature=transaction_nature,
         direction=direction,
         kind=kind or (TransactionKind.spend if direction == TransactionDirection.debit else TransactionKind.income),

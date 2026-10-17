@@ -21,6 +21,7 @@ from app.schemas.transaction import (
     TransactionUpdate,
 )
 from app.services import transaction_service
+from app.services.categories import CategoryError
 from app.services.detection import run_detection
 
 router = APIRouter(prefix="/api/transactions", tags=["transactions"])
@@ -36,6 +37,8 @@ def list_transactions(
     date_from: Optional[datetime] = Query(default=None),
     date_to: Optional[datetime] = Query(default=None),
     person_id: Optional[uuid.UUID] = Query(default=None),
+    subcategory: Optional[str] = Query(default=None, max_length=64),
+    tag: Optional[str] = Query(default=None, max_length=40),
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_active_subscription),
     date_floor: Optional[datetime] = Depends(get_data_date_floor),
@@ -56,6 +59,8 @@ def list_transactions(
         date_from=effective_date_from,
         date_to=date_to,
         person_id=person_id,
+        subcategory=subcategory,
+        tag=tag,
     )
 
 
@@ -125,7 +130,10 @@ def create_transaction(
     db: Session = Depends(get_db),
 ):
     """Manual entry (source=manual). Retrying with the same client_id returns the same transaction."""
-    return transaction_service.create_manual_transaction(db, current_user, payload)
+    try:
+        return transaction_service.create_manual_transaction(db, current_user, payload)
+    except CategoryError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
 
 def _owned_or_404(db: Session, user: User, transaction_id: uuid.UUID):
@@ -147,7 +155,7 @@ def update_transaction(
     txn = _owned_or_404(db, current_user, transaction_id)
     try:
         txn, rule_applied = transaction_service.update_transaction(db, txn, payload)
-    except transaction_service.KindDirectionMismatch as e:
+    except (transaction_service.KindDirectionMismatch, CategoryError) as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     return TransactionPatchResponse(**TransactionResponse.model_validate(txn).model_dump(), rule_applied=rule_applied)
 

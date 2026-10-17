@@ -6,6 +6,7 @@ from typing import List, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.transaction import CATEGORIES
+from app.services.taxonomy import CUSTOM_PREFIX, SUBCATEGORIES
 
 _KINDS = {"spend", "income", "transfer", "refund", "reversal", "lent", "borrowed", "repayment"}
 
@@ -25,7 +26,8 @@ class RuleList(BaseModel):
 
 
 def check_rule_value(field: str, value: str) -> None:
-    if field == "category" and value not in CATEGORIES:
+    # a category rule's value is a group or a subcategory (taxonomy id, or custom:<uuid>: checked when applied)
+    if field == "category" and value not in CATEGORIES and value not in SUBCATEGORIES and not value.startswith(CUSTOM_PREFIX):
         raise ValueError("Unknown category")
     if field == "kind" and value not in _KINDS:
         raise ValueError("Unknown kind")
@@ -37,7 +39,7 @@ class RuleCreate(BaseModel):
     merchant_key: str = Field(min_length=1, max_length=100)
     merchant: str = Field(min_length=1, max_length=100)
     field: Literal["category", "kind"]
-    value: str = Field(min_length=1, max_length=40)
+    value: str = Field(min_length=1, max_length=64)
 
     @model_validator(mode="after")
     def valid_value(self) -> "RuleCreate":
@@ -48,4 +50,4 @@ class RuleCreate(BaseModel):
 class RuleUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    value: str = Field(min_length=1, max_length=40)
+    value: str = Field(min_length=1, max_length=64)

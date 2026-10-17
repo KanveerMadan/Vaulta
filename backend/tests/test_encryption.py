@@ -36,7 +36,8 @@ SECRETS = [
 PLAINTEXT_OK = {
     "users": {"firebase_uid", "email", "full_name", "timezone", "subscription_status", "razorpay_subscription_id",
               "inbound_token_hash", "data_key", "alert_prefs", "onboarding"},       # sign-in, email, settings, key material
-    "transactions": {"category", "auto_category", "currency", "idempotency_key", "user_corrected", "cash_flow"},
+    "transactions": {"category", "auto_category", "currency", "idempotency_key", "user_corrected", "cash_flow",
+                     "subcategory", "auto_subcategory"},                              # taxonomy ids / custom:<uuid>
     "transaction_sources": {"source_label", "idempotency_key"},                      # account label ("HDFC Bank")
     "people": {"tag", "default_category", "default_kind"},
     "recurring_series": {"cadence", "status", "type_guess", "category", "user_status", "user_type", "usage"},
@@ -45,7 +46,7 @@ PLAINTEXT_OK = {
     "chat_messages": {"role"}, "chat_actions": {"token_hash", "tool", "outcome"},
     "reports": {"period_type", "narrative_source"},
     "anomalies": {"type", "status"}, "alerts": {"type", "telegram_status"},
-    "budgets": {"category"}, "corrections": {"field", "old_value", "new_value"},   # kind / category names only
+    "budgets": {"category", "subcategory"}, "custom_subcategories": {"group"}, "corrections": {"field", "old_value", "new_value"},   # kind / category names only
     "import_templates": {"fingerprint", "source_type", "mapping"},                   # column indices, no header text
     "inbound_events": {"bank_key", "bank_name", "outcome"},
     "gmail_confirmations": {"link", "code"},                                         # Gmail's confirmation link

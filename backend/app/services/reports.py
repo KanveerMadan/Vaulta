@@ -183,6 +183,9 @@ def build_report(db: Session, user_id: uuid.UUID, period_type: PeriodType, start
         "top_categories": [{"name": g["label"], "amount": g["total"], "count": g["count"]} for g in spend["groups"][:TOP_N]],
         "top_merchants": [{"name": g["label"], "amount": g["total"], "count": g["count"]}
                           for g in analytics.top_merchants(db, user_id, start, end, TOP_N)],
+        # a transaction with two tags counts under both
+        "tags": [{"name": g["label"], "amount": g["total"], "count": g["count"]}
+                 for g in analytics.spend_summary(db, user_id, start, end, "tag")["groups"][:TOP_N]],
         "recurring": _recurring_changes(db, user_id, start, end),
         "anomalies": _anomalies(db, user_id, period_type, start, end),
         "people": _people(db, user_id),

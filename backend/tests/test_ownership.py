@@ -40,6 +40,7 @@ COVERED = {
     ("GET", "/api/review"),            # tests/test_review.py::test_review_is_per_user
     ("POST", "/api/review/{card_id}/answer"),
     ("GET", "/api/budgets"),           # test_bob_cannot_touch_alice_budgets below
+    ("GET", "/api/budgets/status"),
     ("POST", "/api/budgets"),
     ("PATCH", "/api/budgets/{budget_id}"),
     ("DELETE", "/api/budgets/{budget_id}"),
@@ -95,6 +96,12 @@ COVERED = {
     ("GET", "/api/onboarding"),
     ("PATCH", "/api/onboarding"),
     ("POST", "/api/onboarding/test-email"),
+    # tests/test_taxonomy.py::test_custom_subcategories / test_tags_filter_totals_and_isolation
+    ("GET", "/api/categories"),
+    ("POST", "/api/categories/subcategories"),
+    ("DELETE", "/api/categories/subcategories/{subcategory_id}"),
+    ("GET", "/api/tags"),
+    ("DELETE", "/api/tags/{tag_id}"),
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.
@@ -202,6 +209,8 @@ def test_bob_cannot_touch_alice_budgets(client):
     assert client.get("/api/budgets", headers=BOB).json()["items"] == []
     assert client.patch(f"/api/budgets/{budget['id']}", json={"monthly_limit": "1"}, headers=BOB).status_code == 404
     assert client.delete(f"/api/budgets/{budget['id']}", headers=BOB).status_code == 404
+    assert client.get("/api/budgets/status", headers=BOB).json()["categories"] == []
+    assert [l["category"] for l in client.get("/api/budgets/status", headers=ALICE).json()["categories"]] == ["Food & Dining"]
     # Bob's own budget for the same category is independent
     assert client.post("/api/budgets", json={"category": "Food & Dining", "monthly_limit": "100"}, headers=BOB).status_code == 201
     mine = client.get("/api/budgets", headers=ALICE).json()["items"]

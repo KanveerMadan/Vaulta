@@ -24,21 +24,23 @@ SUGGESTION_MONTHS = 3          # full months of history needed, and the median w
 SUGGESTION_ROUND_TO = 100      # round the suggested limit up to this many rupees
 
 
-def create_or_reactivate(db: Session, user: User, category: Optional[str], monthly_limit) -> Optional[Budget]:
+def create_or_reactivate(db: Session, user: User, category: Optional[str], monthly_limit,
+                         subcategory: Optional[str] = None) -> Optional[Budget]:
     """
-    New active budget for the category, reusing the most recent deleted row
-    if there is one. None if an active budget already exists.
+    New active budget for the category (or one subcategory of it), reusing the
+    most recent deleted row if there is one. None if an active budget already exists.
     """
     same_category = Budget.category.is_(None) if category is None else Budget.category == category
+    same_sub = Budget.subcategory.is_(None) if subcategory is None else Budget.subcategory == subcategory
     rows = (
         db.query(Budget)
-        .filter(Budget.user_id == user.id, same_category)
+        .filter(Budget.user_id == user.id, same_category, same_sub)
         .order_by(Budget.updated_at.desc())
         .all()
     )
     if any(b.is_active for b in rows):
         return None
-    budget = rows[0] if rows else Budget(id=uuid.uuid4(), user_id=user.id, category=category)
+    budget = rows[0] if rows else Budget(id=uuid.uuid4(), user_id=user.id, category=category, subcategory=subcategory)
     budget.monthly_limit = monthly_limit
     budget.is_active = True
     db.add(budget)
