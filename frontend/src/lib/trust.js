@@ -46,7 +46,7 @@ export const TRUST = [
     id: "ai",
     landing: true,
     claim: "The AI never sees bank narrations or UPI IDs.",
-    how: "AI chat and the written summary at the top of each report use Groq (the Llama 3.3 70B model). For chat, Groq receives your question, the last few turns of the conversation and the figures Vaulta calculates to answer it: merchant names, categories, amounts and dates. For a report summary it receives that report's figures. Raw statement descriptions, references, UPI IDs, account details and your notes are removed before anything is sent, and Groq handles what it receives under its own terms. Turning AI chat off in Settings stops chat; report summaries are still written this way unless you turn the report off.",
+    how: "AI chat and the written summary at the top of each report use Groq (OpenAI's open-weight gpt-oss-120b model, run by Groq). For chat, Groq receives your question, the last few turns of the conversation and the figures Vaulta calculates to answer it: merchant names, categories, amounts and dates. For a report summary it receives that report's figures. Raw statement descriptions, references, UPI IDs, account details and your notes are removed before anything is sent, and Groq handles what it receives under its own terms. Turning AI chat off in Settings stops chat; report summaries are still written this way unless you turn the report off.",
     checked: "Tests record every request to the AI and check it for narrations, references, UPI IDs and notes.",
   },
   {

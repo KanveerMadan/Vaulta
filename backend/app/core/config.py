@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     APP_CHECK_ENFORCE: bool = False
     APP_CHECK_DEBUG_TOKEN: str = ""      # never in production
 
+    # Merchant model (services/categorizer.py, docs/ml/model-card.md). false = the rule-based categories only.
+    MERCHANT_MODEL_ENABLED: bool = True
+
     # New demo sessions per client IP per 10 minutes. Generous: mobile carriers put many people behind one address.
     DEMO_SESSIONS_PER_IP: int = 30
 
@@ -88,7 +91,7 @@ class Settings(BaseSettings):
     # ── Groq (Phase 3) ───────────────────────────────────────────────────────
     GROQ_API_KEY: str = ""
     # Any Groq chat model with tool calling
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "openai/gpt-oss-120b"   # llama-3.3-70b-versatile was retired by Groq (404)
     # OpenAI-compatible chat completions endpoint (browser tests point this at a local fake)
     GROQ_API_URL: str = "https://api.groq.com/openai/v1/chat/completions"
 

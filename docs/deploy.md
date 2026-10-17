@@ -54,7 +54,7 @@ data can't be read back, and a database backup can't replace them.
 | `APP_CHECK_ENFORCE` | after go-live step 3a | `true` refuses requests without a valid App Check token; unset = monitor mode (logs only) |
 | `APP_CHECK_DEBUG_TOKEN` | never in production | local runs and browser tests only; production refuses to start with it |
 | `GROQ_API_KEY` | for chat and report summaries | console.groq.com → API keys |
-| `GROQ_MODEL` | optional | default `llama-3.3-70b-versatile` |
+| `GROQ_MODEL` | optional | default `openai/gpt-oss-120b` (Groq retired `llama-3.3-70b-versatile`; unset it if it is still set to that) |
 | `RESEND_API_KEY` | for emails | resend.com → API keys (sending access, one domain) |
 | `EMAIL_FROM` | for emails | e.g. `Vaulta <reports@mail.vaulta.example>` on a domain verified in Resend |
 | `INBOUND_DOMAIN` | for alert forwarding | your domain; addresses become `<token>@in.<domain>` |
