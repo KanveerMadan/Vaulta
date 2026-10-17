@@ -69,6 +69,8 @@ class User(Base):
     tokens_revoked_at = Column(DateTime(timezone=True), nullable=True)
     # --- A password reset email was asked for; completion is detected at the next sign-in (services/account.py) ---
     password_reset_requested_at = Column(DateTime(timezone=True), nullable=True)
+    # --- Opted in to letting their category corrections improve the merchant model (ml/retrain.py; off by default) ---
+    ml_training_consent = Column(Boolean, nullable=False, default=False, server_default=text("false"))
 
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled

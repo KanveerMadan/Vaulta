@@ -19,6 +19,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.correction import Correction
+from app.models.rule import Rule
 from app.models.transaction import Transaction, TransactionKind, TransactionSource, TransactionNature, KIND_DIRECTIONS
 from app.models.transaction_source import StatementSourceType, TransactionDirection, TransactionSourceRecord
 from app.models.user import User
@@ -31,7 +32,7 @@ from app.schemas.transaction import (
     CategorySummary,
 )
 from app.schemas.imports import ImportRow, ImportBatchResult
-from app.services import categories
+from app.services import categories, categorizer, model_metrics
 from app.services.merchant_normalizer import normalize
 from app.core import clock
 from app.services import analytics
@@ -116,6 +117,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
     result = ImportBatchResult()
     seen: dict[tuple, int] = {}
     batch_txn_ids: set = set()
+    memory = categorizer.load_memory(db, user.id) if categorizer.enabled() else []
 
     for row in rows:
         identity = (row.source_type, row.date, row.direction, row.amount, row.description_raw, row.reference)
@@ -127,9 +129,15 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
         normalized = normalize(row.description_raw.replace(" ", "") if is_upi else row.description_raw)
         confident = normalized.confidence >= 0.5
         merchant_clean = normalized.merchant_clean if confident else None
-        nature = _row_nature(row, merchant_clean)
-        category = _category_from_nature(nature, normalized.category if confident else None)
-        subcategory = normalized.subcategory if confident and category == normalized.category else None
+        nature = _row_nature(row, merchant_clean)      # from the normalizer only: the model never makes a person a merchant
+        if nature in (TransactionNature.peer_payment_sent, TransactionNature.peer_payment_received):
+            category, subcategory, explanation = _category_from_nature(nature, None), None, {"source": "nature"}
+        else:
+            client = ({"subcategory": row.predicted_subcategory, "confidence": row.predicted_confidence}
+                      if row.predicted_subcategory else None)
+            decision = categorizer.categorise(row.description_raw, row.direction, normalized, memory, client)
+            category, subcategory, explanation = decision.category, decision.subcategory, decision.explanation
+            merchant_clean = decision.merchant_clean
 
         if "T" in row.date:
             raw_timestamp = datetime.fromisoformat(row.date).replace(tzinfo=IST)
@@ -151,6 +159,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
                 merchant_clean=merchant_clean,
                 category=category,
                 subcategory=subcategory,
+                explanation=explanation,
                 transaction_nature=nature,
                 kind=TransactionKind.transfer if row.type == "transfer" else None,
                 legacy_source_enum=TransactionSource.csv,
@@ -175,6 +184,9 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
             result.duplicates_merged += 1
         else:
             result.imported += 1
+            if category is not None:
+                model_metrics.bump(db, model_metrics.source_of(explanation), "categorised")
+                db.commit()
             if category is None:
                 result.rows_needing_review += 1
 
@@ -197,6 +209,7 @@ def create_manual_transaction(db: Session, user: User, payload: ManualTransactio
     normalized = normalize(payload.merchant)
     confident = normalized.confidence >= 0.5
     nature = TransactionNature.expense if payload.direction == "debit" else TransactionNature.income
+    explanation = {"source": "you"}
     if payload.subcategory:
         category = categories.group_of(db, user.id, payload.subcategory)
         if category is None or (payload.category and payload.category != category):
@@ -205,8 +218,9 @@ def create_manual_transaction(db: Session, user: User, payload: ManualTransactio
     elif payload.category:
         category, subcategory = payload.category, None
     else:
-        category = normalized.category if confident else None
-        subcategory = normalized.subcategory if confident else None
+        memory = categorizer.load_memory(db, user.id) if categorizer.enabled() else []
+        decision = categorizer.categorise(payload.merchant, payload.direction, normalized, memory)
+        category, subcategory, explanation = decision.category, decision.subcategory, decision.explanation
     txn, _record, _matched = ingest_or_match_transaction(
         db,
         user,
@@ -219,6 +233,7 @@ def create_manual_transaction(db: Session, user: User, payload: ManualTransactio
         merchant_clean=normalized.merchant_clean if confident else payload.merchant,
         category=category,
         subcategory=subcategory,
+        explanation=explanation,
         transaction_nature=nature,
         legacy_source_enum=TransactionSource.manual,
         raw_date=date.fromisoformat(payload.date),
@@ -297,6 +312,9 @@ def update_transaction(db: Session, txn: Transaction, payload: TransactionUpdate
     fields = payload.model_fields_set
     if "category" in fields or "subcategory" in fields:
         category, subcategory = _category_edit(db, txn, payload)
+        first = not db.query(Correction.id).filter(Correction.transaction_id == txn.id, Correction.field == "category").first()
+        if first and txn.category == txn.auto_category and (category, subcategory) != (txn.category, txn.subcategory):
+            model_metrics.bump(db, model_metrics.source_of(txn.category_explanation), "corrected")
         record_correction(db, txn, "category", category)
         record_correction(db, txn, "subcategory", subcategory)   # the pair is locked together (detection.Ctx)
     if "notes" in fields:
@@ -322,6 +340,49 @@ def update_transaction(db: Session, txn: Transaction, payload: TransactionUpdate
     changed = sum(1 for t in db.query(Transaction).filter(Transaction.id.in_(list(before))) if _rule_value(t, rule.field) != before[t.id])
     return txn, {"rule_id": rule.id, "merchant": rule.merchant_label, "field": rule.field,
                  "value": rule.value, "applied_count": changed}
+
+
+def explain(db: Session, txn: Transaction) -> dict:
+    """Why the transaction has its category now, in words (shown on tap). Mirrors the order in services/categorizer.py."""
+    custom = categories.custom_subcategories(db, txn.user_id)
+    shown = categories.label(txn.subcategory, custom) or txn.category
+    auto = txn.category_explanation or {}
+    alternatives = [{"id": s, "name": categories.label(s, custom) or s, "probability": p}
+                    for s, p in auto.get("alternatives", [])]
+    out = {"source": None, "text": "", "confidence": auto.get("confidence"), "alternatives": alternatives}
+
+    if db.query(Correction.id).filter(Correction.transaction_id == txn.id, Correction.field == "category").first():
+        return {**out, "source": "you", "text": "You chose this category.", "alternatives": []}
+    key = merchant_key(txn)
+    rule = db.query(Rule).filter(Rule.user_id == txn.user_id, Rule.merchant_key == key, Rule.field == "category").first()
+    if rule and txn.person_id is None and rule.value in (txn.category, txn.subcategory):
+        return {**out, "source": "rule", "text": f"Your rule for {rule.merchant_label}: every payment to it goes here."}
+    if txn.refund_of_id and txn.category != txn.auto_category:
+        return {**out, "source": "refund", "text": "The same category as the payment it refunds."}
+    if txn.person_id and txn.category != txn.auto_category:
+        return {**out, "source": "person", "text": "From the tag you gave this person."}
+    if txn.category is None:
+        text = "No category yet: nothing Vaulta knows matched this merchant, so it's in your review queue."
+        if auto.get("below_threshold") and alternatives:
+            text = (f"No category yet. The merchant model's best guess was {alternatives[0]['name']} "
+                    f"({round(alternatives[0]['probability'] * 100)}% sure), not sure enough to use, so it's in your review queue.")
+        return {**out, "source": "none", "text": text}
+    source = auto.get("source")
+    if source == "known_merchant":
+        text = f"{auto.get('merchant') or txn.merchant_clean} is a merchant Vaulta knows: it's always {shown}."
+    elif source == "model":
+        where = " It was worked out on your device." if auto.get("on_device") else ""
+        text = f"Vaulta's merchant model is {round(auto['confidence'] * 100)}% sure this is {shown}.{where}"
+    elif source == "personal":
+        like = f" ({auto['similar_to']})" if auto.get("similar_to") else ""
+        text = f"You put a similar payment{like} in {shown}, so this one went there too."
+    elif source == "nature":
+        text = f"Payments to and from people are filed under {txn.category}."
+    elif source == "you":
+        text = "You chose this when you added it."
+    else:
+        text = f"Filed under {shown} when it was imported."
+    return {**out, "source": source or "import", "text": text}
 
 
 class SplitError(ValueError):

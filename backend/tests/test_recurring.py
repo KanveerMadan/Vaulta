@@ -46,7 +46,7 @@ def test_monthly_subscription_with_price_hike(client):
 def test_weekly_and_yearly(client):
     _, series = load(client, *[debit(days_ago(d), "CULT FIT SESSION", "300.00") for d in (21, 14, 7, 0)],
                      debit(months_ago(24), "AMAZON PRIME", "1499.00"), debit(months_ago(12), "AMAZON PRIME", "1499.00"))
-    assert series["Cult Fit Session"]["cadence"] == "weekly"
+    assert series["Cult.fit"]["cadence"] == "weekly"
     assert series["Amazon"]["cadence"] == "yearly"
 
 
@@ -83,9 +83,9 @@ def test_totals_upcoming_and_user_fields_survive_redetection(client):
         *[debit(days_ago(d), "CULT FIT SESSION", "300.00") for d in (21, 14, 7, 0)],
     )
     assert Decimal(overview["monthly_committed"]) == Decimal("649.00") + (Decimal("300") * 52 / 12).quantize(Decimal("0.01"))
-    assert {s["name"] for s in overview["upcoming"]} == {"Netflix", "Cult Fit Session"}
+    assert {s["name"] for s in overview["upcoming"]} == {"Netflix", "Cult.fit"}
 
-    gym = series["Cult Fit Session"]
+    gym = series["Cult.fit"]
     res = client.patch(f"/api/recurring/{gym['id']}", json={"name": "Gym", "type": "other", "usage": "review"}, headers=ALICE)
     assert (res.json()["name"], res.json()["type"], res.json()["usage"]) == ("Gym", "other", "review")
     netflix = series["Netflix"]

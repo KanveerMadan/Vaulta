@@ -141,3 +141,10 @@ def firebase_deletions(monkeypatch):
     deleted = []
     monkeypatch.setattr(firebase_auth, "delete_user", lambda uid: deleted.append(uid))
     return deleted
+
+
+@pytest.fixture
+def rules_only(monkeypatch):
+    """The rule-based categories alone (MERCHANT_MODEL_ENABLED=false): for tests of flows about unknown merchants."""
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "MERCHANT_MODEL_ENABLED", False)

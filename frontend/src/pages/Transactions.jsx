@@ -68,6 +68,7 @@ export default function Transactions() {
 
   const virtualizer = useWindowVirtualizer({
     count: items.length,
+    getItemKey: (i) => items[i].id,          // measured heights follow the transaction, not its position in the list
     estimateSize: () => ROW_ESTIMATE,
     overscan: 8,
     scrollMargin: listTop,

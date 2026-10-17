@@ -82,7 +82,7 @@ def test_recurring_confirm(client):
     assert client.get("/api/recurring", headers=ALICE).json()["series"][0]["user_status"] == "confirmed"
 
 
-def test_unknown_merchant_creates_rule(client):
+def test_unknown_merchant_creates_rule(client, rules_only):
     load(client, r(d(5), "SRI SAI TIFFINS", "120.00"), r(d(3), "SRI SAI TIFFINS", "80.00"))
     c = card(client, "merchant")
     assert (c["question"], c["detail"].split(".")[0]) == ("What is “Sri Sai Tiffins”?", "₹200 across 2 payments")
@@ -93,7 +93,7 @@ def test_unknown_merchant_creates_rule(client):
     assert txn(client, "SRI SAI TIFFINS")["category"] == "Food & Dining"
 
 
-def test_skip_is_remembered_and_answers_are_validated(client):
+def test_skip_is_remembered_and_answers_are_validated(client, rules_only):
     load(client, r(d(5), "SRI SAI TIFFINS", "120.00"))
     c = card(client, "merchant")
     assert answer(client, c, "Bribes").status_code == 422
@@ -104,7 +104,7 @@ def test_skip_is_remembered_and_answers_are_validated(client):
     assert queue(client)["count"] == before - 1
 
 
-def test_review_is_per_user(client):
+def test_review_is_per_user(client, rules_only):
     load(client, r(d(5), "SRI SAI TIFFINS", "120.00"))
     c = card(client, "merchant")
     assert queue(client, BOB) == {"count": 0, "items": []}

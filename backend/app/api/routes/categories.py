@@ -6,6 +6,9 @@ The category taxonomy, the user's own subcategories, and tags.
   DELETE /api/categories/subcategories/{id}   remove it; its transactions keep the group, its budgets end
   GET    /api/tags                            your tags with how many transactions carry each
   DELETE /api/tags/{id}                       remove a tag from every transaction
+  POST   /api/categories/recategorise         {"dry_run": true}: what re-checking with the current categoriser would
+                                              change; {"dry_run": false}: apply it (services/recategorise.py)
+  POST   /api/categories/recategorise/{id}/undo   put a run's previous automatic categories back
 Tags are set on a transaction with PATCH /api/transactions/{id} {"tags": [...]}.
 """
 
@@ -20,7 +23,8 @@ from app.core.auth import get_current_user
 from app.core.database import get_db
 from app.models.category import CustomSubcategory, Tag, TransactionTag
 from app.models.user import User
-from app.services import categories, taxonomy
+from app.models.categorizer import RecategorisationRun
+from app.services import categories, recategorise, taxonomy
 from app.services.detection import run_detection
 
 router = APIRouter(tags=["categories"])
@@ -64,6 +68,27 @@ def remove_subcategory(subcategory_id: uuid.UUID, user: User = Depends(get_curre
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subcategory not found.")
     categories.delete_subcategory(db, user, row)
     run_detection(db, user)
+
+
+class RecategoriseRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    dry_run: bool = True
+
+
+@router.post("/api/categories/recategorise")
+def recategorise_all(payload: RecategoriseRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if payload.dry_run:
+        return recategorise.dry_run(db, user)
+    run = recategorise.apply(db, user)
+    return {"run_id": str(run.id), "changed": run.changed, "summary": run.summary}
+
+
+@router.post("/api/categories/recategorise/{run_id}/undo")
+def undo_recategorise(run_id: uuid.UUID, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    run = db.query(RecategorisationRun).filter(RecategorisationRun.id == run_id, RecategorisationRun.user_id == user.id).first()
+    if run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found.")
+    return {"restored": recategorise.undo(db, user, run)}
 
 
 @router.get("/api/tags")

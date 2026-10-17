@@ -1,0 +1,1752 @@
+[
+{
+"text": "UPI/P2M/XXXX/FRESHMENU/Collect request/ICICI BANK",
+"subcategory": "groceries.quick_commerce",
+"confidence": 0.23876727575056864,
+"known_merchant": null,
+"resolved": "FreshMenu"
+},
+{
+"text": "IMPS/P2M/XXXX/LICIOUS READY TO COOK/UPI Txn",
+"subcategory": "food.restaurant",
+"confidence": 0.6346397813815927,
+"known_merchant": "groceries.meat_fish",
+"resolved": "Licious Ready To Cook"
+},
+{
+"text": "UPI/P2M/XXXX/COPPER CHIMNEY/Bill/KOTAK MAHINDRA",
+"subcategory": "finance.payment_app",
+"confidence": 0.28230057557597804,
+"known_merchant": null,
+"resolved": "Copper Chimney"
+},
+{
+"text": "ARSALAN",
+"subcategory": "personal_care.salon",
+"confidence": 0.11755097663946615,
+"known_merchant": null,
+"resolved": "Arsalan"
+},
+{
+"text": "MAD OVER DONUTS NOIDA IN",
+"subcategory": "food.bakery_sweets",
+"confidence": 0.1761967825745799,
+"known_merchant": null,
+"resolved": "Mad Over Donuts"
+},
+{
+"text": "UPI/P2M/XXXX/STARBUCKS/Paid via app/PNB",
+"subcategory": "food.restaurant",
+"confidence": 0.19040923236116414,
+"known_merchant": "food.cafe",
+"resolved": "Starbucks"
+},
+{
+"text": "Coffee Culture",
+"subcategory": "food.cafe",
+"confidence": 0.9960915174176387,
+"known_merchant": null,
+"resolved": "Coffee Culture"
+},
+{
+"text": "POS XXXXXXXXXXXX6329 KITTY SU KOCHI",
+"subcategory": "food.restaurant",
+"confidence": 0.2552669784830328,
+"known_merchant": null,
+"resolved": "Kitty Su"
+},
+{
+"text": "PCD/3199/BIKANERVALA/HYD",
+"subcategory": "transport.vehicle_rental",
+"confidence": 0.09031843441892752,
+"known_merchant": null,
+"resolved": "Bikanervala"
+},
+{
+"text": "UPI/XXXX/BENGALI SWEET HOUSE/X***@ibl/HDFC BANK/UPI",
+"subcategory": "food.bakery_sweets",
+"confidence": 0.926417556824192,
+"known_merchant": null,
+"resolved": "Bengali Sweet House"
+},
+{
+"text": "PG PINELABS BELGIAN WAFFLE CO 12611551",
+"subcategory": "food.restaurant",
+"confidence": 0.11554059061437448,
+"known_merchant": null,
+"resolved": "Belgian Waffle Co"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/SHARMA CHAAT/CNRB/qXXXX@y/UPI",
+"subcategory": "food.street_food",
+"confidence": 0.1948619168801812,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NEFT-RAJU GARI DOSA-NEFT-NXXXX",
+"subcategory": "food.restaurant",
+"confidence": 0.1877482670077605,
+"known_merchant": null,
+"resolved": "Raju Gari Dosa"
+},
+{
+"text": "UPI/XXXX/MOOLCHAND PARATHA/paytmqrXXXX@paytm/AXIS BANK/Bill",
+"subcategory": "food.restaurant",
+"confidence": 0.4162643018903969,
+"known_merchant": null,
+"resolved": "Moolchand Paratha"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/BHEL PURI ST/FDRL/bhelpuristal/UPI Txn",
+"subcategory": "food.street_food",
+"confidence": 0.4140191097451037,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/P2M/XXXX/GHAR KA KHANA TIFFIN/Pay/ICICI BANK",
+"subcategory": "food.canteen",
+"confidence": 0.6318218241403252,
+"known_merchant": null,
+"resolved": "Ghar Ka Khana Tiffin"
+},
+{
+"text": "UPI/ROYALCATERERS/XXXX/Pay",
+"subcategory": "food.catering",
+"confidence": 0.9926346828687199,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/KESAR CATERERS/kesarcaterers.rzp@axisbank/KOTAK MAHINDRA/UPI Txn",
+"subcategory": "food.catering",
+"confidence": 0.9915119721393875,
+"known_merchant": null,
+"resolved": "Kesar Caterers"
+},
+{
+"text": "PAYTM/SPENCERS ONLINE/NEW DELHI",
+"subcategory": "shopping.marketplace",
+"confidence": 0.301351722459066,
+"known_merchant": null,
+"resolved": "Spencer's Online"
+},
+{
+"text": "UPI/KIRANA KING/XXXX/",
+"subcategory": "groceries.kirana",
+"confidence": 0.9959185112281336,
+"known_merchant": null,
+"resolved": "Kirana King"
+},
+{
+"text": "UPI/P2M/XXXX/HYPERCITY/NA/KOTAK MAHINDRA",
+"subcategory": "food.restaurant",
+"confidence": 0.061341930597926135,
+"known_merchant": null,
+"resolved": "Hypercity"
+},
+{
+"text": "UPI/P2M/XXXX/PATELBROTHERSSUPERMARKET/Payment from PhonePe/ICICI BANK",
+"subcategory": "groceries.supermarket",
+"confidence": 0.830668604261676,
+"known_merchant": null,
+"resolved": "Patel Brothers Supermarket"
+},
+{
+"text": "POS/SAFAL STORES/GOA/292913",
+"subcategory": "groceries.kirana",
+"confidence": 0.38549324333031887,
+"known_merchant": null,
+"resolved": "Safal Stores"
+},
+{
+"text": "UPI/RATION SHOP/XXXX/Pay",
+"subcategory": "shopping.paan_tobacco",
+"confidence": 0.16427576792191406,
+"known_merchant": null,
+"resolved": "Ration Shop"
+},
+{
+"text": "NEFT-SABZI MANDI-Payment-NXXXX",
+"subcategory": "groceries.fruits_vegetables",
+"confidence": 0.8507841571730398,
+"known_merchant": null,
+"resolved": "Sabzi Mandi"
+},
+{
+"text": "NEFT-SIDS FARM-Order-NXXXX",
+"subcategory": "shopping.fashion",
+"confidence": 0.11830256427291115,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "CAPTAIN FRESH SURAT",
+"subcategory": "groceries.quick_commerce",
+"confidence": 0.4005454368959411,
+"known_merchant": null,
+"resolved": "Captain Fresh"
+},
+{
+"text": "UPI-NATURES BASKET-N***@icici-XXXX-",
+"subcategory": "groceries.online",
+"confidence": 0.41452606622945964,
+"known_merchant": "groceries.specialty",
+"resolved": "Nature's Basket"
+},
+{
+"text": "UPI/FLIPKART/XXXX/",
+"subcategory": "health.pharmacy",
+"confidence": 0.663697695450531,
+"known_merchant": "shopping.marketplace",
+"resolved": "Flipkart"
+},
+{
+"text": "Myntra Marketplace",
+"subcategory": "shopping.marketplace",
+"confidence": 0.9997762941583572,
+"known_merchant": "shopping.fashion",
+"resolved": "Myntra Marketplace"
+},
+{
+"text": "UPI/XXXX/LIMEROAD/limeroad.payu@hdfcbank/BANK OF BARODA/",
+"subcategory": "utilities.broadband",
+"confidence": 0.08524154747412788,
+"known_merchant": null,
+"resolved": "Limeroad"
+},
+{
+"text": "UPI/XXXX/WESTSIDE/X***@axisbank/BANK OF BARODA/UPI",
+"subcategory": "shopping.home_furniture",
+"confidence": 0.38014731356290066,
+"known_merchant": null,
+"resolved": "Westside"
+},
+{
+"text": "UPI/LEVIS/XXXX/NA",
+"subcategory": "shopping.electronics",
+"confidence": 0.05581851188648767,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "POS XXXXXXXXXXXX7257 VERO MODA SURAT",
+"subcategory": "food.restaurant",
+"confidence": 0.08957307828985707,
+"known_merchant": null,
+"resolved": "Vero Moda"
+},
+{
+"text": "UPI-NYKAA FASHION-nykaafashion@icici-XXXX-",
+"subcategory": "shopping.fashion",
+"confidence": 0.8931526184155425,
+"known_merchant": "shopping.beauty",
+"resolved": "Nykaa Fashion"
+},
+{
+"text": "UPI-INDYA-X***@apl-XXXX-Pay to merchant",
+"subcategory": "finance.payment_app",
+"confidence": 0.09041836691779045,
+"known_merchant": null,
+"resolved": "Indya"
+},
+{
+"text": "UPI/P2M/XXXX/NIKE/HDFC BANK",
+"subcategory": "transport.vehicle_rental",
+"confidence": 0.108613568111524,
+"known_merchant": null,
+"resolved": "Nike"
+},
+{
+"text": "UPI/P2M/XXXX/CATWALK/Sent using Paytm/AXIS BANK",
+"subcategory": "shopping.fashion",
+"confidence": 0.07622316311699227,
+"known_merchant": null,
+"resolved": "Catwalk"
+},
+{
+"text": "UPI/XXXX/SUPERKICKS/superkicks.payu@hdfcbank/PNB/Collect request",
+"subcategory": "groceries.supermarket",
+"confidence": 0.2775478778391902,
+"known_merchant": null,
+"resolved": "Superkicks"
+},
+{
+"text": "IMPS/P2M/XXXX/KOHINOOR ELECTR/Payment from PhonePe",
+"subcategory": "shopping.electronics",
+"confidence": 0.7166327159676913,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "HARMAN LTD MYSORE IN",
+"subcategory": "housing.property",
+"confidence": 0.2703415912110528,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PANASONIC BRAND STORE JAIPUR IN",
+"subcategory": "shopping.electronics",
+"confidence": 0.9823797550856297,
+"known_merchant": null,
+"resolved": "Panasonic Brand Store"
+},
+{
+"text": "UPI-MILTON-paytmqrXXXX@paytm-XXXX-UPI Txn",
+"subcategory": "groceries.dairy",
+"confidence": 0.19451212489840525,
+"known_merchant": null,
+"resolved": "Milton"
+},
+{
+"text": "NEFT-ASTRAL P-Bill-NXXXX",
+"subcategory": "shopping.fashion",
+"confidence": 0.13832535467699444,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "RAZORPAY/GREENPLY/LUCKNOW",
+"subcategory": "shopping.fashion",
+"confidence": 0.1489947413882601,
+"known_merchant": null,
+"resolved": "Greenply"
+},
+{
+"text": "INDUSTRYBUYINGTOOLS",
+"subcategory": "shopping.hardware",
+"confidence": 0.2750624192086534,
+"known_merchant": null,
+"resolved": "Industrybuying"
+},
+{
+"text": "UPI-BATH & BODY WORKS-paytmqrXXXX@paytm-XXXX-",
+"subcategory": "housing.repairs",
+"confidence": 0.16492849133002654,
+"known_merchant": null,
+"resolved": "Bath & Body Works"
+},
+{
+"text": "UPI-KHADI NA-K***@icici-XXXX-UPI",
+"subcategory": "food.restaurant",
+"confidence": 0.7029100199898708,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PCD/1906/HEALTH & GLOW/JAIPUR",
+"subcategory": "insurance.health",
+"confidence": 0.447645738358119,
+"known_merchant": null,
+"resolved": "Health & Glow"
+},
+{
+"text": "Faber-Castell",
+"subcategory": "food.fast_food",
+"confidence": 0.0785683517338402,
+"known_merchant": null,
+"resolved": "Faber-Castell"
+},
+{
+"text": "UPI-PRINTO DOCUM-P***@ibl-XXXX-",
+"subcategory": "software.productivity",
+"confidence": 0.1328756536806153,
+"known_merchant": null,
+"resolved": "Printo"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/ALLEN SOLLY /SBIN/allensollyju/Collect request",
+"subcategory": "shopping.fashion",
+"confidence": 0.8673479920857146,
+"known_merchant": null,
+"resolved": "Allen Solly"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/UNDER ARMOUR/IDIB/bharatpe.272/Bill",
+"subcategory": "shopping.fashion",
+"confidence": 0.09703871071181436,
+"known_merchant": null,
+"resolved": "Under Armour"
+},
+{
+"text": "NEFT-GEAR UP SPORTS-Payment from PhonePe-NXXXX",
+"subcategory": "shopping.sports",
+"confidence": 0.9824478168088686,
+"known_merchant": null,
+"resolved": "Gear Up Sports"
+},
+{
+"text": "AMAZONPAY/BHIMA JEWELLERS/JAIPUR",
+"subcategory": "shopping.jewellery",
+"confidence": 0.9573277412626355,
+"known_merchant": null,
+"resolved": "Bhima Jewellers"
+},
+{
+"text": "UPI-CHUNGATHJEWELLERY-X***@apl-XXXX-Collect request",
+"subcategory": "shopping.jewellery",
+"confidence": 0.9353264001672341,
+"known_merchant": null,
+"resolved": "Chungath Jewellery"
+},
+{
+"text": "UPI/LENS MART/XXXX/Collect request",
+"subcategory": "groceries.supermarket",
+"confidence": 0.3172887407058338,
+"known_merchant": null,
+"resolved": "Lens Mart"
+},
+{
+"text": "UPI-ARCHIES-X***@okaxis-XXXX-Pay to merchant",
+"subcategory": "food.restaurant",
+"confidence": 0.2090211817588879,
+"known_merchant": null,
+"resolved": "Archies"
+},
+{
+"text": "Bombay Gift Shop",
+"subcategory": "shopping.gifts_flowers",
+"confidence": 0.991779876751808,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "MRIGNAYANI GOA IN",
+"subcategory": "food.restaurant",
+"confidence": 0.20701494505198625,
+"known_merchant": null,
+"resolved": "Mrignayani"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/PETPLANET/FDRL/petplanet.rz/Payment",
+"subcategory": "shopping.marketplace",
+"confidence": 0.18626053642916243,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/SEASONS MA/seasonsmall.payu@hdfcbank/KOTAK MAHINDRA/Paid via app",
+"subcategory": "finance.payment_app",
+"confidence": 0.10164181776620268,
+"known_merchant": null,
+"resolved": "Seasons Mall"
+},
+{
+"text": "NEFT-UBER RENTALS-Paid via app-NXXXX",
+"subcategory": "transport.vehicle_rental",
+"confidence": 0.7138677290831018,
+"known_merchant": "transport.ride_hailing",
+"resolved": "Uber Rentals"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/AUTO STAND/IDIB/bharatpe.737/Sent using Paytm",
+"subcategory": "transport.vehicle_service",
+"confidence": 0.192102541805285,
+"known_merchant": null,
+"resolved": "Auto Stand"
+},
+{
+"text": "UPI/P2M/XXXX/CHARGEZONE/Paid via app/KOTAK MAHINDRA",
+"subcategory": "finance.payment_app",
+"confidence": 0.3383987414036503,
+"known_merchant": null,
+"resolved": "ChargeZone"
+},
+{
+"text": "Mall Parking",
+"subcategory": "transport.parking",
+"confidence": 0.7085587390435878,
+"known_merchant": null,
+"resolved": "Mall Parking"
+},
+{
+"text": "Smart Parking",
+"subcategory": "transport.parking",
+"confidence": 0.829739737829216,
+"known_merchant": null,
+"resolved": "Smart Parking"
+},
+{
+"text": "DELHI GURGAON TOLL BLR",
+"subcategory": "transport.tolls",
+"confidence": 0.697823084349877,
+"known_merchant": null,
+"resolved": "Delhi Gurgaon Toll"
+},
+{
+"text": "CEATSHOPPE",
+"subcategory": "shopping.marketplace",
+"confidence": 0.275749683517926,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/CARNATION AUTO/C***@icici/BANK OF BARODA/Payment from PhonePe",
+"subcategory": "transport.vehicle_service",
+"confidence": 0.3407359871048581,
+"known_merchant": null,
+"resolved": "Carnation Auto"
+},
+{
+"text": "BIKE RENTAL GURUGRAM IN",
+"subcategory": "transport.vehicle_rental",
+"confidence": 0.9978765593273172,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI-KLM-K***@axisbank-XXXX-Payment from PhonePe",
+"subcategory": "finance.payment_app",
+"confidence": 0.13963703237735026,
+"known_merchant": null,
+"resolved": "KLM"
+},
+{
+"text": "UPI/XXXX/ABHIBUS/bharatpe.XXXX@fbpe/HDFC BANK/Pay to merchant",
+"subcategory": "shopping.fashion",
+"confidence": 0.07850446806635542,
+"known_merchant": "travel.bus",
+"resolved": "AbhiBus"
+},
+{
+"text": "POS/KESINENI TRA/VADODARA/830682",
+"subcategory": "food.restaurant",
+"confidence": 0.09472343360406324,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "POS/THE PARK HOTELS/NEW DELHI/907567",
+"subcategory": "travel.hotels",
+"confidence": 0.9574221133389577,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "YATRA KOLKATA",
+"subcategory": "utilities.electricity",
+"confidence": 0.16398227777211388,
+"known_merchant": "travel.booking",
+"resolved": "Yatra"
+},
+{
+"text": "PG CCAV GOOGLE FLIG 89943538",
+"subcategory": "software.productivity",
+"confidence": 0.4535306776450973,
+"known_merchant": null,
+"resolved": "Google Pay"
+},
+{
+"text": "Andaman Tourism",
+"subcategory": "travel.holidays",
+"confidence": 0.9864717915909694,
+"known_merchant": null,
+"resolved": "Andaman Tourism"
+},
+{
+"text": "IMPS/P2M/XXXX/PSPCL/Payment",
+"subcategory": "utilities.electricity",
+"confidence": 0.5420843465431633,
+"known_merchant": null,
+"resolved": "PSPCL"
+},
+{
+"text": "AMAZONPAY/RO WATER CAN/NOIDA",
+"subcategory": "utilities.water",
+"confidence": 0.8817680866383116,
+"known_merchant": null,
+"resolved": "RO Water Can"
+},
+{
+"text": "UPI/XXXX/GAILGAS/paytmqrXXXX@paytm/AXIS BANK/",
+"subcategory": "utilities.lpg",
+"confidence": 0.5791520846748186,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/P2M/XXXX/BSNL/Paid via app/HDFC BANK",
+"subcategory": "utilities.broadband",
+"confidence": 0.07491107288069689,
+"known_merchant": "utilities.mobile",
+"resolved": "BSNL"
+},
+{
+"text": "SI MOBILE RECHARGE 85830177",
+"subcategory": "utilities.mobile",
+"confidence": 0.953801517785721,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "Paytm Recharge",
+"subcategory": "finance.payment_app",
+"confidence": 0.8879743150701092,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NACH-DR-IN DIGITAL-UTIBXXXX",
+"subcategory": "utilities.dth_cable",
+"confidence": 0.6953769606136582,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "BILLPAY PAYTM UTILITY 134903",
+"subcategory": "utilities.bill_payments",
+"confidence": 0.32071120724415003,
+"known_merchant": null,
+"resolved": "Billdesk Utility"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/ZOLO STAYS/FDRL/zolostays.rz/Payment from PhonePe",
+"subcategory": "finance.payment_app",
+"confidence": 0.1882664769696501,
+"known_merchant": null,
+"resolved": "Zolo Stays"
+},
+{
+"text": "PCD/5046/SETTL/NAGPUR",
+"subcategory": "finance.payment_app",
+"confidence": 0.6900056020143179,
+"known_merchant": null,
+"resolved": "Settl"
+},
+{
+"text": "UPI/XXXX/JLL PROPERTY SERVICES/jllpropertyservices.rzp@axisbank/KOTAK MAHINDRA/Order",
+"subcategory": "transport.vehicle_service",
+"confidence": 0.1806074625124589,
+"known_merchant": null,
+"resolved": "JLL Property Services"
+},
+{
+"text": "UPI/XXXX/BATHROOM CLEANI/B***@axisbank/PNB/Bill",
+"subcategory": "housing.home_services",
+"confidence": 0.33518142269803564,
+"known_merchant": null,
+"resolved": "Bathroom Cleaning"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/SNABBIT/KKBK/snabbit186@o/",
+"subcategory": "food.restaurant",
+"confidence": 0.05527801278954433,
+"known_merchant": null,
+"resolved": "Snabbit"
+},
+{
+"text": "ECS/MAIDAGENCY/XXXX",
+"subcategory": "transport.vehicle_service",
+"confidence": 0.37107293832192484,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "Pikmystuff",
+"subcategory": "entertainment.events",
+"confidence": 0.07035220173979921,
+"known_merchant": null,
+"resolved": "PikMyStuff"
+},
+{
+"text": "BIL/BPAY/XXXX/MAGICBRI",
+"subcategory": "housing.rent",
+"confidence": 0.19363574826400715,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "IMPS/P2M/XXXX/APOLLO HEALTHCO INDIA PRIVATE LIMITED/Payment from PhonePe",
+"subcategory": "health.pharmacy",
+"confidence": 0.44998247504924604,
+"known_merchant": null,
+"resolved": "Apollo 24/7"
+},
+{
+"text": "PCD/9442/TRUST CHEMISTS/MUM",
+"subcategory": "health.pharmacy",
+"confidence": 0.5620503126872635,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI-FORTIS CONSULTATION-F***@oksbi-XXXX-Pay",
+"subcategory": "health.doctor",
+"confidence": 0.7268114139371343,
+"known_merchant": null,
+"resolved": "Fortis Consultation"
+},
+{
+"text": "PHONEPE PG*PSYCHIATRIST",
+"subcategory": "finance.payment_app",
+"confidence": 0.09625251288642309,
+"known_merchant": null,
+"resolved": "Psychiatrist"
+},
+{
+"text": "POS/ST JOHNS HOSPITAL/AHMEDABAD/049849",
+"subcategory": "health.hospital",
+"confidence": 0.9503219499281377,
+"known_merchant": null,
+"resolved": "St John's Hospital"
+},
+{
+"text": "PCD/3040/METROPOLIS HEALTHCARE/CHANDIGARH",
+"subcategory": "health.hospital",
+"confidence": 0.8999245370196944,
+"known_merchant": null,
+"resolved": "Metropolis Healthcare"
+},
+{
+"text": "UPI/P2M/XXXX/PATHKIND LABS/Pay/BANK OF BARODA",
+"subcategory": "health.diagnostics",
+"confidence": 0.6513701724193076,
+"known_merchant": null,
+"resolved": "Pathkind Labs"
+},
+{
+"text": "UPI/PATHOLOGY LAB/XXXX/Payment",
+"subcategory": "health.diagnostics",
+"confidence": 0.9617938946074145,
+"known_merchant": null,
+"resolved": "Pathology Lab"
+},
+{
+"text": "UPI-NARAYANA NETHRALAYA-bharatpe.XXXX@fbpe-XXXX-",
+"subcategory": "health.eye_care",
+"confidence": 0.2507793412563041,
+"known_merchant": null,
+"resolved": "Narayana Nethralaya"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/EYE CLINIC/CNRB/eyeclinic.rz/Collect request",
+"subcategory": "health.eye_care",
+"confidence": 0.9740662736203279,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/TALWALKARS/XXXX/",
+"subcategory": "entertainment.movies",
+"confidence": 0.036513894212687276,
+"known_merchant": null,
+"resolved": "Talwalkars"
+},
+{
+"text": "IMPS/P2M/XXXX/FITNESS CENTRE/Payment",
+"subcategory": "health.fitness",
+"confidence": 0.9987276823725508,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/TATA NEU FITNESS/XXXX/Paid via app",
+"subcategory": "health.fitness",
+"confidence": 0.9871472363039069,
+"known_merchant": null,
+"resolved": "Tata Neu Fitness"
+},
+{
+"text": "IMPS/P2M/XXXX/MUSCLEBLAZE/Paid via app",
+"subcategory": "software.storage",
+"confidence": 0.14526100600921274,
+"known_merchant": null,
+"resolved": "MuscleBlaze"
+},
+{
+"text": "NEFT-PROTEIN SHOP-Paid via app-NXXXX",
+"subcategory": "shopping.pets",
+"confidence": 0.13182313538539514,
+"known_merchant": null,
+"resolved": "Protein Shop"
+},
+{
+"text": "LIMELITE SALON GOA IN",
+"subcategory": "personal_care.salon",
+"confidence": 0.9527303729006311,
+"known_merchant": null,
+"resolved": "Limelite Salon"
+},
+{
+"text": "NEFT-BBLUNT-Collect request-NXXXX",
+"subcategory": "food.restaurant",
+"confidence": 0.11270689911284913,
+"known_merchant": null,
+"resolved": "BBlunt"
+},
+{
+"text": "LAUNDROKART MUMBAI",
+"subcategory": "personal_care.laundry",
+"confidence": 0.6234136625810089,
+"known_merchant": null,
+"resolved": "Laundrokart"
+},
+{
+"text": "UPI/XXXX/LAUNDRY SERVICES/X***@paytm/AXIS BANK/",
+"subcategory": "personal_care.laundry",
+"confidence": 0.9164357809252637,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/BOMBAY LAUND/ICIC/qXXXX@y/Sent using Paytm",
+"subcategory": "shopping.fashion",
+"confidence": 0.08075683258955517,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NEFT-BOUTIQUE TAILORING-Collect request-NXXXX",
+"subcategory": "personal_care.tailoring",
+"confidence": 0.8686064968561958,
+"known_merchant": null,
+"resolved": "Boutique Tailoring"
+},
+{
+"text": "UPI-APPLE TV+-appletv.payu@hdfcbank-XXXX-UPI Txn",
+"subcategory": "shopping.electronics",
+"confidence": 0.5311891135544955,
+"known_merchant": null,
+"resolved": "Apple TV+"
+},
+{
+"text": "PCD/5645/GAANA LTD/KOLKATA",
+"subcategory": "food.restaurant",
+"confidence": 0.188818613219581,
+"known_merchant": "entertainment.music_streaming",
+"resolved": "Gaana"
+},
+{
+"text": "UPI/P2M/XXXX/MIRAJ CINEMAS/Bill/ICICI BANK",
+"subcategory": "entertainment.movies",
+"confidence": 0.9814181775081654,
+"known_merchant": null,
+"resolved": "Miraj Cinemas"
+},
+{
+"text": "UPI/P2M/XXXX/SKILLBOX/Bill/HDFC BANK",
+"subcategory": "finance.payment_app",
+"confidence": 0.08694567809498402,
+"known_merchant": null,
+"resolved": "Skillbox"
+},
+{
+"text": "My11Circle",
+"subcategory": "shopping.books_stationery",
+"confidence": 0.10652209564810045,
+"known_merchant": null,
+"resolved": "My11Circle"
+},
+{
+"text": "POS XXXXXXXXXXXX3070 BALLEBAAZI KOLKATA",
+"subcategory": "shopping.marketplace",
+"confidence": 0.07320823378468831,
+"known_merchant": null,
+"resolved": "Ballebaazi"
+},
+{
+"text": "UPI-AQUARIUM TICKETS-Q***@ybl-XXXX-UPI",
+"subcategory": "entertainment.events",
+"confidence": 0.9208482151680671,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "BILLDESK/PHOTOGRAPHY WOR/GOA",
+"subcategory": "entertainment.amusement",
+"confidence": 0.11098987242074336,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "ACH D- DON BOSCO SCHOOL-XXXXXXXX36",
+"subcategory": "education.school",
+"confidence": 0.9934388010845406,
+"known_merchant": null,
+"resolved": "Don Bosco School"
+},
+{
+"text": "CATHEDRAL SCHOOL NEW DELHI IN",
+"subcategory": "education.school",
+"confidence": 0.9702451381840541,
+"known_merchant": null,
+"resolved": "Cathedral School"
+},
+{
+"text": "UPI/IIT MADRAS/XXXX/UPI Txn",
+"subcategory": "education.college",
+"confidence": 0.49622388478565704,
+"known_merchant": null,
+"resolved": "IIT Madras"
+},
+{
+"text": "NACH-DR-ASHOKA UNIVERSITY-CNRBXXXX",
+"subcategory": "education.college",
+"confidence": 0.9256325395179265,
+"known_merchant": null,
+"resolved": "Ashoka University"
+},
+{
+"text": "BIL/BPAY/XXXX/FERGUSSON COLLEGE",
+"subcategory": "education.college",
+"confidence": 0.8148221385375686,
+"known_merchant": null,
+"resolved": "Fergusson College"
+},
+{
+"text": "CODINGNINJAS",
+"subcategory": "software.dev_tools",
+"confidence": 0.6869661094145088,
+"known_merchant": null,
+"resolved": "Coding Ninjas"
+},
+{
+"text": "UPI/JIGSAW ACADEMY/XXXX/Pay",
+"subcategory": "education.coaching",
+"confidence": 0.9213361938614003,
+"known_merchant": null,
+"resolved": "Jigsaw Academy"
+},
+{
+"text": "UPI-VEDANTU-vedantu.rzp@axisbank-XXXX-Bill",
+"subcategory": "health.pharmacy",
+"confidence": 0.0807163676564532,
+"known_merchant": "education.coaching",
+"resolved": "Vedantu"
+},
+{
+"text": "APTECH GURUGRAM IN",
+"subcategory": "taxes.government_fees",
+"confidence": 0.17101389086554405,
+"known_merchant": null,
+"resolved": "Aptech"
+},
+{
+"text": "UPI/P2M/XXXX/IBPS EXAM FEE/Payment from PhonePe/STATE BANK OF INDIA",
+"subcategory": "education.exams",
+"confidence": 0.852808995966884,
+"known_merchant": null,
+"resolved": "IBPS Exam Fee"
+},
+{
+"text": "HELLO KIDS VIZAG IN",
+"subcategory": "shopping.kids",
+"confidence": 0.9670934472921585,
+"known_merchant": null,
+"resolved": "Hello Kids"
+},
+{
+"text": "YOTTACLOUD",
+"subcategory": "software.cloud",
+"confidence": 0.9522219585469475,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI-NEW RELIC-newrelic.payu@hdfcbank-XXXX-",
+"subcategory": "shopping.marketplace",
+"confidence": 0.16483079379717835,
+"known_merchant": null,
+"resolved": "New Relic"
+},
+{
+"text": "PCD/6261/DROPBOX/CHENNAI",
+"subcategory": "software.storage",
+"confidence": 0.46111710267730105,
+"known_merchant": null,
+"resolved": "Dropbox"
+},
+{
+"text": "SAMSUNG CLOUD BLR",
+"subcategory": "software.cloud",
+"confidence": 0.8277008288755083,
+"known_merchant": null,
+"resolved": "Samsung Cloud"
+},
+{
+"text": "IMPS/P2M/XXXX/WIX/Payment",
+"subcategory": "finance.payment_app",
+"confidence": 0.17955256005815337,
+"known_merchant": null,
+"resolved": "Wix"
+},
+{
+"text": "ZNETLIVE PATNA IN",
+"subcategory": "software.cloud",
+"confidence": 0.3072922075453425,
+"known_merchant": null,
+"resolved": "Znetlive"
+},
+{
+"text": "NEFT-RUNWAY ML-NEFT-NXXXX",
+"subcategory": "shopping.fashion",
+"confidence": 0.05150426362222543,
+"known_merchant": null,
+"resolved": "Runway ML"
+},
+{
+"text": "UPI/P2M/XXXX/ICICI BANK LOAN EMI/Bill/BANK OF BARODA",
+"subcategory": "finance.loan_emi",
+"confidence": 0.5570796330738568,
+"known_merchant": "finance.loan_emi",
+"resolved": "Axis Bank Loan EMI"
+},
+{
+"text": "SI CASHE 62671452",
+"subcategory": "cash.atm",
+"confidence": 0.21460297869414954,
+"known_merchant": null,
+"resolved": "CASHe"
+},
+{
+"text": "UPI/XXXX/GOLD LOAN INTEREST/goldloaninterest.rzp@axisbank/KOTAK MAHINDRA/UPI Txn",
+"subcategory": "income.interest",
+"confidence": 0.5701926832682029,
+"known_merchant": null,
+"resolved": "Gold Loan Interest"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/CHEQUE BOOK /ICIC/chequebookch/Sent using Paytm",
+"subcategory": "shopping.books_stationery",
+"confidence": 0.9541595442785915,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/CARD REPLACEMENT FEE/C***@okicici/AXIS BANK/Bill",
+"subcategory": "transfers.credit_card_bill",
+"confidence": 0.27262773893742404,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "BILLPAY INSTAREM 239979",
+"subcategory": "finance.payment_app",
+"confidence": 0.1363210206888243,
+"known_merchant": null,
+"resolved": "Instarem"
+},
+{
+"text": "PG CF GALAXY HEALTH INSURANCE 44963304",
+"subcategory": "insurance.health",
+"confidence": 0.7915547696621763,
+"known_merchant": null,
+"resolved": "Galaxy Health Insurance"
+},
+{
+"text": "PNB METLIFE MUMBAI IN",
+"subcategory": "insurance.life",
+"confidence": 0.36882698277247933,
+"known_merchant": null,
+"resolved": "PNB MetLife"
+},
+{
+"text": "POS XXXXXXXXXXXX1191 RAHEJA QBE GURGAON",
+"subcategory": "food.restaurant",
+"confidence": 0.12522054402400926,
+"known_merchant": null,
+"resolved": "Raheja QBE"
+},
+{
+"text": "UPI/NEXTBILLION TECHNO/XXXX/Payment",
+"subcategory": "finance.payment_app",
+"confidence": 0.707132288965164,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "ECS/WINT WEALTH/XXXX",
+"subcategory": "insurance.health",
+"confidence": 0.19066724944761285,
+"known_merchant": null,
+"resolved": "Wint Wealth"
+},
+{
+"text": "PINELABS*RELIGARE BROKING",
+"subcategory": "investments.stocks",
+"confidence": 0.2803364071338799,
+"known_merchant": null,
+"resolved": "Religare Broking"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/RD INSTALMEN/YESB/rdinstalment/Collect request",
+"subcategory": "finance.loan_emi",
+"confidence": 0.5498921656518816,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/PHONEPE GOLD/XXXX/Paid via app",
+"subcategory": "finance.payment_app",
+"confidence": 0.6860536749812498,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NEFT-PROTEAN EGOV NPS-Collect request-NXXXX",
+"subcategory": "investments.retirement",
+"confidence": 0.19063141359662908,
+"known_merchant": null,
+"resolved": "Protean eGov NPS"
+},
+{
+"text": "PCD/4943/ICICI PENSION FUND/NOIDA",
+"subcategory": "investments.retirement",
+"confidence": 0.9566802373348107,
+"known_merchant": null,
+"resolved": "HDFC Pension Fund"
+},
+{
+"text": "UPI-INCOMETAXE-FILING-E***@ibl-XXXX-UPI Txn",
+"subcategory": "taxes.income_tax",
+"confidence": 0.7121957445961682,
+"known_merchant": "taxes.income_tax",
+"resolved": null
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/BBMP PROPERT/CNRB/bbmpproperty/UPI",
+"subcategory": "housing.property",
+"confidence": 0.7362779623713152,
+"known_merchant": null,
+"resolved": "BBMP Property Tax"
+},
+{
+"text": "IMPS/P2M/XXXX/SARATHI DRIVING LICENCE/Payment from PhonePe",
+"subcategory": "taxes.government_fees",
+"confidence": 0.1104984635796064,
+"known_merchant": null,
+"resolved": "Sarathi Driving Licence"
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/E-DISTRICT S/SBIN/edistrictser/Pay",
+"subcategory": "entertainment.movies",
+"confidence": 0.18445158135874865,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI-PRATHAM-paytmqrXXXX@paytm-XXXX-Paid via app",
+"subcategory": "food.restaurant",
+"confidence": 0.08977978850834886,
+"known_merchant": null,
+"resolved": "Pratham"
+},
+{
+"text": "UPI/P2M/XXXX/FUELADREAM/HDFC BANK",
+"subcategory": "transport.fuel",
+"confidence": 0.5591284401626607,
+"known_merchant": null,
+"resolved": "Fueladream"
+},
+{
+"text": "NEFT CR-FULLANDFINALSETTLEMENT-SAL-XXXX",
+"subcategory": "finance.payment_app",
+"confidence": 0.6643933143867814,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/CR/XXXX/CASHBACK RECEIVED/HDFC/paytmqrXXXX@paytm",
+"subcategory": "income.cashback",
+"confidence": 0.7215003838210585,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "COMMISSION RECEIVED CR 509066",
+"subcategory": "income.business",
+"confidence": 0.8097497975217023,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/CR/XXXX/GRUHA LAKSHMI/IDIB/G***@icici",
+"subcategory": "health.diagnostics",
+"confidence": 0.12860867588817226,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/AMAZON PAY BALANC/XXXX/Order",
+"subcategory": "finance.payment_app",
+"confidence": 0.31985304475174664,
+"known_merchant": "shopping.marketplace",
+"resolved": "Amazon"
+},
+{
+"text": "NWD-XXXXXXXXXXXX4024-YESB1154-MYSORE",
+"subcategory": "cash.atm",
+"confidence": 0.9654031149134742,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/BANSAL GENER/INDB/XXXX@o/Sent using Paytm",
+"subcategory": "insurance.general",
+"confidence": 0.21349771940270762,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PAYTM/BANERJEE CHEMISTS & DRUGGISTS/KOLKATA",
+"subcategory": "health.pharmacy",
+"confidence": 0.9845092665575187,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "Desai Medicos",
+"subcategory": "health.pharmacy",
+"confidence": 0.9946261981653846,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "IMPS/P2M/XXXX/VINAYAKA GENTS PARLOUR/Sent using Paytm",
+"subcategory": "personal_care.salon",
+"confidence": 0.9146751250068393,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "GARG HAIR SALON CHANDIGARH",
+"subcategory": "personal_care.salon",
+"confidence": 0.9990078477940987,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/MURUGAN HERB/ICIC/muruganherba/Bill",
+"subcategory": "food.restaurant",
+"confidence": 0.3288050475416378,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/GARGHERBALBEAUTYCARE/G***@paytm/BANK OF BARODA/Pay",
+"subcategory": "shopping.beauty",
+"confidence": 0.8813316199573321,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/KAPOORMILITARYHOTEL/K***@icici/AXIS BANK/Paid via app",
+"subcategory": "food.restaurant",
+"confidence": 0.46694881626273027,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "Desai Sweets",
+"subcategory": "food.bakery_sweets",
+"confidence": 0.9998867582971351,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "SWAMY SNACKS CORNER LUCKNOW IN",
+"subcategory": "food.fast_food",
+"confidence": 0.20551827862166205,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "POS/ROYAL CHAAT BHANDAR/PATNA/923891",
+"subcategory": "food.street_food",
+"confidence": 0.2529811230245063,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/P2M/XXXX/SARASWATI CAFE/Collect request/HDFC BANK",
+"subcategory": "food.cafe",
+"confidence": 0.9334264604591521,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "IMPS/P2M/XXXX/JINDAL COFFEE HOUSE/Pay to merchant",
+"subcategory": "food.cafe",
+"confidence": 0.9931104113442559,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/KAMAKSHI LIQ/CNRB/qXXXX@y/UPI Txn",
+"subcategory": "food.restaurant",
+"confidence": 0.12060875584096535,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PG CCAV RAJDHANI BEER SHOP 82751453",
+"subcategory": "food.bar",
+"confidence": 0.3496908692202656,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/P2M/XXXX/SIDDHIVINAYAK MESS/Pay/YES BANK",
+"subcategory": "food.canteen",
+"confidence": 0.4000202672686801,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "Golden Tiffin Centre",
+"subcategory": "food.canteen",
+"confidence": 0.9758432152901173,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/MAHAVIR CATERING SERVICES/paytmqrXXXXXXXX49@paytm/BANK OF BARODA/Pay",
+"subcategory": "food.catering",
+"confidence": 0.9474145763259172,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI-SELVAM FRUIT MA-selvamfruitmart.payu@hdfcbank-XXXX-UPI Txn",
+"subcategory": "groceries.fruits_vegetables",
+"confidence": 0.9821573301137213,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NEFT-SHIVA MILK DAIRY-NEFT-NXXXX",
+"subcategory": "groceries.dairy",
+"confidence": 0.999991891240932,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/KAPOOR FISH /HDFC/qXXXX@y/UPI Txn",
+"subcategory": "groceries.meat_fish",
+"confidence": 0.2828371629991148,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/P2M/XXXX/BANERJEE MEAT SHOP/Paid via app/KOTAK MAHINDRA",
+"subcategory": "groceries.meat_fish",
+"confidence": 0.2737277767616703,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "POS/HANUMAN ORGANIC STORE/BHOPAL/508450",
+"subcategory": "groceries.specialty",
+"confidence": 0.5301459963637675,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/VENKATESHWAR/UTIB/XXXX@h/Payment from PhonePe",
+"subcategory": "food.restaurant",
+"confidence": 0.17130454001953166,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "CCAV/KAMAKSHI ORGANIC STORE/PATNA",
+"subcategory": "groceries.specialty",
+"confidence": 0.7197194940431713,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/VENKATESHWAR/ICIC/venkateshwar/",
+"subcategory": "health.hospital",
+"confidence": 0.10617399104323061,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NEFT-KAMAKSHI ELECTRO-NEFT-NXXXX",
+"subcategory": "shopping.electronics",
+"confidence": 0.6475277662268812,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NEFT-MURUGAN MOBILE WORLD-Collect request-NXXXX",
+"subcategory": "shopping.electronics",
+"confidence": 0.9644965092572974,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PCD/1373/JOSHI MOBILES/MYSORE",
+"subcategory": "shopping.electronics",
+"confidence": 0.9617057515104681,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "CCAVENUE/DAS TEXTILES/NOIDA",
+"subcategory": "shopping.fashion",
+"confidence": 0.876620926125467,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/P2M/XXXX/MURUGAN READYMADE/HDFC BANK",
+"subcategory": "food.restaurant",
+"confidence": 0.253670048944137,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PCD/2579/HEGDE SHOE HOUSE/LUCKNOW",
+"subcategory": "shopping.footwear",
+"confidence": 0.9395132418993002,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "GODAVARI JEWELLERY BENGALURU IN",
+"subcategory": "shopping.jewellery",
+"confidence": 0.9872819721006642,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/HEGDE STATIONERS/XXXX/Payment from PhonePe",
+"subcategory": "shopping.books_stationery",
+"confidence": 0.9448679382592797,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/NOORANI BOOK STALL/N***@oksbi/PNB/",
+"subcategory": "shopping.books_stationery",
+"confidence": 0.9732134601974427,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "JINDAL VESSELS STORE HYD IN",
+"subcategory": "shopping.marketplace",
+"confidence": 0.7703903673329924,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/BANSAL FURNI/CNRB/bansalfurnis/Order",
+"subcategory": "shopping.home_furniture",
+"confidence": 0.9329707407500654,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PCD/1376/ROYAL ST/THANE",
+"subcategory": "personal_care.salon",
+"confidence": 0.17794928475744212,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "FERNANDES FANCY AND COS MYSORE IN",
+"subcategory": "shopping.beauty",
+"confidence": 0.5064461298145795,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/PRASAD FLOWER SHOP/XXXX/Pay to merchant",
+"subcategory": "shopping.gifts_flowers",
+"confidence": 0.9178016435534648,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI-AMBA FLOWE-bharatpe.XXXX@fbpe-XXXX-UPI Txn",
+"subcategory": "shopping.gifts_flowers",
+"confidence": 0.80505114445848,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NEFT-CITY AQUARIUM SHOP-NEFT-NXXXX",
+"subcategory": "shopping.pets",
+"confidence": 0.9381405295436992,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/THAKUR PET CLINIC AND SHOP/X***@apl/PNB/Payment",
+"subcategory": "shopping.pets",
+"confidence": 0.8860064470311094,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "VINAYAKATOYCE",
+"subcategory": "shopping.kids",
+"confidence": 0.6129308514041456,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "KANNAN SPORTS THANE",
+"subcategory": "shopping.sports",
+"confidence": 0.996081041637068,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "IMPS/P2M/XXXX/SENTHIL SPORTS CORNER/UPI Txn",
+"subcategory": "shopping.sports",
+"confidence": 0.9952627130062646,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "MUKESHOPTICALS KOLKATA IN",
+"subcategory": "shopping.eyewear",
+"confidence": 0.803339325715316,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/P2M/XXXX/KRISHNA OPTICS/KOTAK MAHINDRA",
+"subcategory": "shopping.eyewear",
+"confidence": 0.8250198494729445,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NATIONALOPTICS",
+"subcategory": "shopping.eyewear",
+"confidence": 0.9024633796315802,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/P2M/XXXX/BANERJEEPAANSHOP/AXIS BANK",
+"subcategory": "shopping.paan_tobacco",
+"confidence": 0.9392816656589216,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NEFT-VENKATESHWARA FUEL POINT-NA-NXXXX",
+"subcategory": "transport.fuel",
+"confidence": 0.9544496824726085,
+"known_merchant": "transport.fuel",
+"resolved": null
+},
+{
+"text": "PINELABS*CHAUHAN CAR WASH",
+"subcategory": "transport.vehicle_service",
+"confidence": 0.6411937087835207,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PHONEPE PG/DAS CAR WASH/CHENNAI",
+"subcategory": "transport.vehicle_service",
+"confidence": 0.25600817283382854,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NARESHAUTOSPARES",
+"subcategory": "transport.vehicle_service",
+"confidence": 0.8611269281624077,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "IMPS/P2M/XXXX/SIDDHIVINAYAK/Payment from PhonePe",
+"subcategory": "donations.religious",
+"confidence": 0.30111967681045787,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PCD/9453/PRASAD BIKE/GOA",
+"subcategory": "transport.vehicle_rental",
+"confidence": 0.44302747588864644,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/CHAUHAN CAR TRAVELS/C***@icici/BANK OF BARODA/",
+"subcategory": "travel.booking",
+"confidence": 0.693755623951125,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/P2M/XXXX/SARASWATI BUS SERVICE/Pay/YES BANK",
+"subcategory": "transport.vehicle_service",
+"confidence": 0.3066276241925233,
+"known_merchant": null,
+"resolved": "RO Service"
+},
+{
+"text": "UPI/P2M/XXXX/KAMAKSHI TRAVELS/UPI/AXIS BANK",
+"subcategory": "travel.booking",
+"confidence": 0.9524049121842104,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "POS/RAJDHANI DRY CLEANERS/DELHI/532969",
+"subcategory": "personal_care.laundry",
+"confidence": 0.8220271189145976,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "THAKURD",
+"subcategory": "food.restaurant",
+"confidence": 0.6805759324586891,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "IMPS/P2M/XXXX/SHIVA TAILORS/Collect request",
+"subcategory": "personal_care.tailoring",
+"confidence": 0.9894764740735245,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "DAS POLYCLINI KOCHI IN",
+"subcategory": "health.hospital",
+"confidence": 0.7432917884389258,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/KRISHNA POLY/INDB/krishnapolyc/NA",
+"subcategory": "personal_care.laundry",
+"confidence": 0.20543176806380886,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/KHANNA MULTISPECIALITY HOSPITAL/X***@paytm/STATE BANK OF INDIA/Bill",
+"subcategory": "health.hospital",
+"confidence": 0.9989352283084039,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PG PAYUMONEY NARESHNURSINGHOME 69727575",
+"subcategory": "food.restaurant",
+"confidence": 0.10524016247407501,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PCD/8207/PRASAD LAB/GOA",
+"subcategory": "health.diagnostics",
+"confidence": 0.5657271763238116,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/P2M/XXXX/DESAI DENTAL CARE/Bill/PNB",
+"subcategory": "health.dental",
+"confidence": 0.9983984606731606,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "IMPS/P2M/XXXX/MUKESH DENTAL CLINIC/Order",
+"subcategory": "health.dental",
+"confidence": 0.9872793898405382,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/BANSAL EYE CLINIC/XXXX/UPI",
+"subcategory": "health.eye_care",
+"confidence": 0.9771421071260835,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "KULKARNI EYE CLINIC CHANDIGARH IN",
+"subcategory": "health.eye_care",
+"confidence": 0.773933360482885,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/SHIVA FITNESS STUDIO/Q***@ybl/HDFC BANK/Pay",
+"subcategory": "health.fitness",
+"confidence": 0.9937126130410132,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "TO TRANSFER-UPI/DR/XXXX/GODAVARI VID/HDFC/qXXXX@y/UPI Txn",
+"subcategory": "education.school",
+"confidence": 0.06080397699557172,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "PRADEEP VIDYALAYA GOA IN",
+"subcategory": "education.school",
+"confidence": 0.977142577006854,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/XXXX/KRISHNA TUTORIALS/paytmqrXXXX@paytm/YES BANK/",
+"subcategory": "education.coaching",
+"confidence": 0.9403234858214017,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "Chauhan Coaching Centre",
+"subcategory": "education.coaching",
+"confidence": 0.997681301456629,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "POS XXXXXXXXXXXX3392 SWAMYDAYCARE KOCHI",
+"subcategory": "education.childcare",
+"confidence": 0.8263950459933534,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "BBPS/KRISHNA ELECTRICAL WORKS/XXXX",
+"subcategory": "housing.repairs",
+"confidence": 0.9058828905715299,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "BANSAL ALUMINIUM WORKS NEW DELHI IN",
+"subcategory": "shopping.hardware",
+"confidence": 0.7147797824276598,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "NEFT-PRASAD TRANSPORT CO-Order-NXXXX",
+"subcategory": "transport.vehicle_service",
+"confidence": 0.8159381934095703,
+"known_merchant": null,
+"resolved": null
+},
+{
+"text": "UPI/GODAVARI TRANSPORT CO/XXXX/Collect request",
+"subcategory": "transport.vehicle_service",
+"confidence": 0.7722678798938402,
+"known_merchant": null,
+"resolved": null
+}
+]

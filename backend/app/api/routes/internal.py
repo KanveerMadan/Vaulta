@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.services import model_metrics
 from app.core.database import get_db
 from app.services import inbound, scheduler, telegram_bot
 
@@ -44,6 +45,12 @@ class InboundEmail(BaseModel):
     text: Optional[str] = None
     html: Optional[str] = None
     auth_results: str = Field(default="", max_length=8000)
+
+
+@router.get("/model-metrics", dependencies=[Depends(require_secret)])
+def model_metrics_summary(days: int = 30, db: Session = Depends(get_db)):
+    """Live correction rate of automatic categories (aggregate counts only; services/model_metrics.py)."""
+    return model_metrics.summary(db, max(1, min(days, 365)))
 
 
 @router.post("/inbound-email", dependencies=[Depends(require_secret)])

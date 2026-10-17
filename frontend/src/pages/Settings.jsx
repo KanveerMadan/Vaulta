@@ -252,7 +252,7 @@ export default function Settings() {
         ))}
       </section>
 
-      <CustomSubcategories />
+      <CustomSubcategories consent={data.ml_training_consent} onConsent={(v) => save({ ml_training_consent: v })} />
 
       <SecuritySettings />
 

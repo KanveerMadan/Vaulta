@@ -17,11 +17,11 @@ export default function TagEditor({ tags, onSave, onCancel }) {
         <span className="sr-only">Tags, separated by commas</span>
         <input autoFocus value={value} onChange={(e) => setValue(e.target.value)} list={list} maxLength={300}
           onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); onCancel(); } }}
-          placeholder="Goa trip, Reimbursable" className="input h-9 min-h-0 text-sm" />
+          placeholder="Goa trip, Reimbursable" className="input h-9 text-sm" />
       </label>
       <datalist id={list}>{known.map((t) => <option key={t} value={t} />)}</datalist>
-      <button type="submit" className="btn-secondary h-9 min-h-0">Save</button>
-      <button type="button" onClick={onCancel} className="btn-quiet h-9 min-h-0">Cancel</button>
+      <button type="submit" className="btn-secondary h-9">Save</button>
+      <button type="button" onClick={onCancel} className="btn-quiet h-9">Cancel</button>
     </form>
   );
 }

@@ -160,6 +160,16 @@ def update_transaction(
     return TransactionPatchResponse(**TransactionResponse.model_validate(txn).model_dump(), rule_applied=rule_applied)
 
 
+@router.get("/{transaction_id}/explanation")
+def explain_category(
+    transaction_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Why this transaction has its category (shown on tap in the app)."""
+    return transaction_service.explain(db, _owned_or_404(db, current_user, transaction_id))
+
+
 @router.delete("/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_transaction(
     transaction_id: uuid.UUID,

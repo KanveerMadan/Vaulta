@@ -34,6 +34,7 @@ from app.services.detection import find_transfer_pairs, load_context, run_detect
 from app.services.keys import merchant_key
 from app.services.people import repayment_candidates, set_tag
 from app.services.rules import upsert_rule
+from app.services import taxonomy
 
 # ── Tunable thresholds (listed in the Phase 2 report) ─────────────────────────
 PERSON_MIN_PAYMENTS = 3       # untagged person paid this many times → ask what it is
@@ -138,12 +139,17 @@ def build_cards(db: Session, user: User) -> list[Card]:
         if not key:
             continue
         label = txns[0].merchant_clean or key.title()
+        # the merchant model's own guesses first, when it had some but wasn't sure enough to file it (categorizer.py)
+        guesses = [s for s, _ in (txns[0].category_explanation or {}).get("alternatives", []) if taxonomy.label(s)]
+        options = [{"value": s, "label": taxonomy.label(s)} for s in guesses[:MERCHANT_SUGGESTIONS]]
+        groups_offered = {taxonomy.group_of(s) for s in guesses[:MERCHANT_SUGGESTIONS]}
+        options += [{"value": c, "label": c} for c in suggestions if c not in groups_offered][:max(0, MERCHANT_SUGGESTIONS - len(options))]
         cards.append(Card(
             id=f"merchant:{hashlib.sha256(key.encode()).hexdigest()[:16]}", type="merchant",
             question=f"What is “{label}”?",
             detail=f"{_rupees(sum(t.amount for t in txns))} across {len(txns)} payment{'s' if len(txns) > 1 else ''}. "
                    f"Your answer applies to all of them and future ones.",
-            options=[{"value": c, "label": c} for c in suggestions] + [{"value": "Other", "label": "Other"}, SKIP],
+            options=options + [{"value": "Other", "label": "Other"}, SKIP],
             target=(key, label),
         ))
 

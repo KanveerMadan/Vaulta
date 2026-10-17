@@ -88,6 +88,9 @@ class Transaction(Base):
     # `category`'s group. auto_subcategory is what the system assigned, like auto_category.
     subcategory = Column(String(64), nullable=True)
     auto_subcategory = Column(String(64), nullable=True)
+    # Why auto_category is what it is (services/categorizer.py): known merchant, model (confidence, alternatives),
+    # or the user's own similar correction. Encrypted: it can name a merchant.
+    category_explanation = Column(EncryptedJSON, nullable=True)
 
     # What kind of money movement this is (expense / income / peer payment / self-transfer).
     # Defaults to "expense" at the DB level for backfill safety — all rows ingested before

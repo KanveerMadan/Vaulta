@@ -24,7 +24,7 @@ function AddSubcategoryBudget({ taken, onAdd }) {
   return (
     <form onSubmit={add} className="flex items-center gap-2 pt-3 flex-wrap">
       <CategorySelect value={sub} onChange={setSub} empty="Pick a subcategory" groups={SUB_GROUPS} system={false}
-        groupOption={null} aria-label="Subcategory" className="input h-9 min-h-0 py-0 text-sm flex-1 min-w-[12rem]" />
+        groupOption={null} aria-label="Subcategory" className="input h-9 py-0 text-sm flex-1 min-w-[12rem]" />
       <input value={value} onChange={(e) => setValue(e.target.value)} inputMode="decimal" placeholder="Monthly limit"
         pattern="\d{1,10}(\.\d{1,2})?" aria-label="Subcategory monthly limit" className="w-32 border border-sage-200 rounded-lg px-2 py-1 text-sm" />
       <button type="submit" disabled={!group || !value.trim() || taken.has(sub)}

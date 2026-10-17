@@ -148,7 +148,7 @@ test('change password in Settings', async ({ page, request, guard }) => {
   await page.getByRole('button', { name: 'Change password' }).click()
   await expect(page.getByText('Password changed. Your other devices were signed out.')).toBeVisible()
   await page.goto('/budgets')                                    // this browser stays signed in
-  await expect(page.getByRole('heading', { name: 'Budgets' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Budgets', exact: true })).toBeVisible()
   const old = await request.post('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=e2e-fake-key',
     { data: { email: account.email, password: account.password, returnSecureToken: true } })
   expect(old.ok()).toBe(false)

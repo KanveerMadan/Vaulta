@@ -2,8 +2,58 @@ import { useState } from "react";
 import api from "../lib/api";
 import { refreshCategoryTree, useCategoryTree } from "../lib/categories";
 
-/** Settings → Categories: add your own subcategories to a group, or remove them (their transactions keep the group). */
-export default function CustomSubcategories() {
+/** "Re-check categories": preview what the current categoriser would change, apply it, undo it. Corrected rows are never touched. */
+function Recheck() {
+  const [state, setState] = useState({ step: "idle" });   // idle | checking | preview | applied | undone | error
+  const check = async () => {
+    setState({ step: "checking" });
+    try { setState({ step: "preview", plan: (await api.post("/api/categories/recategorise", { dry_run: true })).data }); }
+    catch { setState({ step: "error" }); }
+  };
+  const apply = async () => {
+    try { setState({ step: "applied", run: (await api.post("/api/categories/recategorise", { dry_run: false })).data }); }
+    catch { setState({ step: "error" }); }
+  };
+  const undo = async () => {
+    try { setState({ step: "undone", restored: (await api.post(`/api/categories/recategorise/${state.run.run_id}/undo`)).data.restored }); }
+    catch { setState({ step: "error" }); }
+  };
+  const { plan } = state;
+  return (
+    <div className="border-t border-line pt-3 space-y-2" aria-live="polite">
+      <p className="text-sm text-ink-500">Re-check your past transactions with Vaulta's current categories. Ones you changed yourself are never touched, and you can undo it.</p>
+      {state.step === "idle" || state.step === "undone" || state.step === "error" ? (
+        <>
+          {state.step === "undone" && <p className="text-sm text-ink">Undone: {state.restored} transactions are back as they were.</p>}
+          {state.step === "error" && <p role="alert" className="text-sm text-danger">That didn't work. Nothing was changed.</p>}
+          <button onClick={check} className="btn-secondary h-10">Re-check categories</button>
+        </>
+      ) : state.step === "checking" ? <p className="text-sm text-muted">Checking…</p>
+        : state.step === "preview" ? (
+          plan.changed === 0 ? <p className="text-sm text-ink">Nothing would change.</p> : (
+            <div className="space-y-2">
+              <p className="text-sm text-ink">{plan.changed} transaction{plan.changed === 1 ? "" : "s"} would change:</p>
+              <ul className="text-sm text-ink-2 list-disc pl-5">
+                {Object.entries(plan.summary).slice(0, 8).map(([k, n]) => <li key={k}>{k}: {n}</li>)}
+              </ul>
+              <div className="flex gap-2">
+                <button onClick={apply} className="btn-primary h-10">Apply</button>
+                <button onClick={() => setState({ step: "idle" })} className="btn-quiet h-10">Not now</button>
+              </div>
+            </div>
+          )
+        ) : (
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-sm text-ink">Changed {state.run.changed} transaction{state.run.changed === 1 ? "" : "s"}.</p>
+            {state.run.changed > 0 && <button onClick={undo} className="btn-secondary h-10">Undo</button>}
+          </div>
+        )}
+    </div>
+  );
+}
+
+/** Settings → Categories: your own subcategories, training consent, and re-checking past categories. */
+export default function CustomSubcategories({ consent, onConsent }) {
   const tree = useCategoryTree();
   const [group, setGroup] = useState(tree.groups[0]?.name || "");
   const [name, setName] = useState("");
@@ -41,14 +91,28 @@ export default function CustomSubcategories() {
         </ul>
       )}
       <form onSubmit={add} className="flex flex-wrap gap-2">
-        <select value={group} onChange={(e) => setGroup(e.target.value)} aria-label="Category" className="input h-10 min-h-0 sm:w-48">
+        <select value={group} onChange={(e) => setGroup(e.target.value)} aria-label="Category" className="input h-10 sm:w-48">
           {tree.groups.map((g) => <option key={g.name}>{g.name}</option>)}
         </select>
         <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} required aria-label="New subcategory name"
-          placeholder="Office lunch" className="input h-10 min-h-0 flex-1 min-w-[10rem]" />
-        <button type="submit" disabled={!name.trim()} className="btn-secondary h-10 min-h-0">Add</button>
+          placeholder="Office lunch" className="input h-10 flex-1 min-w-[10rem]" />
+        <button type="submit" disabled={!name.trim()} className="btn-secondary h-10">Add</button>
       </form>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      <Recheck />
+      {onConsent && (
+        <div className="border-t border-line pt-3 space-y-1">
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input type="checkbox" checked={consent} onChange={(e) => onConsent(e.target.checked)} />
+            Let my category corrections help improve Vaulta's categories
+          </label>
+          <p className="text-xs text-ink-500">
+            Off unless you turn it on. When on, the corrections you make (the merchant text with personal details already
+            removed, and the category you chose) may be used to retrain the model that suggests categories. Nothing else
+            is used, and turning it off stops it for any retraining after that.
+          </p>
+        </div>
+      )}
     </section>
   );
 }

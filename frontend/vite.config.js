@@ -68,12 +68,17 @@ export default defineConfig(({ mode }) => {
       registerType: 'autoUpdate',
       injectRegister: 'script-defer',   // never render-blocking
       includeAssets: ['favicon.svg'],
-      // The service worker precaches the built static files only. No runtime caching at all:
-      // API responses and financial data are never stored by it. OCR assets (~7 MB) load on demand.
+      // The service worker precaches the built static files only. API responses and financial data are never
+      // stored by it. OCR assets (~7 MB) load on demand. The one runtime cache is the merchant model
+      // (public/models/, ~1 MB, no user data), kept after its first use and refreshed in the background.
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        globIgnores: ['ocr/**'],
-        runtimeCaching: [],
+        globIgnores: ['ocr/**', 'models/**'],
+        runtimeCaching: [{
+          urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/models/'),
+          handler: 'StaleWhileRevalidate',
+          options: { cacheName: 'merchant-model', expiration: { maxEntries: 4 } },
+        }],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//, /^\/auth\//, /^\/internal\//, /^\/unsubscribe/],
       },

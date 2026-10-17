@@ -22,7 +22,7 @@ def categorize(client, txn, category):
     return res.json()
 
 
-def test_two_consistent_corrections_learn_a_rule(client):
+def test_two_consistent_corrections_learn_a_rule(client, rules_only):
     txns = load(client, *[chai(d) for d in range(1, 7)])
     assert {t["category"] for t in txns} == {None}
     assert categorize(client, txns[0], "Food & Dining")["rule_applied"] is None     # one correction: no rule yet

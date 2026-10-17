@@ -102,6 +102,10 @@ COVERED = {
     ("DELETE", "/api/categories/subcategories/{subcategory_id}"),
     ("GET", "/api/tags"),
     ("DELETE", "/api/tags/{tag_id}"),
+    # tests/test_categorizer.py::test_explanations_and_recategorising_are_per_user
+    ("GET", "/api/transactions/{transaction_id}/explanation"),
+    ("POST", "/api/categories/recategorise"),
+    ("POST", "/api/categories/recategorise/{run_id}/undo"),
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.
@@ -112,6 +116,7 @@ EXEMPT = {
     ("POST", "/api/payments/webhook"),    # no user; Razorpay HMAC signature instead
     # no user session: X-Internal-Secret (tests/test_delivery.py::test_internal_endpoint_needs_the_secret)
     ("POST", "/internal/run-reports"),
+    ("GET", "/internal/model-metrics"),     # aggregate counts only (tests/test_categorizer.py)
     ("POST", "/internal/inbound-email"),   # tests/test_inbound.py::test_endpoint_guards
     ("POST", "/internal/telegram"),        # Telegram's secret_token header: tests/test_telegram.py::test_webhook_secret
     # no user session: signed per-user token (tests/test_delivery.py::test_unsubscribe)

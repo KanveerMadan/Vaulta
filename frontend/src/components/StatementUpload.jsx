@@ -1,5 +1,7 @@
 import Sheet from "../ui/Sheet";
-import { useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { loadModel, predict } from "../lib/merchantModel";
+import { subcategoryName } from "../lib/categories";
 import api from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { parseStatement, ImportError } from "../import";
@@ -58,12 +60,23 @@ function EditCell({ value, field, onEdit, label }) {
   );
 }
 
+/** The merchant model, once it has loaded on this device (null until then, or if it isn't available). */
+function useMerchantModel() {
+  const [model, setModel] = useState(null);
+  useEffect(() => { let alive = true; loadModel().then((m) => alive && setModel(m)); return () => { alive = false; }; }, []);
+  return model;
+}
+
 function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit }) {
   const { rows, removed, lowConfidence } = parsed;
+  const model = useMerchantModel();
+  // categorised on this device; the server still prefers your rules and known merchants (services/categorizer.py)
+  const guesses = useMemo(() => (model ? rows.map((r) => predict(model, r.description_raw)) : []), [model, rows]);
+  const withGuess = (r, i) => (guesses[i] ? { ...r, predicted_subcategory: guesses[i].subcategory, predicted_confidence: guesses[i].confidence } : r);
   const invalid = [...lowConfidence].some((i) => Object.entries(VALID).some(([f, re]) => !re.test(rows[i][f])));
   const [excluded, setExcluded] = useState(() => new Set());
   const toggle = (i) => setExcluded((s) => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; });
-  const included = rows.filter((_, i) => !excluded.has(i));
+  const included = rows.map(withGuess).filter((_, i) => !excluded.has(i));
   const dates = rows.map((r) => r.date).sort();
 
   return (
@@ -94,6 +107,7 @@ function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit
               <th className="px-2 py-1.5">Merchant</th>
               <th className="px-2 py-1.5 text-right">Amount</th>
               <th className="px-2 py-1.5">Type</th>
+              {model && <th className="px-2 py-1.5">Category guess</th>}
               <th className="px-2 py-1.5">Reference</th>
             </tr>
           </thead>
@@ -122,6 +136,11 @@ function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit
                 <td data-label="Type" className={`px-2 py-1 whitespace-nowrap ${r.direction === "credit" ? "text-safe" : "text-ink-600"}`}>
                   {r.type === "transfer" ? "Transfer" : r.direction === "credit" ? "Credit" : "Debit"}
                 </td>
+                {model && (
+                  <td className="px-2 py-1 whitespace-nowrap text-ink-600" data-label="Category guess">
+                    {guesses[i] && guesses[i].confidence >= model.threshold ? subcategoryName(guesses[i].subcategory) : <span className="text-muted">To review</span>}
+                  </td>
+                )}
                 <td className="px-2 py-1 font-mono text-ink-400 whitespace-nowrap" data-label="Reference">{r.reference || <span className="sr-only">none</span>}</td>
               </tr>
             ))}

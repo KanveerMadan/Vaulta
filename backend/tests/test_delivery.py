@@ -157,6 +157,7 @@ def test_settings(client):
     channels = s.pop("alert_channels")
     assert channels["duplicate_charge"] == {"telegram": True, "email": True} and channels["price_change"] == {"telegram": True, "email": False}
     assert (s.pop("quiet_start"), s.pop("quiet_end")) == (22, 8)
+    assert s.pop("ml_training_consent") is False          # opt-in only
     assert s == {"ai_chat_enabled": True, "timezone": "Asia/Kolkata", "reports_weekly": True, "reports_monthly": True,
                  "reports_annual": True, "email_weekly": True, "email_monthly": True, "email_annual": True,
                  "email_configured": email.configured()}

@@ -46,7 +46,10 @@ PLAINTEXT_OK = {
     "chat_messages": {"role"}, "chat_actions": {"token_hash", "tool", "outcome"},
     "reports": {"period_type", "narrative_source"},
     "anomalies": {"type", "status"}, "alerts": {"type", "telegram_status"},
-    "budgets": {"category", "subcategory"}, "custom_subcategories": {"group"}, "corrections": {"field", "old_value", "new_value"},   # kind / category names only
+    "budgets": {"category", "subcategory"}, "custom_subcategories": {"group"},
+    "recategorisation_runs": {"summary"},                                           # category names and counts only
+    "model_metrics": {"source"},                                   # no user at all: daily counts per categoriser step
+    "corrections": {"field", "old_value", "new_value"},   # kind / category names only
     "import_templates": {"fingerprint", "source_type", "mapping"},                   # column indices, no header text
     "inbound_events": {"bank_key", "bank_name", "outcome"},
     "gmail_confirmations": {"link", "code"},                                         # Gmail's confirmation link

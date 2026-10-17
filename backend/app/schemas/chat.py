@@ -68,6 +68,7 @@ class Settings(BaseModel):
     alert_channels: Dict[str, Dict[str, bool]]   # {type: {"telegram": bool, "email": bool}}, defaults filled in
     quiet_start: int
     quiet_end: int
+    ml_training_consent: bool     # corrections may improve the merchant model (ml/retrain.py); off by default
 
 
 class SettingsUpdate(BaseModel):
@@ -84,6 +85,7 @@ class SettingsUpdate(BaseModel):
     alert_channels: Optional[Dict[str, Dict[str, bool]]] = None   # partial: only the types/channels given change
     quiet_start: Optional[int] = Field(default=None, ge=0, le=23)
     quiet_end: Optional[int] = Field(default=None, ge=0, le=23)
+    ml_training_consent: Optional[bool] = None
 
     @field_validator("alert_channels")
     @classmethod

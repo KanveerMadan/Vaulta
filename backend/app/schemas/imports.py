@@ -80,6 +80,9 @@ class ImportRow(BaseModel):
     source_type: Literal["bank_csv", "bank_pdf", "credit_card", "upi_google_pay", "upi_phonepe", "upi_paytm", "email_alert"]
     source_label: str = Field(min_length=1, max_length=60, pattern=r"^[A-Za-z0-9 ()&.,'/-]+$")
     type: Literal["transaction", "transfer"] = "transaction"
+    # The browser's own merchant-model prediction (frontend/src/lib/merchantModel.js); the server checks the id
+    predicted_subcategory: Optional[str] = Field(default=None, pattern=r"^[a-z_]+\.[a-z_]+$")
+    predicted_confidence: Optional[float] = Field(default=None, ge=0, le=1)
 
     @field_validator("date")
     @classmethod
