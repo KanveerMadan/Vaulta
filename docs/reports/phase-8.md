@@ -68,13 +68,33 @@ finished, with CI green. Pushed; PR #1 updated and still marked DO NOT MERGE.
 - **Snapshots broke when the day changed:** the masks for dates and the forecast took the size of their content, so
   they moved the next day. Their size is now pinned before comparing.
 
+### Found by CI (first run, 11 of 364 failed)
+
+- **Tour reopened after a quick Escape:** pressing Escape right after "?" could be undone by a reply still on its
+  way. Resume is now decided once per visit.
+- **Tour place saved out of order:** quick back-and-forth could leave the server on an older step. Saves now go one
+  after another.
+- **Spotlight drifted:** content moving without a scroll (data arriving above the target) left the outline behind.
+  It now follows layout changes.
+- **Pages opened mid-scroll:** a new page kept the previous page's scroll position, so Transactions opened from
+  `/try` showed the middle of the list. A new page now opens at its top. Back/forward and `#` links are unchanged.
+- **Test-only:**
+  - The "why" test now waits for the category save.
+  - Playwright's WebKit reports API calls cut off by navigation as "… due to access control checks" even when the
+    app handled them. Those are ignored for WebKit and the app's own API only. Chromium and Firefox still fail on
+    any CORS error, and the backend tests check CORS directly.
+  - Sign-in retries once if the page never sends the sign-in request (WebKit once stalled starting Firebase Auth
+    on CI).
+
 ## Results
 
 | Check | Result |
 |---|---|
 | Backend tests | 403 passed |
 | Frontend unit / lint / build | 224 passed / clean / OK |
-| Playwright, all 18 projects (macOS): Chromium, Firefox, WebKit, iPhone WebKit and 9 device profiles | 364 passed, 8 skipped, 0 failed |
+| Playwright, all 18 projects (macOS): Chromium, Firefox, WebKit, iPhone WebKit and 9 device profiles | 364 passed, 8 skipped, 0 failed; after the CI fixes, 362 passed and 2 failed (the tour snapshot, one pixel row off under load) |
+| Tour and try specs after the CI fixes, 3 repeats on Chromium, mobile, Firefox, WebKit and iPhone WebKit | 105 passed |
+| Tour snapshots after the fix (centred in whole pixels until still), 4 repeats under load | macOS 60 passed, Linux 60 passed |
 | Visual and device snapshots on Linux (Docker) | 76 passed |
 | Lighthouse (5 cold runs, mobile profile) | Landing 100/100/100, CLS 0 · Home 99–100/100/100, LCP 1.9–2.1 s, CLS 0 |
 | New third-party requests | none: no CSP or origin change, and the e2e guard fails on any unexpected origin |

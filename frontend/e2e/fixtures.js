@@ -211,10 +211,17 @@ export async function checkLayout(page, testInfo) {
   expect(issues, `${page.url()}\n${issues.join('\n')}`).toEqual([])
 }
 
-// Scroll a tour target to the middle at once and wait two frames, so the spotlight and page sit the same way every run.
+// Scroll a tour target to the middle (whole pixels), again until it stays put: under load, content above it can still
+// change height after the first scroll. The spotlight follows.
 export async function centre(page, id) {
-  await page.evaluate((id) => new Promise((done) => {
-    document.querySelector(`[data-tour="${id}"]`)?.scrollIntoView({ block: 'center', behavior: 'instant' })
-    requestAnimationFrame(() => requestAnimationFrame(done))
-  }), id)
+  let last
+  for (let i = 0; i < 10; i++) {
+    const top = await page.evaluate((id) => new Promise((done) => {
+      const r = document.querySelector(`[data-tour="${id}"]`).getBoundingClientRect()
+      window.scrollTo({ top: Math.round(window.scrollY + r.top - (window.innerHeight - r.height) / 2), behavior: 'instant' })
+      setTimeout(() => requestAnimationFrame(() => done(window.scrollY + document.querySelector(`[data-tour="${id}"]`).getBoundingClientRect().top)), 250)
+    }), id)
+    if (top === last) return
+    last = top
+  }
 }
