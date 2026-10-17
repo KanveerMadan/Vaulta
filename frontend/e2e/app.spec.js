@@ -240,7 +240,7 @@ test('settings toggles and Telegram link code', async ({ page, request }, testIn
   await expect(weekly).toBeChecked()
   await weekly.click()
   await expect(weekly).not.toBeChecked()
-  await page.reload()
+  await page.reload({ waitUntil: 'domcontentloaded' })   // the assertion below waits for the data
   await expect(page.getByRole('checkbox', { name: 'Build' }).first()).not.toBeChecked()
   const priceTelegram = page.locator('li', { hasText: 'Subscription price change' }).getByRole('checkbox', { name: 'Telegram' })
   await priceTelegram.click()
