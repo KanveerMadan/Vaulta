@@ -30,3 +30,4 @@ ml/data/private/
 ml/data/narrations.jsonl
 ml/data/merchant_list.jsonl
 ml/data/labels.jsonl
+ml/artifacts/merchant_model.json
