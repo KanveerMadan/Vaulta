@@ -69,6 +69,7 @@ test('"?" replays it from the start, Escape skips, and on phones it is a bottom 
       return Math.abs(r.bottom - o.bottom) <= 1 && Math.abs(r.width - o.width) <= 1 && Math.abs(r.left - o.left) <= 1
     })).toBe(true)
   }
+  await expect(card(page).getByRole('button', { name: 'Next' })).toBeFocused()       // the card is ready for keys
   await page.keyboard.press('Escape')
   await expect(tour(page)).toHaveCount(0)
   await expect.poll(async () => (await callApi(request, a, 'GET', '/api/tour')).status).toBe('skipped')

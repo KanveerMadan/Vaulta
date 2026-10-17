@@ -17,6 +17,7 @@ const Layout = lazy(() => import('./components/Layout'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Transactions = lazy(() => import('./pages/Transactions'))
 const Connect = lazy(() => import('./pages/Connect'))
+const Try = lazy(() => import('./pages/Try'))
 const Recurring = lazy(() => import('./pages/Recurring'))
 const People = lazy(() => import('./pages/People'))
 const Rules = lazy(() => import('./pages/Rules'))
@@ -105,6 +106,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/connect" element={<Connect />} />
+          <Route path="/try" element={<Try />} />
           <Route path="/recurring" element={<Recurring />} />
           <Route path="/people" element={<People />} />
           <Route path="/rules" element={<Rules />} />

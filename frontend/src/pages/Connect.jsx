@@ -162,6 +162,7 @@ export default function Connect() {
         <h1 className="font-display text-display-s text-ink">Connect your accounts</h1>
         <p className="text-ink-500 mt-1 text-sm">
           Upload a bank or UPI statement to get started. It takes 30 seconds, and we detect the source automatically.
+          Not ready? <Link to="/try" className="font-medium text-accent-text underline underline-offset-2">Try it with samples first</Link>.
         </p>
       </div>
 

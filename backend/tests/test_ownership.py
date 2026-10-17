@@ -110,6 +110,7 @@ COVERED = {
     ("GET", "/api/tour"), ("PATCH", "/api/tour"), ("GET", "/api/checklist"), ("PATCH", "/api/checklist"),
     # tests/test_samples.py::test_samples_are_per_user
     ("GET", "/api/simulations"), ("DELETE", "/api/simulations"),
+    ("POST", "/api/simulations/bank-alert"), ("POST", "/api/simulations/quick-add"),   # tests/test_simulations.py
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.

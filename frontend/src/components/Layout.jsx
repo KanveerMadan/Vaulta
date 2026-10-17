@@ -94,7 +94,8 @@ export default function Layout() {
       {demoToken && (
         <div role="note" className="bg-warn-tint text-ink text-sm px-4 py-2 text-center border-b border-line">
           You're viewing a demo with sample data.{' '}
-          <button onClick={signUp} className="font-semibold underline underline-offset-2">Sign up to track your own.</button>
+          <NavLink to="/try" className="font-semibold underline underline-offset-2">Try the simulations</NavLink>{' '}or{' '}
+          <button onClick={signUp} className="font-semibold underline underline-offset-2">sign up to track your own.</button>
         </div>
       )}
       {readOnly && (
@@ -146,7 +147,8 @@ export default function Layout() {
           </div>
         </aside>}
 
-        <main id="main" tabIndex={-1} className="min-w-0 px-4 sm:px-6 py-6 outline-none">
+        {/* below xl the floating Ask button sits over the bottom of the page: leave room to scroll past it */}
+        <main id="main" tabIndex={-1} className="min-w-0 px-4 sm:px-6 pt-6 pb-28 xl:pb-6 outline-none">
           <Suspense fallback={<div className="space-y-4 max-w-5xl mx-auto" aria-label="Loading"><div className="skeleton h-10 w-56" /><div className="skeleton h-4 w-full" /><div className="skeleton h-4 w-4/5" /></div>}>
             <Outlet />
           </Suspense>

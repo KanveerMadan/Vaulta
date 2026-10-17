@@ -203,7 +203,8 @@ def import_rows(db: Session, user: User, rows: List[ImportRow], simulation_id: O
 # Manual entry and edits
 # ─────────────────────────────────────────────
 
-def create_manual_transaction(db: Session, user: User, payload: ManualTransactionCreate) -> Transaction:
+def create_manual_transaction(db: Session, user: User, payload: ManualTransactionCreate,
+                              simulation_id: Optional[uuid.UUID] = None) -> Transaction:
     """
     Manual entries go through the normalizer and the dedup matcher like
     imported rows, so a cash entry later seen in a statement isn't doubled.
@@ -231,7 +232,8 @@ def create_manual_transaction(db: Session, user: User, payload: ManualTransactio
         direction=TransactionDirection(payload.direction),
         amount=Decimal(payload.amount),
         transaction_date_hint=None,
-        idempotency_key=hashlib.sha256(f"manual|{payload.client_id.lower()}".encode()).hexdigest(),
+        idempotency_key=hashlib.sha256(f"{'sample|' if simulation_id else ''}manual|{payload.client_id.lower()}".encode()).hexdigest(),
+        simulation_id=simulation_id,
         merchant_raw=payload.merchant,
         merchant_clean=normalized.merchant_clean if confident else payload.merchant,
         category=category,
@@ -247,8 +249,9 @@ def create_manual_transaction(db: Session, user: User, payload: ManualTransactio
         txn.notes = payload.notes
         db.commit()
     run_detection(db, user)
-    db.refresh(txn)
-    return txn
+    # (a sample is hidden from ordinary queries, so it's reloaded asking for samples: core/samples.py)
+    return (db.query(Transaction).execution_options(include_samples=True, populate_existing=True)
+            .filter(Transaction.id == txn.id).one())
 
 
 def get_owned_transaction(db: Session, user: User, transaction_id: uuid.UUID) -> Optional[Transaction]:

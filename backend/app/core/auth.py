@@ -95,7 +95,9 @@ def verify_firebase_token(token: str, check_revoked: bool = False) -> dict:
 
 # The demo session may read everything but write nothing, except asking the assistant
 DEMO_READ_METHODS = {"GET", "HEAD", "OPTIONS"}
-DEMO_WRITES_ALLOWED = {("POST", "/api/chat")}
+DEMO_WRITES_ALLOWED = {("POST", "/api/chat"),
+                       # simulations write nothing for the demo (services/simulations.py); tests/test_simulations.py
+                       ("POST", "/api/simulations/bank-alert"), ("POST", "/api/simulations/quick-add")}
 DEMO_READ_ONLY = "You're viewing the demo, which is read-only. Sign up to track your own money."
 
 

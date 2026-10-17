@@ -50,7 +50,7 @@ for (const scheme of ['light', 'dark']) {
       const report = await callApi(request, account, 'POST', '/api/reports/generate', { period_type: 'monthly' })
       await signIn(page, account)
       for (const path of ['/', '/transactions', '/budgets', '/goals', '/cash', '/recurring', '/reports', `/reports/${report.id}`,
-        '/people', '/rules', '/connect', '/settings', '/review']) {
+        '/people', '/rules', '/connect', '/settings', '/review', '/try']) {
         await page.goto(path)
         await audit(page, `${scheme} ${path}`)
       }

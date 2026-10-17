@@ -92,23 +92,31 @@ def process(db: Session, to: str, from_: str, subject: str, text: Optional[str],
         _event(db, user, "gmail_confirmation", None)
         return "gmail_confirmation"
 
+    outcome, row, bank = read_alert(user, from_, subject, body, auth_results, received_at)
+    if row is None:
+        if outcome in ("untrusted_sender", "auth_failed"):
+            logger.info(f"inbound: discarded user={user_ref(user.id)} outcome={outcome} sender_domain={email_alerts.address_of(from_).rpartition('@')[2]}")
+        _event(db, user, outcome, bank)
+        return outcome
+    import_rows(db, user, [row])
+    _event(db, user, "parsed", bank)
+    logger.info(f"inbound: parsed user={user_ref(user.id)} bank={bank['key']}")
+    return "parsed"
+
+
+def read_alert(user: User, from_: str, subject: str, body: str, auth_results: str,
+               received_at: Optional[datetime] = None) -> tuple[str, Optional[ImportRow], Optional[dict]]:
+    """
+    The sender check and the parse, in memory, with nothing stored: (outcome, row or None, bank). process() stores
+    the row; the bank-alert simulation (services/simulations.py) runs the same steps on a sample email.
+    """
     trust = email_alerts.check_sender(from_, auth_results)
     if trust.reason != "ok":
-        outcome = "untrusted_sender" if trust.reason == "unknown_sender" else "auth_failed"
-        logger.info(f"inbound: discarded user={user_ref(user.id)} outcome={outcome} sender_domain={email_alerts.address_of(from_).rpartition('@')[2]}")
-        _event(db, user, outcome, trust.bank)
-        return outcome
-
+        return ("untrusted_sender" if trust.reason == "unknown_sender" else "auth_failed"), None, trust.bank
     parsed = email_alerts.parse_alert(trust.bank, subject, body, received_at or clock.now(), holder_name=user.full_name)
     if parsed.row is None:
-        _event(db, user, parsed.outcome, trust.bank)
-        return parsed.outcome
+        return parsed.outcome, None, trust.bank
     try:
-        row = ImportRow(**parsed.row)
+        return "parsed", ImportRow(**parsed.row), trust.bank
     except ValidationError:
-        _event(db, user, "unparsed", trust.bank)
-        return "unparsed"
-    import_rows(db, user, [row])
-    _event(db, user, "parsed", trust.bank)
-    logger.info(f"inbound: parsed user={user_ref(user.id)} bank={trust.bank['key']}")
-    return "parsed"
+        return "unparsed", None, trust.bank

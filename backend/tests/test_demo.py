@@ -7,6 +7,8 @@ from collections import Counter
 from datetime import date, timedelta
 
 import pytest
+
+from app.core import auth
 from fastapi.routing import APIRoute
 
 from app.core import clock
@@ -118,7 +120,7 @@ def test_every_write_route_refuses_the_demo(client, demo_headers):
         if not session:
             continue
         res = client.request(method, _fill(path), headers=demo_headers, json={})
-        if (method, path) == ("POST", "/api/chat"):
+        if (method, path) in auth.DEMO_WRITES_ALLOWED:   # chat, and simulations that write nothing (test_simulations.py)
             assert res.status_code != 403
             continue
         assert res.status_code == 403, (method, path, res.status_code)

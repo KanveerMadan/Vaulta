@@ -38,7 +38,10 @@ export default function GettingStarted({ refreshKey = 0 }) {
           </li>
         ))}
       </ul>
-      <button onClick={hide} className="btn-quiet mt-1 text-micro text-muted">Hide this list</button>
+      <div className="mt-1 flex flex-wrap items-center gap-x-3">
+        <Link to="/try" className="text-micro font-medium text-accent-text hover:underline">Try it with samples first</Link>
+        <button onClick={hide} className="btn-quiet text-micro text-muted">Hide this list</button>
+      </div>
     </section>
   );
 }

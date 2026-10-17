@@ -1,4 +1,5 @@
 import Sheet from "../ui/Sheet";
+import { Link } from "react-router-dom";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { loadModel, predict } from "../lib/merchantModel";
 import { subcategoryName } from "../lib/categories";
@@ -67,7 +68,7 @@ function useMerchantModel() {
   return model;
 }
 
-function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit }) {
+function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit, sample = false }) {
   const { rows, removed, lowConfidence } = parsed;
   const model = useMerchantModel();
   // categorised on this device; the server still prefers your rules and known merchants (services/categorizer.py)
@@ -155,6 +156,14 @@ function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit
         </p>
       )}
 
+      {sample ? (
+        <div className="space-y-3">
+          <p role="status" className="rounded-md bg-warn-tint/60 px-3 py-2.5 text-sm text-ink">
+            This is a sample. Nothing is imported: it was read on this device and nothing was sent.
+          </p>
+          <Link to="/connect?do=import" className="btn-primary w-full text-sm py-2 justify-center">Import your own statement</Link>
+        </div>
+      ) : (
       <div className="flex gap-3">
         <button onClick={onBack} disabled={sending} className="btn-ghost flex-1 text-sm py-2">Choose another file</button>
         <button
@@ -165,6 +174,7 @@ function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit
           {sending ? `Sending ${progress?.[0] ?? 0}/${progress?.[1] ?? included.length}…` : `Import ${included.length} transactions`}
         </button>
       </div>
+      )}
     </div>
   );
 }
@@ -200,7 +210,11 @@ function Result({ result, onAnother, onClose }) {
   );
 }
 
-export default function StatementUpload({ onSuccess, onClose }) {
+/**
+ * Import a statement. `sample` (a File): the "try it" simulation; the sample is read on this device exactly like a
+ * real statement, and the preview says nothing is imported (no Import button, nothing sent).
+ */
+export default function StatementUpload({ onSuccess, onClose, sample = null }) {
   // Used in memory to replace the holder's own name in narrations with "SELF"
   const holderName = useAuthStore((s) => s.user?.displayName);
   const [step, setStep] = useState("pick"); // pick | password | mapping | preview | done
@@ -273,6 +287,12 @@ export default function StatementUpload({ onSuccess, onClose }) {
     }
   };
 
+  useEffect(() => {                                   // the simulation opens its sample file by itself
+    if (!sample) return undefined;
+    const t = setTimeout(() => run(sample), 0);
+    return () => clearTimeout(t);
+  }, [sample]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleFile = (f) => {
     if (!f) return;
     if (f.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
@@ -307,7 +327,7 @@ export default function StatementUpload({ onSuccess, onClose }) {
   };
 
   return (
-    <Sheet title="Import statement" onClose={onClose} wide={step === "preview" || step === "mapping"}>
+    <Sheet title={sample ? "Sample statement" : "Import statement"} onClose={onClose} wide={step === "preview" || step === "mapping"}>
       <div>
         <p className="text-sm text-muted -mt-1 mb-4">Bank CSV, Excel or PDF, credit card PDF, Google Pay, PhonePe or Paytm</p>
 
@@ -385,7 +405,7 @@ export default function StatementUpload({ onSuccess, onClose }) {
           )}
 
           {step === "preview" && preview && (
-            <Preview parsed={preview} rawRows={rawResult.rows} onConfirm={confirm} onBack={reset} sending={busy} progress={progress}
+            <Preview parsed={preview} rawRows={rawResult.rows} onConfirm={confirm} onBack={reset} sending={busy} progress={progress} sample={Boolean(sample)}
               onEdit={(i, field, value) => setRawResult((r) => ({
                 ...r, rows: r.rows.map((row, j) => (j === i ? { ...row, [field]: value } : row)),
               }))} />
