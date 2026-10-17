@@ -78,7 +78,10 @@ export async function accountExists(request, email) {
 export const APP_CHECK = { 'X-Firebase-AppCheck': 'e2e-app-check-debug-token' }
 
 export async function callApi(request, account, method, path, data) {
-  const res = await request.fetch(`${API}${path}`, { method, data, headers: { Authorization: `Bearer ${account.token}`, ...APP_CHECK } })
+  const send = () => request.fetch(`${API}${path}`, { method, data, headers: { Authorization: `Bearer ${account.token}`, ...APP_CHECK } })
+  // a kept-alive connection the API server has just closed fails with "socket hang up" before any response; the
+  // setup calls made here are idempotent (imports dedupe), so one retry is safe
+  const res = await send().catch((e) => { if (/socket hang up|ECONNRESET/.test(e.message)) return send(); throw e })
   expect(res.ok(), `${method} ${path}: ${res.status()} ${await res.text()}`).toBeTruthy()
   return res.status() === 204 ? null : res.json()
 }
