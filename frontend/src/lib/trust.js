@@ -50,6 +50,12 @@ export const TRUST = [
     checked: "Tests record every request to the AI and check it for narrations, references, UPI IDs and notes.",
   },
   {
+    id: "categories",
+    claim: "Categories are worked out without sending your transactions to an AI.",
+    how: "Vaulta files transactions with its own small model (character patterns and logistic regression), after your rules, your own past corrections of similar payments and the merchants it knows. For statements it runs in your browser; for forwarded alerts, manual entries and Telegram it runs on Vaulta's server. The model file is served by Vaulta itself. It was trained on synthetic transactions made from a catalogue of public merchant names, labelled by AI models on Groq, which received only those merchant names; no one's transactions were used. When it isn't sure enough, the transaction goes to your review queue instead of being guessed. \"Why is it filed here?\" on any transaction says why it has its category. Your corrections only ever change your own categories, unless you turn on \"Let my category corrections help improve Vaulta's categories\" in Settings: then the corrected descriptions (with personal details already masked) and the categories you chose may be used to retrain the model.",
+    checked: "Tests check that the browser, the server and the training code give the same answers, that your corrections always win and apply only to you, that re-checking categories never changes what you corrected and can be undone, that only consenting users' corrections are exported, and that logs and the model's metrics contain no merchant names. The scripts that build the training data, and the labels the AI gave, are in the repository (ml/).",
+  },
+  {
     id: "telegram",
     claim: "Telegram is optional, and what you send there passes through Telegram.",
     how: "If you link Telegram, the messages you send the bot and its replies (amounts, merchant names, summaries and any alerts you send there) travel through Telegram's servers like any other Telegram chat; chats with bots aren't end-to-end encrypted. Bill photos sent there are never read. Unlink in Settings or send /unlink, and that chat stops reaching your account.",
