@@ -1,9 +1,9 @@
 {
   "merchants": {
     "test:brand": 553,
-    "test_local:local": 354,
+    "test_local:local": 353,
     "train:brand": 2516,
-    "train:local": 936,
+    "train:local": 935,
     "val:brand": 535,
     "val:local": 140
   },
@@ -17,11 +17,11 @@
   },
   "test_local": {
     "real": 0,
-    "synthetic": 2123
+    "synthetic": 2118
   },
   "train": {
     "real": 0,
-    "synthetic": 23228
+    "synthetic": 23222
   },
   "val": {
     "real": 0,

@@ -91,7 +91,7 @@ def debit_formats(rng, m, name):
                                f"PG {rng.choice(GATEWAYS)} {name} {digits(rng, 8)}"]),
         "card": f"{name[:23]} {city} IN" if rng.random() < 0.7 else f"{name[:23]} {city}",
         "imps": f"IMPS/P2M/{digits(rng, 12)}/{name}/{remark or 'Payment'}",
-        "neft": f"NEFT-{ifsc(rng)}{digits(rng, 6)}-{name}-{remark or 'NEFT'}",
+        "neft": f"NEFT-{ifsc(rng)}-{name}-{remark or 'NEFT'}-N{digits(rng, 9)}",
     }
 
 
@@ -150,9 +150,9 @@ def narrations_for(rng: random.Random, m: dict, n: int) -> list[tuple[str, str]]
     return out
 
 
-def local_shops(rng: random.Random) -> list[dict]:
+def local_shops(rng: random.Random, taken: set[str]) -> list[dict]:
     stems, words = name_stems(), local_shop_words()
-    shops, seen = [], set()
+    shops, seen = [], set(taken)
     for hint, shop_words in words.items():
         for _ in range(LOCAL_SHOPS_PER_SUBCATEGORY):
             stem, word = rng.choice(stems), rng.choice(shop_words)
@@ -177,7 +177,8 @@ def main() -> None:
     rng = random.Random(SEED)
     stems = name_stems()
     held_out = set(random.Random(SEED + 1).sample(stems, int(len(stems) * HELD_OUT_STEM_SHARE)))
-    everything = merchants() + local_shops(rng)
+    brands = merchants()
+    everything = brands + local_shops(rng, {m["name"].lower() for m in brands})
     rows, merchant_rows = [], []
     for m in everything:
         m["split"] = split_of(m, held_out)
