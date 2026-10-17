@@ -66,8 +66,9 @@ OWNER = re.compile(rb"kanveer" + rb"madan@", re.I)   # split so this file doesn'
 BAD_PATH = re.compile(r"(^|/)\.env(\.|$)(?!e2e$)|\.(eml|msg|p12|pfx|pem|key)$|(^|/)local-statements/|service[-_]?account.*\.json$", re.I)
 DATA_FILE = re.compile(r"\.(pdf|csv|xlsx?|png|jpe?g|webp|heic)$", re.I)
 # allowed binary data: synthetic statement fixtures, app icons, and the browser tests' visual
-# snapshots (screenshots of seeded synthetic accounts, frontend/e2e/visual.spec.js and devices.spec.js)
-DATA_OK = re.compile(r"^(fixtures/statements/|frontend/public/icon-|frontend/src/assets/|frontend/e2e/(visual|devices)\.spec\.js-snapshots/)")
+# snapshots (screenshots of seeded synthetic accounts, frontend/e2e/visual.spec.js and devices.spec.js), and the
+# merchant model's evaluation charts (aggregate metrics on synthetic data, written by ml/train.py)
+DATA_OK = re.compile(r"^(fixtures/statements/|frontend/public/icon-|frontend/src/assets/|frontend/e2e/(visual|devices)\.spec\.js-snapshots/|docs/ml/[a-z0-9-]+\.png$)")
 
 findings = []
 for line in open(blobs_file):
