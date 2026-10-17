@@ -88,6 +88,9 @@ class Transaction(Base):
     # `category`'s group. auto_subcategory is what the system assigned, like auto_category.
     subcategory = Column(String(64), nullable=True)
     auto_subcategory = Column(String(64), nullable=True)
+    # A simulation's sample row (core/samples.py): shown labelled "Sample", never counted, deleted after an hour
+    is_sample = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    simulation_id = Column(UUID(as_uuid=True), nullable=True)
     # Why auto_category is what it is (services/categorizer.py): known merchant, model (confidence, alternatives),
     # or the user's own similar correction. Encrypted: it can name a merchant.
     category_explanation = Column(EncryptedJSON, nullable=True)
@@ -168,6 +171,7 @@ class Transaction(Base):
         Index("ix_transactions_user_merchant", "user_id", "merchant_clean"),
         Index("ix_transactions_user_nature", "user_id", "transaction_nature"),
         Index("ix_transactions_user_kind", "user_id", "kind"),
+        Index("ix_transactions_samples", "user_id", "created_at", postgresql_where=text("is_sample")),
     )
 
     # Split parts go with their parent by ON DELETE CASCADE, so a flush that deletes both may find a part already gone

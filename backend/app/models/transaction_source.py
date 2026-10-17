@@ -15,7 +15,7 @@ import enum
 from datetime import date as date_type
 
 from sqlalchemy import (
-    Column, String, Numeric, DateTime, Date, ForeignKey,
+    Boolean, Column, String, Numeric, DateTime, Date, ForeignKey,
     Enum as SAEnum, Index, UniqueConstraint, JSON, SmallInteger, text
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -120,6 +120,7 @@ class TransactionSourceRecord(Base):
     match_tier = Column(SmallInteger, nullable=True)
     matched_at = Column(DateTime(timezone=True), nullable=True)
 
+    is_sample = Column(Boolean, nullable=False, default=False, server_default=text("false"))   # core/samples.py
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
 
     transaction = relationship("Transaction", back_populates="source_records")

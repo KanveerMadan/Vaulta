@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # The alembic revision this code expects (GET /health/ready); tests/test_health.py keeps it equal to the real head
-MIGRATION_HEAD = "a6b2c4d8e0f1"
+MIGRATION_HEAD = "b7c3d5e9f0a2"
 
 engine = create_engine(
     settings.DATABASE_URL,
@@ -21,6 +21,12 @@ engine = create_engine(
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Sample rows (simulations) are left out of every ORM query unless asked for (core/samples.py)
+from sqlalchemy import event as _event  # noqa: E402
+from sqlalchemy.orm import Session as _Session  # noqa: E402
+from app.core.samples import exclude_samples  # noqa: E402
+_event.listen(_Session, "do_orm_execute", exclude_samples)
 
 class Base(DeclarativeBase):
     pass

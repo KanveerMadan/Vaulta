@@ -285,6 +285,7 @@ def ingest_or_match_transaction(
     category: Optional[str] = None,
     subcategory: Optional[str] = None,
     explanation: Optional[dict] = None,
+    simulation_id: Optional[uuid.UUID] = None,
     transaction_nature: TransactionNature = TransactionNature.expense,
     kind: Optional[TransactionKind] = None,
     legacy_source_enum: TransactionSource = TransactionSource.csv,
@@ -318,7 +319,8 @@ def ingest_or_match_transaction(
         logger.debug(f"Duplicate source record skipped: {idempotency_key}")
         return existing.transaction, existing, True
 
-    matched_txn, tier = find_match(
+    # a sample (simulation) never merges into a real transaction: it is always a row of its own
+    matched_txn, tier = (None, None) if simulation_id is not None else find_match(
         db,
         user.id,
         direction=direction,
@@ -389,6 +391,8 @@ def ingest_or_match_transaction(
         subcategory=subcategory,
         auto_subcategory=subcategory,
         category_explanation=explanation,
+        is_sample=simulation_id is not None,
+        simulation_id=simulation_id,
         transaction_nature=transaction_nature,
         direction=direction,
         kind=kind or (TransactionKind.spend if direction == TransactionDirection.debit else TransactionKind.income),
@@ -418,6 +422,7 @@ def ingest_or_match_transaction(
         idempotency_key=idempotency_key,
         match_tier=None,
         matched_at=None,
+        is_sample=simulation_id is not None,
     )
     db.add(source_record)
 

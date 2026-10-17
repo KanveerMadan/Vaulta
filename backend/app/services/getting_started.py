@@ -6,7 +6,8 @@ The guided tour's state and the getting-started checklist (Phase 8). Both live i
   checklist   {"dismissed": bool}; items tick from what the user has actually done (server data), never from clicks
   *_opened_at when the review queue and a report were first opened (GET /api/review, GET /api/reports/{id})
 
-Neither exists for the demo: the routes say "available": false.
+Neither exists for the demo: the routes say "available": false. Sample rows (simulations) never tick anything: every
+query here goes through the sample filter (core/samples.py; tests/test_samples.py checks the checklist).
 """
 
 from __future__ import annotations

@@ -32,7 +32,7 @@ from app.schemas.transaction import (
     CategorySummary,
 )
 from app.schemas.imports import ImportRow, ImportBatchResult
-from app.services import categories, categorizer, model_metrics
+from app.services import categories, categorizer, model_metrics, samples
 from app.services.merchant_normalizer import normalize
 from app.core import clock
 from app.services import analytics
@@ -113,7 +113,8 @@ def _row_nature(row: ImportRow, merchant_clean: Optional[str]) -> TransactionNat
     return TransactionNature.expense if row.direction == "debit" else TransactionNature.income
 
 
-def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchResult:
+def import_rows(db: Session, user: User, rows: List[ImportRow], simulation_id: Optional[uuid.UUID] = None) -> ImportBatchResult:
+    """Rows the browser parsed (or an alert email found). With `simulation_id` they become sample rows (core/samples.py)."""
     result = ImportBatchResult()
     seen: dict[tuple, int] = {}
     batch_txn_ids: set = set()
@@ -154,7 +155,9 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
                 direction=TransactionDirection(row.direction),
                 amount=Decimal(row.amount),
                 transaction_date_hint=None,
-                idempotency_key=_row_idempotency_key(row, occurrence),
+                idempotency_key=_row_idempotency_key(row, occurrence) if simulation_id is None
+                else hashlib.sha256(f"sample|{simulation_id}|{_row_idempotency_key(row, occurrence)}".encode()).hexdigest(),
+                simulation_id=simulation_id,
                 merchant_raw=row.description_raw,
                 merchant_clean=merchant_clean,
                 category=category,
@@ -184,7 +187,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow]) -> ImportBatchRe
             result.duplicates_merged += 1
         else:
             result.imported += 1
-            if category is not None:
+            if category is not None and simulation_id is None:
                 model_metrics.bump(db, model_metrics.source_of(explanation), "categorised")
                 db.commit()
             if category is None:
@@ -460,8 +463,11 @@ def get_transactions(
     subcategory: Optional[str] = None,
     tag: Optional[str] = None,
 ) -> TransactionListResponse:
-    # Split parts are listed under their parent (TransactionResponse.splits)
-    query = db.query(Transaction).filter(Transaction.user_id == user.id, Transaction.split_parent_id.is_(None))
+    # Split parts are listed under their parent (TransactionResponse.splits). Samples are listed (labelled), the one
+    # place they appear (core/samples.py), and deleted here once they're an hour old.
+    samples.purge_expired(db, user)
+    query = (db.query(Transaction).execution_options(include_samples=True)
+             .filter(Transaction.user_id == user.id, Transaction.split_parent_id.is_(None)))
 
     if category:
         query = query.filter(Transaction.category == category)

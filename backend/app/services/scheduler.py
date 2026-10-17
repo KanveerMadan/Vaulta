@@ -9,7 +9,8 @@ period whose send time has passed:
 Idempotent: a report is built only if it doesn't exist yet, and emailed only
 if it hasn't been (so a failed send is retried next hour). Periods with no
 transactions are skipped. Also: date-based alerts and alerts held for quiet
-hours (services/alerts.py), and purges chat history older than 30 days.
+hours (services/alerts.py), purges chat history older than 30 days, and deletes simulations' sample rows
+an hour after they were made (services/samples.py).
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ from app.models.transaction import Transaction
 from app.core.ratelimit import purge_expired
 from app.core.scope import all_user_ids, find_user
 from app.models.user import User
-from app.services import alerts, analytics, demo, email, report_email, reports
+from app.services import alerts, analytics, demo, email, report_email, reports, samples
 from app.services.chat import purge_old
 from app.services.telegram_bot import send_cash_reminder, send_weekly_summary
 from app.core.logs import user_ref
@@ -79,13 +80,14 @@ def _send(db: Session, user: User, report: Report, now: datetime) -> bool:
 def run(db: Session, now: Optional[datetime] = None) -> dict:
     now = now or clock.now()
     result = {"users": 0, "generated": 0, "emailed": 0, "telegram": 0, "cash_reminders": 0, "alerts": 0, "alerts_sent": 0,
-              "skipped_empty": 0, "errors": 0, "chat_messages_purged": 0}
+              "skipped_empty": 0, "errors": 0, "chat_messages_purged": 0, "samples_purged": 0}
     for user_id in all_user_ids(db):
         user = find_user(db, "id", user_id)
         if user is None:
             continue
         result["users"] += 1
         result["chat_messages_purged"] += purge_old(db, user.id)
+        result["samples_purged"] += samples.purge_expired(db, user)          # simulations' rows, an hour after
         local_now = now.astimezone(user_zone(user))
         try:
             done = alerts.run_hourly(db, user, now)

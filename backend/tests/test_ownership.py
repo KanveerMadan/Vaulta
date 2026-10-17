@@ -108,6 +108,8 @@ COVERED = {
     ("POST", "/api/categories/recategorise/{run_id}/undo"),
     # tests/test_getting_started.py (state is the caller's own; Bob's is untouched)
     ("GET", "/api/tour"), ("PATCH", "/api/tour"), ("GET", "/api/checklist"), ("PATCH", "/api/checklist"),
+    # tests/test_samples.py::test_samples_are_per_user
+    ("GET", "/api/simulations"), ("DELETE", "/api/simulations"),
 }
 # Routes that only ever act on the caller's own user row (no id in the path)
 # or on no user at all. Listed so the guard still notices new routes.

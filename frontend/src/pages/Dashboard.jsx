@@ -10,6 +10,7 @@ import SubscriptionBanner from "../components/SubscriptionBanner";
 import QuickAddBar from "../components/QuickAddBar";
 import GuidedTour from "../components/GuidedTour";
 import GettingStarted from "../components/GettingStarted";
+import SamplesBanner from "../components/SamplesBanner";
 import { tourSteps } from "../lib/tour";
 import { ReviewCard } from "../components/ReviewQueue";
 import TransactionRow from "../components/TransactionRow";
@@ -281,6 +282,7 @@ export default function Dashboard() {
     <div className="max-w-5xl mx-auto space-y-8">
       {tour.open && <GuidedTour steps={tourSteps(home, txns?.length ?? 0)} start={tour.start} onFinish={tour.finish} />}
       {!demo && <SubscriptionBanner />}
+      {!demo && <SamplesBanner refreshKey={refreshKey} onCleared={refresh} />}
       {onboarding?.status === "active" && (
         <Link to="/onboarding" className="flex items-center justify-between gap-3 rounded-md border border-accent-line bg-accent-tint/60 px-4 py-3 text-sm text-ink hover:bg-accent-tint">
           <span>Finish setting up. Tracking coverage is {onboarding.coverage.percent}%.</span>

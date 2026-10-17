@@ -8,6 +8,7 @@ import { useApi } from "../lib/format";
 import CategorySelect from "../components/CategorySelect";
 import { ruleToast } from "../lib/ruleToast";
 import TransactionRow from "../components/TransactionRow";
+import SamplesBanner from "../components/SamplesBanner";
 import Empty from "../ui/Empty";
 import { SkeletonRows } from "../ui/Skeleton";
 
@@ -117,6 +118,8 @@ export default function Transactions() {
           <kbd className="kbd">/</kbd> search <kbd className="kbd">j</kbd><kbd className="kbd">k</kbd> move <kbd className="kbd">e</kbd> edit category
         </p>
       </header>
+
+      <SamplesBanner refreshKey={reloadKey} onCleared={() => setReloadKey((k) => k + 1)} />
 
       <div className="flex flex-col sm:flex-row gap-2">
         <label className="relative flex-1">

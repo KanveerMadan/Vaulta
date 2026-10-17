@@ -80,7 +80,7 @@ const TransactionRow = forwardRef(function TransactionRow({ txn, onChanged, onRu
     </select>
   );
   const sub = subcategoryName(local.subcategory, tree);
-  const actions = [
+  const actions = txn.is_sample ? [] : [
     { key: "why", Icon: Info, title: "Why is it filed here?", label: `Why ${name} is filed here`, expanded: editing === "why", onClick: explain },
     { key: "tags", Icon: Tag, title: "Tags", label: `Tags for ${name}`, expanded: editing === "tags",
       onClick: () => setEditing(editing === "tags" ? null : "tags") },
@@ -97,9 +97,14 @@ const TransactionRow = forwardRef(function TransactionRow({ txn, onChanged, onRu
           {(name || "?")[0].toUpperCase()}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[15px] font-medium text-ink truncate">{name}</p>
+          <p className="text-[15px] font-medium text-ink truncate">
+            {name}
+            {txn.is_sample && <span className="ml-2 align-middle rounded-full bg-warn-tint px-2 py-0.5 text-micro font-medium text-ink" title="A sample from trying Vaulta out. It isn't counted anywhere and goes by itself within an hour.">Sample</span>}
+          </p>
           <div className="text-micro text-muted flex items-center gap-1.5 flex-wrap">
-            {editing === "category" ? (
+            {txn.is_sample ? (
+              <span>{sub ? `${local.category} › ${sub}` : local.category || "Uncategorized"} · not counted</span>
+            ) : editing === "category" ? (
               <CategorySelect autoFocus value={categoryValue(local.category, local.subcategory)} empty="Uncategorized"
                 onChange={(v) => change("category", v)} onBlur={() => setEditing(null)} onKeyDown={escape}
                 className="input h-8 min-h-0 py-0 text-micro w-auto max-w-[14rem]" aria-label="Category" />
@@ -109,8 +114,8 @@ const TransactionRow = forwardRef(function TransactionRow({ txn, onChanged, onRu
                 {sub ? `${local.category} › ${sub}` : local.category || "Uncategorized"}
               </button>
             )}
-            <span aria-hidden>·</span>
-            {editing === "kind" ? select("kind", kindsFor(txn.direction).map(([v, k]) => <option key={v} value={v}>{k.label}</option>)) : (
+            {!txn.is_sample && <span aria-hidden>·</span>}
+            {txn.is_sample ? null : editing === "kind" ? select("kind", kindsFor(txn.direction).map(([v, k]) => <option key={v} value={v}>{k.label}</option>)) : (
               <button onClick={() => setEditing("kind")} title="Change what this transaction is"
                 className={`inline-flex items-center py-1 hover:text-accent-text hover:underline ${counted ? "" : "text-warn"}`}>
                 {atm ? "Cash withdrawal" : KINDS[local.kind]?.label ?? local.kind}
@@ -148,10 +153,10 @@ const TransactionRow = forwardRef(function TransactionRow({ txn, onChanged, onRu
           ))}
         </div>
         {/* phones: one button, so the text keeps its width */}
-        <button onClick={() => setEditing(editing === "more" ? null : "more")} className="sm:hidden btn-quiet px-2 text-muted shrink-0"
+        {actions.length > 0 && <button onClick={() => setEditing(editing === "more" ? null : "more")} className="sm:hidden btn-quiet px-2 text-muted shrink-0"
           aria-label={`More for ${name}`} aria-expanded={editing === "more"}>
           <DotsThree size={18} aria-hidden />
-        </button>
+        </button>}
       </div>
       {editing === "more" && (
         <div className="sm:hidden mt-1 ml-12 flex flex-wrap gap-1">

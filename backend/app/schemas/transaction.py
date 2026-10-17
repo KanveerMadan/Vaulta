@@ -75,6 +75,7 @@ class TransactionResponse(TransactionBase):
     splits: List[SplitPart] = []
     subcategory: Optional[str] = None
     tags: List[str] = []
+    is_sample: bool = False             # a simulation's row: shown as "Sample", never counted (core/samples.py)
     created_at: datetime
     updated_at: datetime
 
