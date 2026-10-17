@@ -88,7 +88,10 @@ for line in open(blobs_file):
             findings.append(f"{path} (blob {sha[:8]}): {name}")
     if OWNER.search(data):
         findings.append(f"{path} (blob {sha[:8]}): the owner's email address")
-    for m in set(EMAIL.findall(data)):
+    # The loose email pattern isn't run on images: their bytes are compressed pixels, where it matches random bytes
+    # and can't see text drawn in the picture anyway. The secret patterns above still run on them.
+    is_image = data[:8] == b"\x89PNG\r\n\x1a\n" or data[:3] == b"\xff\xd8\xff"
+    for m in ([] if is_image else set(EMAIL.findall(data))):
         if not SAFE_EMAIL.search(m):
             findings.append(f"{path} (blob {sha[:8]}): email address ***@{m.decode(errors='replace').rpartition('@')[2]}")
 
