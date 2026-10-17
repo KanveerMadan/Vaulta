@@ -1,0 +1,302 @@
+[
+ {
+  "confidence": 0.9932,
+  "text": "PINELABS*HOSPITAL CANT",
+  "teacher": "food.canteen",
+  "model": "health.hospital"
+ },
+ {
+  "confidence": 0.9892,
+  "text": "TO TRANSFER-UPI/DR/XXXX/HOSPITAL CAN/ICIC/bharatpe.490/Bill",
+  "teacher": "food.canteen",
+  "model": "health.hospital"
+ },
+ {
+  "confidence": 0.9867,
+  "text": "UPI-LEARNING-L***@ybl-XXXX-",
+  "teacher": "education.coaching",
+  "model": "education.online_learning"
+ },
+ {
+  "confidence": 0.9791,
+  "text": "Bulk Order Biryani",
+  "teacher": "food.catering",
+  "model": "food.restaurant"
+ },
+ {
+  "confidence": 0.9762,
+  "text": "UPI/SUGARCANE JUICE CENTRE/XXXX/",
+  "teacher": "food.street_food",
+  "model": "food.cafe"
+ },
+ {
+  "confidence": 0.9721,
+  "text": "UPI/EYE MANTRA OPTICALS/XXXX/Payment from PhonePe",
+  "teacher": "shopping.eyewear",
+  "model": "health.eye_care"
+ },
+ {
+  "confidence": 0.9721,
+  "text": "UPI/EYE MANTRA OPTICALS/XXXX/Payment from PhonePe",
+  "teacher": "shopping.eyewear",
+  "model": "health.eye_care"
+ },
+ {
+  "confidence": 0.97,
+  "text": "AMAZONPAY*ZESTMONEY",
+  "teacher": "finance.bnpl",
+  "model": "finance.payment_app"
+ },
+ {
+  "confidence": 0.968,
+  "text": "PCD/8325/SUGARCANE JUICE CENTRE/BLR",
+  "teacher": "food.street_food",
+  "model": "food.cafe"
+ },
+ {
+  "confidence": 0.9679,
+  "text": "UPI/P2M/XXXX/EYE MANTRA OPTICALS/Payment/PNB",
+  "teacher": "shopping.eyewear",
+  "model": "health.eye_care"
+ },
+ {
+  "confidence": 0.9652,
+  "text": "IMPS/P2M/XXXX/METRO CASH AN/Order",
+  "teacher": "groceries.supermarket",
+  "model": "transport.public_transit"
+ },
+ {
+  "confidence": 0.9544,
+  "text": "UPI-CAR SPA-carspa.rzp@axisbank-XXXX-",
+  "teacher": "transport.vehicle_service",
+  "model": "personal_care.spa"
+ },
+ {
+  "confidence": 0.9542,
+  "text": "TO TRANSFER-UPI/DR/XXXX/CHEQUE BOOK /ICIC/chequebookch/Sent using Paytm",
+  "teacher": "finance.bank_charges",
+  "model": "shopping.books_stationery"
+ },
+ {
+  "confidence": 0.9533,
+  "text": "UPI/XXXX/EYE MANTRA OPTICALS/eyemantraopticals.rzp@axisbank/STATE BANK OF INDIA/Sent using Paytm",
+  "teacher": "shopping.eyewear",
+  "model": "health.eye_care"
+ },
+ {
+  "confidence": 0.9516,
+  "text": "UPI/BULK ORDER BIRYANI/XXXX/Payment from PhonePe",
+  "teacher": "food.catering",
+  "model": "food.restaurant"
+ },
+ {
+  "confidence": 0.9506,
+  "text": "UPI/XXXX/EYE MANTRA OPTICALS/Q***@ybl/AXIS BANK/Payment from PhonePe",
+  "teacher": "shopping.eyewear",
+  "model": "health.eye_care"
+ },
+ {
+  "confidence": 0.9483,
+  "text": "UPI/XXXX/BULK ORDER BIRYANI/X***@okicici/PNB/",
+  "teacher": "food.catering",
+  "model": "food.restaurant"
+ },
+ {
+  "confidence": 0.948,
+  "text": "MUNICIPAL THANE",
+  "teacher": "transport.parking",
+  "model": "taxes.government_fees"
+ },
+ {
+  "confidence": 0.9477,
+  "text": "Metro Cash And Carry",
+  "teacher": "groceries.supermarket",
+  "model": "transport.public_transit"
+ },
+ {
+  "confidence": 0.9437,
+  "text": "UPI-SUGARCANE JUICE CENTRE-S***@ybl-XXXX-",
+  "teacher": "food.street_food",
+  "model": "food.cafe"
+ },
+ {
+  "confidence": 0.9424,
+  "text": "TO TRANSFER-UPI/DR/XXXX/FUTURE GENER/HDFC/futuregenera/",
+  "teacher": "insurance.health",
+  "model": "insurance.general"
+ },
+ {
+  "confidence": 0.9376,
+  "text": "POS XXXXXXXXXXXX2094 SUGARCANE JUICE CENTRE NEW DELHI",
+  "teacher": "food.street_food",
+  "model": "food.cafe"
+ },
+ {
+  "confidence": 0.936,
+  "text": "Apna Bazar",
+  "teacher": "groceries.kirana",
+  "model": "shopping.marketplace"
+ },
+ {
+  "confidence": 0.936,
+  "text": "Apna Bazar",
+  "teacher": "groceries.kirana",
+  "model": "shopping.marketplace"
+ },
+ {
+  "confidence": 0.936,
+  "text": "SI MANAPPURAM FINANCE 68804279",
+  "teacher": "finance.bank_charges",
+  "model": "finance.loan_emi"
+ },
+ {
+  "confidence": 0.9354,
+  "text": "PG CCAV EYEMANTRAOPTICALS 87591991",
+  "teacher": "shopping.eyewear",
+  "model": "health.eye_care"
+ },
+ {
+  "confidence": 0.9335,
+  "text": "BULK ORDER BIRYANI BENGALURU IN",
+  "teacher": "food.catering",
+  "model": "food.restaurant"
+ },
+ {
+  "confidence": 0.9291,
+  "text": "NEFT-BULK ORDER BIRYAN-Paid via app-NXXXX",
+  "teacher": "food.catering",
+  "model": "food.restaurant"
+ },
+ {
+  "confidence": 0.9289,
+  "text": "UPI/METRO CASH AND CARRY/XXXX/Pay",
+  "teacher": "groceries.supermarket",
+  "model": "transport.public_transit"
+ },
+ {
+  "confidence": 0.9279,
+  "text": "Jiomart",
+  "teacher": "shopping.marketplace",
+  "model": "groceries.quick_commerce"
+ },
+ {
+  "confidence": 0.9275,
+  "text": "UPI/P2M/XXXX/FREECHARGE/UPI Txn/ICICI BANK",
+  "teacher": "utilities.mobile",
+  "model": "finance.payment_app"
+ },
+ {
+  "confidence": 0.9253,
+  "text": "IMPS/P2M/XXXX/PHARMEASY L/Paid via app",
+  "teacher": "health.diagnostics",
+  "model": "health.pharmacy"
+ },
+ {
+  "confidence": 0.9239,
+  "text": "NEFT-GAMES24X7 LTD-UPI Txn-NXXXX",
+  "teacher": "entertainment.fantasy_sports",
+  "model": "entertainment.gaming"
+ },
+ {
+  "confidence": 0.9235,
+  "text": "UPI/CAR SPA/XXXX/Paid via app",
+  "teacher": "transport.vehicle_service",
+  "model": "personal_care.spa"
+ },
+ {
+  "confidence": 0.9208,
+  "text": "UPI-AQUARIUM TICKETS-Q***@ybl-XXXX-UPI",
+  "teacher": "entertainment.amusement",
+  "model": "entertainment.events"
+ },
+ {
+  "confidence": 0.9164,
+  "text": "UPI-AQUARIUM TICKETS-X***@axl-XXXX-Bill",
+  "teacher": "entertainment.amusement",
+  "model": "entertainment.events"
+ },
+ {
+  "confidence": 0.9149,
+  "text": "PAYU*METRO CASH AND CARRY",
+  "teacher": "groceries.supermarket",
+  "model": "transport.public_transit"
+ },
+ {
+  "confidence": 0.9133,
+  "text": "POS XXXXXXXXXXXX7038 HOSPITAL CANTEEN PATNA",
+  "teacher": "food.canteen",
+  "model": "health.hospital"
+ },
+ {
+  "confidence": 0.913,
+  "text": "UPI-PHARMEASY LABS-pharmeasylabs.payu@hdfcbank-XXXX-Bill",
+  "teacher": "health.diagnostics",
+  "model": "health.pharmacy"
+ },
+ {
+  "confidence": 0.9056,
+  "text": "UPI-FREECHARGE RECHARGE-X***@apl-XXXX-",
+  "teacher": "utilities.mobile",
+  "model": "finance.payment_app"
+ },
+ {
+  "confidence": 0.905,
+  "text": "UPI/LEARNING CENTRE/XXXX/",
+  "teacher": "education.coaching",
+  "model": "education.online_learning"
+ },
+ {
+  "confidence": 0.9042,
+  "text": "NEFT-AQUARIUM TICKETS-NA-NXXXX",
+  "teacher": "entertainment.amusement",
+  "model": "entertainment.events"
+ },
+ {
+  "confidence": 0.8995,
+  "text": "BBPS/LEARNING CENTRE/XXXXXXXX64",
+  "teacher": "education.coaching",
+  "model": "education.online_learning"
+ },
+ {
+  "confidence": 0.8979,
+  "text": "UPI/XXXX/ZESTMONE/zestmoney.payu@hdfcbank/STATE BANK OF INDIA/Pay",
+  "teacher": "finance.bnpl",
+  "model": "finance.payment_app"
+ },
+ {
+  "confidence": 0.8971,
+  "text": "NEFT-AQUARIUM TICKETS-UPI Txn-NXXXX",
+  "teacher": "entertainment.amusement",
+  "model": "entertainment.events"
+ },
+ {
+  "confidence": 0.8956,
+  "text": "PARKSMART",
+  "teacher": "transport.parking",
+  "model": "groceries.supermarket"
+ },
+ {
+  "confidence": 0.895,
+  "text": "UPI/P2M/XXXX/AQUARIUM TICKETS/Pay/BANK OF BARODA",
+  "teacher": "entertainment.amusement",
+  "model": "entertainment.events"
+ },
+ {
+  "confidence": 0.8902,
+  "text": "UPI/MONEYGRAM/XXXX/Payment",
+  "teacher": "finance.remittance",
+  "model": "finance.payment_app"
+ },
+ {
+  "confidence": 0.8884,
+  "text": "UPI-FREECHARGE RECHARGE-freechargerecharge.rzp@axisbank-XXXX-Collect request",
+  "teacher": "utilities.mobile",
+  "model": "finance.payment_app"
+ },
+ {
+  "confidence": 0.8865,
+  "text": "RZP/FREECHARGE RECHARGE/PATNA",
+  "teacher": "utilities.mobile",
+  "model": "finance.payment_app"
+ }
+]
