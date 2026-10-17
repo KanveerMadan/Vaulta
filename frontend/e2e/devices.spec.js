@@ -19,6 +19,13 @@ async function settle(page) {
   await page.evaluate(() => document.fonts.ready)
   await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null, { timeout: 5000 }).catch(() => {})
   await page.waitForTimeout(200)
+  // The figures and dates here depend on the day and are masked, but a mask takes the size of what it covers: a longer
+  // weekday or a different forecast moved the masks and failed the comparison the next day. Pin those sizes (set
+  // through the CSSOM, which the page's strict CSP allows, unlike an injected stylesheet).
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll('main time')) Object.assign(el.style, { display: 'inline-block', width: '11em', overflow: 'hidden', whiteSpace: 'nowrap', verticalAlign: 'bottom' })
+    for (const el of document.querySelectorAll('main [data-testid="outlook"]')) Object.assign(el.style, { height: '210px', overflow: 'hidden' })
+  })
 }
 
 /** No sideways scrolling on any device (checkLayout adds tap-target sizes on touch devices). */

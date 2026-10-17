@@ -39,6 +39,7 @@ const PROCESSORS = [
 
 const RETENTION = [
   'Chat history: 30 days, then deleted automatically.',
+  'Samples you make on the "Try it" page: an hour, then deleted automatically (or at once with "Clear samples"). They are never counted in your numbers.',
   'Forwarded alert emails: not kept at all once read; only the transaction found and which bank sent it.',
   'Everything else: until you delete it, or delete your account. Delete everything removes it all from Vaulta\'s database at once, then deletes your sign-in and emails you a confirmation. If the sign-in can\'t be deleted at that moment, Vaulta keeps only its id and your email address until it is, within the hour.',
   'After deletion, copies can remain in the database provider\'s short-term recovery backups until they expire, and are never restored into the service except to recover from a failure.',

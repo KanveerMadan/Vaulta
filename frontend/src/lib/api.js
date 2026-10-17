@@ -6,7 +6,16 @@ const api = axios.create({
   timeout: 20000,
 })
 
+// Requests still in flight when the page is left are cancelled cleanly, instead of being cut off by the navigation
+// (WebKit reports a cut-off request as an error from the page being left). The callers' catch blocks see a cancel.
+let leaving = new AbortController()
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => leaving.abort())
+  window.addEventListener('pageshow', (e) => { if (e.persisted) leaving = new AbortController() })   // back/forward cache
+}
+
 api.interceptors.request.use(async (config) => {
+  if (!config.signal) config.signal = leaving.signal
   const demo = useAuthStore.getState().demoToken
   const user = demo ? null : (await import('./firebase')).auth.currentUser
   if (user && config.recent) await (await import('./reauth')).ensureRecentLogin(user)   // sensitive: see lib/reauth.js

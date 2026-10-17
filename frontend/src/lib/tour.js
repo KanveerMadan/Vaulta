@@ -5,7 +5,7 @@ import { formatINR } from "./money";
 /** The steps for this user's data (`home`: /api/home; `txnCount`: transactions on the page). */
 export function tourSteps(home, txnCount) {
   const safe = home?.safe_to_spend;
-  const attention = home?.attention?.length ?? 0;
+  const attention = home?.attention?.review_count ?? 0;
   return [
     {
       id: "safe", title: "Safe to spend today",

@@ -12,6 +12,19 @@ Raw numbers: [lighthouse.json](lighthouse.json).
 | Landing (`/welcome`) | 100 | 100 | 100 | 1.3 s | 0 | 0 ms |
 | Home (`/`, signed in) | 98 | 100 | 100 | 2.0 s | 0.07 | 0 ms |
 
+**Phase 8** (tour, checklist, samples), five cold runs ([lighthouse-phase8.json](lighthouse-phase8.json) is the last):
+
+| Page | Performance | Accessibility | Best practices | LCP | CLS | TBT |
+|---|---|---|---|---|---|---|
+| Landing (`/welcome`) | 100 in all five | 100 | 100 | 1.3–1.4 s | 0 | 10–40 ms |
+| Home (`/`, signed in) | 99–100 | 100 | 100 | 1.9–2.1 s | 0 | 10–90 ms |
+
+- **Home CLS** went from 0.07 to 0. The free-tier banner, fetched on its own, used to push the page down
+  as it arrived. A first Phase 8 build made that worse (CLS 0.099 in three runs of five).
+- **The fix:**
+  - The banner and the month header now appear together with the page's data.
+  - The checklist and the sample count come with `/api/home` instead of separate requests.
+
 What it took to get there (the first cold run scored 96 and 94, with LCP 2.7 s and 2.9 s):
 - **Main bundle:** the landing shell moved into the main bundle, and its animated parts load after the headline paints.
 - **Shell prefetch:** the app shell and home download while Firebase restores the session.

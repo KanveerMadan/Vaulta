@@ -63,3 +63,12 @@ def test_tour_and_checklist_state_doesnt_restart_setup_for_existing_accounts(cli
     client.get("/api/review", headers=USER)                # records review_opened_at in users.onboarding
     client.patch("/api/tour", json={"status": "skipped"}, headers=USER)
     assert client.get("/api/onboarding", headers=USER).json()["status"] == "skipped"
+
+
+def test_home_carries_the_checklist_and_sample_count(client):
+    """So the home page draws them with everything else (no layout shift from a later request)."""
+    client.get("/auth/me", headers=ALICE)
+    home = client.get("/api/home", headers=ALICE).json()
+    assert home["checklist"]["available"] and home["checklist"]["total"] == 10 and home["samples"] == 0
+    client.post("/api/simulations/quick-add", json={"text": "150 auto cash", "save": True}, headers=ALICE)
+    assert client.get("/api/home", headers=ALICE).json()["samples"] == 1

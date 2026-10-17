@@ -281,8 +281,10 @@ export default function Dashboard() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       {tour.open && <GuidedTour steps={tourSteps(home, txns?.length ?? 0)} start={tour.start} onFinish={tour.finish} />}
-      {!demo && <SubscriptionBanner />}
-      {!demo && <SamplesBanner refreshKey={refreshKey} onCleared={refresh} />}
+      {/* The banner and the month header appear with the page's data, in one go, so nothing above the content shifts
+          it down as it arrives (layout shift). The banner starts fetching at once, hidden. */}
+      {!demo && <div hidden={!home}><SubscriptionBanner /></div>}
+      {!demo && home?.samples > 0 && <SamplesBanner count={home.samples} onCleared={refresh} />}
       {onboarding?.status === "active" && (
         <Link to="/onboarding" className="flex items-center justify-between gap-3 rounded-md border border-accent-line bg-accent-tint/60 px-4 py-3 text-sm text-ink hover:bg-accent-tint">
           <span>Finish setting up. Tracking coverage is {onboarding.coverage.percent}%.</span>
@@ -290,7 +292,7 @@ export default function Dashboard() {
         </Link>
       )}
 
-      <div className="flex items-center justify-between gap-2">
+      <div className={`flex items-center justify-between gap-2 ${home || error ? "" : "invisible"}`}>
         <h1 className="sr-only">{current ? "Today" : monthLabel(month)}</h1>
         {!current ? (
           <button onClick={() => setMonth(thisMonth)} className="btn-quiet text-accent-text"><CaretLeft size={14} aria-hidden />Back to this month</button>
@@ -343,7 +345,7 @@ export default function Dashboard() {
               </Panel></div>
             </div>
             <div className="space-y-8 min-w-0">
-              {current && !demo && <GettingStarted refreshKey={refreshKey} />}
+              {current && !demo && <GettingStarted key={refreshKey} checklist={home.checklist} />}
               <Panel title="Budgets" action={<Link to="/budgets" className="text-micro font-medium text-accent-text hover:underline">{home.budgets.categories.length || home.budgets.overall ? "Edit" : "Set limits"}</Link>}>
                 {home.budgets.overall || home.budgets.categories.length ? (
                   <div className="space-y-4">

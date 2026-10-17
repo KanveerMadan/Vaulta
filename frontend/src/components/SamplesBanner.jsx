@@ -5,17 +5,21 @@ import api from "../lib/api";
  * When the user has sample rows from trying Vaulta out (Phase 8 simulations): say they aren't counted, and clear
  * them in one click. They also go by themselves an hour after they were made (services/samples.py).
  */
-export default function SamplesBanner({ refreshKey = 0, onCleared }) {
-  const [count, setCount] = useState(0);
+export default function SamplesBanner({ count: known, refreshKey = 0, onCleared }) {
+  // the home page passes the count it already has (/api/home); elsewhere it's fetched
+  const [fetched, setFetched] = useState(0);
+  const [cleared, setCleared] = useState(false);
   useEffect(() => {
+    if (known !== undefined) return undefined;
     let alive = true;
-    api.get("/api/simulations").then((r) => alive && setCount(r.data.samples)).catch(() => {});
+    api.get("/api/simulations").then((r) => { if (alive) { setFetched(r.data.samples); setCleared(false); } }).catch(() => {});
     return () => { alive = false; };
-  }, [refreshKey]);
+  }, [refreshKey, known]);
+  const count = cleared ? 0 : known ?? fetched;
   if (!count) return null;
   const clear = async () => {
     await api.delete("/api/simulations");
-    setCount(0);
+    setCleared(true);
     onCleared?.();
   };
   return (

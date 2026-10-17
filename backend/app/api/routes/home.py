@@ -17,7 +17,7 @@ from app.core.database import get_db
 from app.models.anomaly import Anomaly
 from app.models.user import User
 from app.schemas.review import ReviewCardResponse
-from app.services import analytics, cash, coverage
+from app.services import analytics, cash, coverage, getting_started, samples
 from app.services.review import build_cards
 
 router = APIRouter(prefix="/api/home", tags=["home"])
@@ -36,6 +36,8 @@ def home(month: Optional[str] = Query(default=None, pattern=r"^\d{4}-\d{2}$"),
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="month must look like 2024-06")
     current = first == today.replace(day=1)
     cards = build_cards(db, current_user)
+    samples.purge_expired(db, current_user)
+    sample_count = samples.count(db, current_user)
     data = {
         "month": first.isoformat()[:7],
         "is_current_month": current,
@@ -50,5 +52,9 @@ def home(month: Optional[str] = Query(default=None, pattern=r"^\d{4}-\d{2}$"),
         },
         "coverage": coverage.sources(db, current_user),
         "cash_balance": cash.wallet(db, current_user.id)["balance"],
+        # here rather than fetched after the page draws, so the home page doesn't shift as they arrive
+        "checklist": getting_started.checklist(db, current_user,
+                                               bool(getattr(getattr(current_user, "token", None), "email_verified", False))),
+        "samples": sample_count,
     }
     return json.loads(json.dumps(data, default=str))   # Decimals as strings, like every other route

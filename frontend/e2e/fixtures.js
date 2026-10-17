@@ -134,9 +134,11 @@ export async function signIn(page, account, { reauth = true } = {}) {
   await page.getByPlaceholder('••••••••').fill(account.password)
   await page.getByRole('button', { name: 'Log in' }).click()
   await page.waitForURL((url) => !url.pathname.startsWith('/login'))
-  // and the page it lands on has rendered: a test that navigates away while its chunks are still downloading makes
-  // WebKit report the cancelled import from the page it leaves ("Importing a module script failed")
+  // and the page it lands on has rendered and loaded its data: a test that navigates away while chunks or API calls
+  // are still in flight makes WebKit report them as errors from the page it leaves ("Importing a module script
+  // failed", "… due to access control checks"). Bounded: a page that keeps polling still gets on with the test.
   await page.locator('main').first().waitFor()
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 }
 
 /** A signed-in user with data, on the home screen. */

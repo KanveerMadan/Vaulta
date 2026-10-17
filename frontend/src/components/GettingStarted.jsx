@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle, Circle } from "@phosphor-icons/react";
 import api from "../lib/api";
@@ -8,15 +8,12 @@ import { Ring } from "./CoverageRing";
  * The getting-started checklist (Phase 8). Items tick from what the user has actually done (the server works it out,
  * GET /api/checklist); each undone item links to where it's done. Hide it here; Settings brings it back. Not in the demo.
  */
-export default function GettingStarted({ refreshKey = 0 }) {
-  const [data, setData] = useState(null);
-  useEffect(() => {
-    let alive = true;
-    api.get("/api/checklist").then((r) => alive && setData(r.data)).catch(() => {});
-    return () => { alive = false; };
-  }, [refreshKey]);
+export default function GettingStarted({ checklist }) {
+  // comes with /api/home, so it draws with the rest of the page instead of pushing it down later
+  const [hidden, setHidden] = useState(null);
+  const data = hidden || checklist;
   if (!data?.available || data.dismissed) return null;
-  const hide = async () => setData((await api.patch("/api/checklist", { dismissed: true })).data);
+  const hide = async () => setHidden((await api.patch("/api/checklist", { dismissed: true })).data);
   return (
     <section className="rule pt-4" aria-labelledby="getting-started-title" data-testid="getting-started">
       <div className="flex items-center gap-4">
