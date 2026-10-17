@@ -1,6 +1,7 @@
 # Phase 9 report: merchant categorisation model
 
-Branch `rebuild/phase9`, built on `rebuild/phase6-5`. Pushed; PR #1 updated and still marked DO NOT MERGE.
+Branch `rebuild/phase9`, built on `rebuild/phase6-5`. Pushed; PR #1 updated and still marked DO NOT MERGE. GitHub Actions
+run 39029240420 is green: all seven jobs, including the new ML data/leakage job and every browser engine and device.
 
 ## Decision
 
@@ -111,6 +112,16 @@ cache. Refused (429) and retried calls in those runs aren't counted.
 | Visual and device snapshots on Linux (Docker) | 61 passed |
 | Bandit, Semgrep, pip-audit, npm audit gate, actionlint | clean |
 | Secret check | clean |
+
+CI needed four runs, each failing on one different test; each was fixed at its cause.
+
+| Run | Failing test | Cause and fix |
+|---|---|---|
+| 1 | iPad landscape import-preview screenshot | A baseline from before the guess column (it had passed locally only within the 2% tolerance). Every import-preview baseline rewritten. |
+| 1 | Activity-log test | The test computed `auth_time` per request, so a new second logged an extra sign-in. Now fixed once per test. |
+| 1 | Firefox Settings test | `reload()` waited for `load`; it now waits for `domcontentloaded`. |
+| 2 | Sign-in again after sign-out-everywhere (iPhone WebKit) | Slow on CI. The URL check now allows 20 s. |
+| 3 | A test-setup API call ("socket hang up") | A dropped keep-alive connection. The setup call retries once (setup calls are idempotent). |
 
 The full macOS run ended with 3 failures:
 
