@@ -138,7 +138,7 @@ function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit
                 </td>
                 {model && (
                   <td className="px-2 py-1 whitespace-nowrap text-ink-600" data-label="Category guess">
-                    {guesses[i] && guesses[i].confidence >= model.threshold ? subcategoryName(guesses[i].subcategory) : <span className="text-muted">To review</span>}
+                    {guesses[i] && guesses[i].confidence >= model.threshold ? subcategoryName(guesses[i].subcategory) : <span className="text-muted">Not sure</span>}
                   </td>
                 )}
                 <td className="px-2 py-1 font-mono text-ink-400 whitespace-nowrap" data-label="Reference">{r.reference || <span className="sr-only">none</span>}</td>
@@ -147,6 +147,13 @@ function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit
           </tbody>
         </table>
       </div>
+
+      {model && (
+        <p className="text-xs text-ink-500">
+          Category guesses are worked out on this device. When you import, your own rules and the merchants Vaulta knows
+          come first, so a few may end up different; anything still unsure goes to your review queue.
+        </p>
+      )}
 
       <div className="flex gap-3">
         <button onClick={onBack} disabled={sending} className="btn-ghost flex-1 text-sm py-2">Choose another file</button>

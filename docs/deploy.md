@@ -55,6 +55,7 @@ data can't be read back, and a database backup can't replace them.
 | `APP_CHECK_DEBUG_TOKEN` | never in production | local runs and browser tests only; production refuses to start with it |
 | `GROQ_API_KEY` | for chat and report summaries | console.groq.com → API keys |
 | `GROQ_MODEL` | optional | default `openai/gpt-oss-120b` (Groq retired `llama-3.3-70b-versatile`; unset it if it is still set to that) |
+| `MERCHANT_MODEL_ENABLED` | optional | default `true`: the merchant model categorises (docs/ml/model-card.md); `false` returns to the rule-based categories |
 | `RESEND_API_KEY` | for emails | resend.com → API keys (sending access, one domain) |
 | `EMAIL_FROM` | for emails | e.g. `Vaulta <reports@mail.vaulta.example>` on a domain verified in Resend |
 | `INBOUND_DOMAIN` | for alert forwarding | your domain; addresses become `<token>@in.<domain>` |
@@ -99,6 +100,15 @@ All `VITE_*` values are compiled into the public JavaScript, so none of them is 
 | `MASTER_KEY`, `BLIND_INDEX_KEY` | the same values as the API's (the encryption migration uses them) |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | any value, e.g. `{}` (migrations don't sign anyone in) |
 | `ENCRYPTION_KEY` | only if the database holds Phase 4 forwarding tokens |
+
+After a deploy that ships a new merchant model or taxonomy, re-check existing users' categories from the same machine
+(the API role is enough, as `DATABASE_URL`). It is a dry run unless `--apply`, prints counts only, never touches rows a
+user corrected, and each user's run can be undone in Settings or with `--undo-latest`:
+
+```
+cd backend && python scripts/recategorise.py            # dry run: how many would change
+cd backend && python scripts/recategorise.py --apply
+```
 
 ## Security headers and caching
 

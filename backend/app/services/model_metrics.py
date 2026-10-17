@@ -16,6 +16,12 @@ from sqlalchemy.orm import Session
 from app.core import clock
 
 TRACKED = ("model", "on_device", "known_merchant", "personal")
+_BUMP = {
+    "categorised": text("INSERT INTO model_metrics (day, source, categorised) VALUES (:d, :s, 1) "
+                        "ON CONFLICT (day, source) DO UPDATE SET categorised = model_metrics.categorised + 1"),
+    "corrected": text("INSERT INTO model_metrics (day, source, corrected) VALUES (:d, :s, 1) "
+                      "ON CONFLICT (day, source) DO UPDATE SET corrected = model_metrics.corrected + 1"),
+}
 
 
 def source_of(explanation: Optional[dict]) -> Optional[str]:
@@ -31,10 +37,7 @@ def bump(db: Session, source: Optional[str], column: str) -> None:
     """Add one to today's count. Caller commits."""
     if source is None:
         return
-    assert column in ("categorised", "corrected")
-    db.execute(text(f"INSERT INTO model_metrics (day, source, {column}) VALUES (:d, :s, 1) "
-                    f"ON CONFLICT (day, source) DO UPDATE SET {column} = model_metrics.{column} + 1"),
-               {"d": clock.today(), "s": source})
+    db.execute(_BUMP[column], {"d": clock.today(), "s": source})
 
 
 def summary(db: Session, days: int = 30) -> dict:

@@ -63,8 +63,14 @@ export function loadModel() {
     loading = (async () => {
       try {
         const res = await fetch(MODEL_URL);
-        if (!res.ok || typeof DecompressionStream === "undefined") return null;
-        const text = await new Response(res.body.pipeThrough(new DecompressionStream("gzip"))).text();
+        if (!res.ok) return null;
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        // some servers and browsers already undo the gzip (Content-Encoding); decompress only if it's still gzip
+        const gzipped = bytes[0] === 0x1f && bytes[1] === 0x8b;
+        if (gzipped && typeof DecompressionStream === "undefined") return null;
+        const text = gzipped
+          ? await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text()
+          : new TextDecoder().decode(bytes);
         return JSON.parse(text);
       } catch {
         return null;            // no model: the server categorises with its own copy, or the rules alone

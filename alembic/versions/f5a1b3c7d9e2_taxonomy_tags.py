@@ -53,14 +53,19 @@ def upgrade() -> None:
         sa.Column("tag_id", UUID(as_uuid=True), sa.ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True, index=True),
         sa.Column("user_id", UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
     )
-    for table in NEW_TABLES:
-        op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
-        op.execute(f"CREATE POLICY user_isolation ON {table} USING (user_id = vaulta_current_user_id()) "
-                   "WITH CHECK (user_id = vaulta_current_user_id())")
-    op.execute(f"""
+    op.execute("ALTER TABLE custom_subcategories ENABLE ROW LEVEL SECURITY")
+    op.execute("CREATE POLICY user_isolation ON custom_subcategories USING (user_id = vaulta_current_user_id()) "
+               "WITH CHECK (user_id = vaulta_current_user_id())")
+    op.execute("ALTER TABLE tags ENABLE ROW LEVEL SECURITY")
+    op.execute("CREATE POLICY user_isolation ON tags USING (user_id = vaulta_current_user_id()) "
+               "WITH CHECK (user_id = vaulta_current_user_id())")
+    op.execute("ALTER TABLE transaction_tags ENABLE ROW LEVEL SECURITY")
+    op.execute("CREATE POLICY user_isolation ON transaction_tags USING (user_id = vaulta_current_user_id()) "
+               "WITH CHECK (user_id = vaulta_current_user_id())")
+    op.execute("""
 DO $$ BEGIN
   IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'vaulta_app') THEN
-    GRANT SELECT, INSERT, UPDATE, DELETE ON {", ".join(NEW_TABLES)} TO vaulta_app;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON custom_subcategories, tags, transaction_tags TO vaulta_app;
   END IF;
 END $$;""")
 

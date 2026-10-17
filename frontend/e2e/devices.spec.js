@@ -113,6 +113,7 @@ test('import preview', async ({ page, request }, testInfo) => {
   await page.getByRole('button', { name: /upload/i }).first().click()
   await page.locator('input[type=file]').setInputFiles(STATEMENT)
   await expect(page.getByText(/transactions from HDFC Bank/)).toBeVisible()
+  await expect(page.getByText(/Category guesses are worked out on this device/)).toBeVisible()   // the on-device model has loaded
   await settle(page)
   await fits(page, testInfo)
   await expect(page).toHaveScreenshot('import-preview.png', { ...SNAP, mask: dynamic(page) })

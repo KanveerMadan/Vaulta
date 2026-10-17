@@ -2,8 +2,8 @@
 // merchant_model_parity.json is written by ml/export.py with the model, and backend/tests/test_categorizer.py checks
 // the server against the same file.
 import { existsSync, readFileSync } from "node:fs";
-import { gunzipSync } from "node:zlib";
-import { describe, expect, it } from "vitest";
+import { gunzipSync, gzipSync } from "node:zlib";
+import { describe, expect, it, vi } from "vitest";
 import { ngrams, normalize, predict } from "./merchantModel.js";
 
 const MODEL = new URL("../../public/models/merchant-model.json.gz", import.meta.url);
@@ -46,5 +46,25 @@ describe("parity with ml/ and the server", () => {
     const server = new URL("../../../backend/app/data/merchant_model.json.gz", import.meta.url);
     expect(existsSync(MODEL)).toBe(existsSync(server));
     if (existsSync(MODEL)) expect(readFileSync(MODEL).equals(readFileSync(server))).toBe(true);
+  });
+});
+
+describe("loading the model file", () => {
+  const tiny = { labels: ["food.cafe"] };
+  it("reads it whether or not the server already undid the gzip", async () => {
+    for (const body of [gzipSync(JSON.stringify(tiny)), Buffer.from(JSON.stringify(tiny))]) {
+      vi.resetModules();
+      vi.stubGlobal("fetch", async () => new Response(body));
+      const { loadModel } = await import("./merchantModel.js");
+      expect(await loadModel()).toEqual(tiny);
+      vi.unstubAllGlobals();
+    }
+  });
+  it("gives null when the file isn't there", async () => {
+    vi.resetModules();
+    vi.stubGlobal("fetch", async () => new Response("", { status: 404 }));
+    const { loadModel } = await import("./merchantModel.js");
+    expect(await loadModel()).toBeNull();
+    vi.unstubAllGlobals();
   });
 });

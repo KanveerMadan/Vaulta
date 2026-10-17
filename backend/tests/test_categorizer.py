@@ -215,3 +215,18 @@ def test_training_export_takes_only_consenting_users_corrections(client, tmp_pat
     assert rows == [{"text": "UPI-RAJU KIRANA-R***@okaxis", "label": "groceries.dairy", "source": "correction"}]
     printed = capsys.readouterr().out
     assert "consenting" in printed and "KIRANA" not in printed.upper()
+
+
+def test_recategorise_script_dry_run_apply_undo(client, tiny_model, monkeypatch, capsys):
+    import sys
+    from scripts import recategorise as script
+    monkeypatch.setattr(settings, "MERCHANT_MODEL_ENABLED", False)
+    post(client, [row(description_raw="UPI-RAJU KIRANA-R***@okaxis", reference="412345678901")])
+    monkeypatch.setattr(settings, "MERCHANT_MODEL_ENABLED", True)
+    for argv, expected in ((["x"], "'dry run', 'users': 1, 'changed': 1"), (["x", "--apply"], "'apply', 'users': 1, 'changed': 1"),
+                           (["x", "--undo-latest"], "'undo', 'users': 1, 'changed': 0, 'restored': 1")):
+        monkeypatch.setattr(sys, "argv", argv)
+        script.main()
+        out = capsys.readouterr().out
+        assert expected in out and "KIRANA" not in out.upper()
+    assert txns(client)["UPI-RAJU KIRANA-R***@okaxis"]["category"] is None
