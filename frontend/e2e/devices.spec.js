@@ -130,6 +130,29 @@ test('Money Wrapped', async ({ page, request }, testInfo) => {
   await expect(page).toHaveScreenshot('wrapped.png', { ...SNAP, mask: dynamic(page) })
 })
 
+test('guided tour and getting-started checklist', async ({ page, request }, testInfo) => {
+  const a = await account(request)
+  await callApi(request, a, 'PATCH', '/api/tour', { status: 'active', step: 1 })     // a step with no figures in it
+  await signIn(page, a)
+  const card = page.getByTestId('tour').getByRole('dialog')
+  await expect(card).toHaveAccessibleName('Add anything in one line')
+  await settle(page)
+  // the card (or, on phones, the bottom sheet) is fully on screen and its buttons are big enough to tap
+  const box = await card.boundingBox()
+  const [w, h] = await page.evaluate(() => [document.documentElement.clientWidth, document.documentElement.clientHeight])
+  expect(box.x >= 0 && box.y >= 0 && box.x + box.width <= w + 1 && box.y + box.height <= h + 1, JSON.stringify({ box, w, h })).toBe(true)
+  await checkLayout(page, testInfo)
+  // the page's own figures change daily: mask those inside the page, never over the tour on top of it
+  const inPage = [page.locator('main .num'), page.locator('main [data-value]'), page.locator('main time'), page.locator('main [data-testid="outlook"]')]
+  await expect(page).toHaveScreenshot('tour.png', { ...SNAP, mask: inPage })
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('tour')).toHaveCount(0)
+  const checklist = page.getByTestId('getting-started')
+  await checklist.scrollIntoViewIfNeeded(); await settle(page)
+  await fits(page, testInfo)
+  await expect(checklist).toHaveScreenshot('checklist.png', { ...SNAP, mask: [checklist.locator('.num')] })
+})
+
 test('installed app (standalone display mode)', async ({ page, request }, testInfo) => {
   // No engine here can emulate display-mode: standalone, so check what the installed app relies on: the shipped CSS
   // pads the sticky header for the status bar in standalone mode, and the header carries that class

@@ -42,6 +42,25 @@ for (const scheme of ['light', 'dark']) {
       await expect(page).toHaveScreenshot(`settings-${scheme}.png`, mask(page))
     })
 
+    test('guided tour, getting-started checklist and samples', async ({ page, request }) => {
+      const account = await newAccount(request)
+      await callApi(request, account, 'GET', '/auth/me')
+      await seedData(request, account)
+      await callApi(request, account, 'PATCH', '/api/tour', { status: 'active', step: 1 })    // the quick-add step
+      await signIn(page, account)
+      const card = page.getByTestId('tour').getByRole('dialog')
+      await expect(card).toHaveAccessibleName('Add anything in one line')
+      await settle(page)
+      const inPage = [page.locator('main .num'), page.locator('main [data-value]'), page.locator('main time'), page.locator('main [data-testid="outlook"]')]
+      await expect(page).toHaveScreenshot(`tour-${scheme}.png`, { ...SNAP, mask: inPage })      // never over the tour itself
+      await page.keyboard.press('Escape')
+      const checklist = page.getByTestId('getting-started')
+      await checklist.scrollIntoViewIfNeeded(); await settle(page)
+      await expect(checklist).toHaveScreenshot(`checklist-${scheme}.png`, { ...SNAP, mask: [checklist.locator('.num')] })
+      await page.goto('/try'); await settle(page)
+      await expect(page).toHaveScreenshot(`try-${scheme}.png`, SNAP)
+    })
+
     test('onboarding', async ({ page, request }) => {
       const account = await newAccount(request)
       await signIn(page, account)

@@ -134,6 +134,9 @@ export async function signIn(page, account, { reauth = true } = {}) {
   await page.getByPlaceholder('••••••••').fill(account.password)
   await page.getByRole('button', { name: 'Log in' }).click()
   await page.waitForURL((url) => !url.pathname.startsWith('/login'))
+  // and the page it lands on has rendered: a test that navigates away while its chunks are still downloading makes
+  // WebKit report the cancelled import from the page it leaves ("Importing a module script failed")
+  await page.locator('main').first().waitFor()
 }
 
 /** A signed-in user with data, on the home screen. */

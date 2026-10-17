@@ -83,12 +83,12 @@ export default function GuidedTour({ steps, start = 0, onFinish }) {
     <div className="fixed inset-0 z-[60]" data-testid="tour">
       {spot ? (
         <div aria-hidden className={`fixed rounded-md pointer-events-none ${motion}`}
-          style={{ ...spot, boxShadow: "0 0 0 9999px rgb(0 0 0 / 0.55)" }} />
+          style={{ ...spot, boxShadow: "0 0 0 9999px rgb(0 0 0 / 0.55)", outline: "2px solid rgb(var(--accent))", outlineOffset: 2 }} />
       ) : <div aria-hidden className="fixed inset-0 bg-black/55" />}
       <div ref={box} role="dialog" aria-modal="true" aria-labelledby="tour-title" aria-describedby="tour-body"
         className={phone
-          ? "fixed inset-x-0 bottom-0 rounded-t-lg bg-surface p-5 pb-safe-3 shadow-lg"
-          : `fixed w-[22rem] max-w-[calc(100vw-2rem)] rounded-md bg-surface p-5 shadow-lg ${!spot ? "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" : ""}`}
+          ? "fixed inset-x-0 bottom-0 rounded-t-lg border-t border-line bg-surface p-5 pb-safe-3 shadow-lg"
+          : `fixed w-[22rem] max-w-[calc(100vw-2rem)] rounded-md border border-line bg-surface p-5 shadow-lg ${!spot ? "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" : ""}`}
         style={cardStyle}>
         <p className="text-micro text-muted" aria-live="polite">Step {i + 1} of {steps.length}</p>
         <h2 id="tour-title" className="mt-1 font-display text-lg text-ink">{step.title}</h2>

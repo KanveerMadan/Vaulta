@@ -44,6 +44,7 @@ for (const scheme of ['light', 'dark']) {
     })
 
     test('workspace pages', async ({ page, request }) => {
+      test.setTimeout(150_000)                     // 14 pages, each audited after it settles
       const account = await newAccount(request)
       await callApi(request, account, 'GET', '/auth/me')
       await seedData(request, account)
