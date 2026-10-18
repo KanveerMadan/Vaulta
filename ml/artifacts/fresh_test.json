@@ -1,0 +1,28 @@
+{
+  "ambiguous_rows": 795,
+  "dropped_as_used_before": {
+    "brands": 1592,
+    "name_stems": 20
+  },
+  "merchants_by_kind": {
+    "brand": 362,
+    "local": 336
+  },
+  "name_stems_used": 175,
+  "note": "Evaluation only. Never used for training, model choice or thresholds.",
+  "rows": 4538,
+  "rows_by_kind": {
+    "brand": 2534,
+    "local": 2004
+  },
+  "sha256": "e94b43b4fc7fcb05cd1e0dd42f503d889af83e84b633c3eaa2baf57e35703013",
+  "teacher": {
+    "models": {
+      "A": "openai/gpt-oss-120b",
+      "B": "qwen/qwen3.8-27b",
+      "C": "openai/gpt-oss-20b"
+    },
+    "prompt_version": "v1"
+  },
+  "unlabelled_strings_left_out": 2
+}
