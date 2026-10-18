@@ -5,7 +5,10 @@ import { getTransformedRoutes } from '@vercel/routing-utils'
 import config from '../vercel.json'
 
 const { routes, error } = getTransformedRoutes({ rewrites: config.rewrites, headers: config.headers, redirects: config.redirects })
-const headersFor = (path) => Object.assign({}, ...routes.filter((r) => r.headers && new RegExp(r.src).test(path)).map((r) => r.headers))
+// The patterns are Vercel's compiled form of our own vercel.json, tested against fixed paths: no user input.
+// nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+const matches = (route, path) => new RegExp(route.src).test(path)
+const headersFor = (path) => Object.assign({}, ...routes.filter((r) => r.headers && matches(r, path)).map((r) => r.headers))
 
 describe('vercel.json', () => {
   it('is accepted by Vercel', () => {
@@ -14,10 +17,10 @@ describe('vercel.json', () => {
 
   it('serves the app shell for routes and files as themselves', () => {
     const rewrite = routes.find((r) => r.dest === '/index.html')
-    expect(new RegExp(rewrite.src).test('/transactions')).toBe(true)
-    expect(new RegExp(rewrite.src).test('/reports/42')).toBe(true)
-    expect(new RegExp(rewrite.src).test('/assets/index-abc.js')).toBe(false)
-    expect(new RegExp(rewrite.src).test('/sw.js')).toBe(false)
+    expect(matches(rewrite, '/transactions')).toBe(true)
+    expect(matches(rewrite, '/reports/42')).toBe(true)
+    expect(matches(rewrite, '/assets/index-abc.js')).toBe(false)
+    expect(matches(rewrite, '/sw.js')).toBe(false)
   })
 
   it('caches hashed assets for good and never caches the shell or service worker', () => {

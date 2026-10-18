@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { test, expect, accountExists, checkLayout, openMenu, openChatPanel, isTouch, newAccount, signIn, signedInWithData, callApi, finishSetup } from './fixtures'
+import { test, expect, accountExists, checkLayout, openMenu, openChatPanel, isTouch, newAccount, signIn, signedInWithData, callApi, finishSetup, reopen } from './fixtures'
 
 const STATEMENT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../fixtures/statements/hdfc.csv')
 const menu = async (page, testInfo, name) => {
@@ -196,7 +196,7 @@ test('alerts bell', async ({ page, request }, testInfo) => {
   await callApi(request, account, 'POST', '/api/import/batch', { rows: [{ date: new Date().toISOString().slice(0, 10),
     description_raw: 'SWIGGY BANGALORE', amount: '5500.00', direction: 'debit', reference: null, source_type: 'bank_csv',
     source_label: 'HDFC Bank', type: 'transaction' }] })
-  await page.reload()
+  await reopen(page)
   const bell = page.getByRole('button', { name: /^Alerts, \d+ unread$/ })
   await expect(bell).toBeVisible()
   await bell.click()
@@ -244,7 +244,7 @@ test('settings toggles and Telegram link code', async ({ page, request }, testIn
   await expect(weekly).toBeChecked()
   await weekly.click()
   await expect(weekly).not.toBeChecked()
-  await page.reload({ waitUntil: 'domcontentloaded' })   // the assertion below waits for the data
+  await reopen(page)                                     // the assertion below waits for the data
   await expect(page.getByRole('checkbox', { name: 'Build' }).first()).not.toBeChecked()
   const priceTelegram = page.locator('li', { hasText: 'Subscription price change' }).getByRole('checkbox', { name: 'Telegram' })
   await priceTelegram.click()

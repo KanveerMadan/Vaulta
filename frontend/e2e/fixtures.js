@@ -227,3 +227,7 @@ export async function centre(page, id) {
     last = top
   }
 }
+
+// Load the current page again. Playwright's Firefox has hung on page.reload() on CI right after a write (twice, never
+// locally); opening the same URL is the same fresh load.
+export const reopen = (page) => page.goto(page.url(), { waitUntil: 'domcontentloaded' })

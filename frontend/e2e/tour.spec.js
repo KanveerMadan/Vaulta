@@ -82,7 +82,12 @@ test('without data, the steps say what will appear', async ({ page, request }) =
   await signIn(page, a)
   await expect(card(page)).toHaveAccessibleName('Safe to spend today')     // starts by itself after setup
   await expect(card(page)).toContainText('Once Vaulta knows your income or a budget')
-  for (let i = 0; i < 3; i++) await card(page).getByRole('button', { name: 'Next' }).click()
+  for (let i = 1; i <= 3; i++) {
+    // a key press, not a pointer click: the card follows the smooth scroll to the next element, and Firefox's clicks
+    // could land beside a card still moving
+    await card(page).getByRole('button', { name: 'Next' }).press('Enter')
+    await expect(card(page)).toContainText(`Step ${i + 1} of ${STEPS}`)
+  }
   await expect(card(page)).toContainText('Import a statement or forward a bank alert')
 })
 
