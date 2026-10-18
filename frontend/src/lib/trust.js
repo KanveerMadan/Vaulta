@@ -69,6 +69,12 @@ export const TRUST = [
     checked: "Tests check that the export holds everything, decrypted; that after deleting, no table has a row of the account left and the sign-in no longer exists; and that a failed sign-in deletion is finished by the hourly run.",
   },
   {
+    id: "errors",
+    claim: "Error reports never carry your financial data.",
+    how: "When something breaks, Vaulta sends an error report to Sentry (EU region) so it can be fixed: the kind of error and where in the code it happened. Before it leaves your browser or Vaulta's server, the report loses request contents, cookies, headers, search terms, who you are, and from any text, emails, UPI IDs, amounts, long numbers and anything quoted (where transaction descriptions, merchants and names would appear). There is no session recording or performance tracing.",
+    checked: "A test sends a real server error with a narration, a UPI ID, an email, amounts, a session token and a search term in every part of the request and finds none of them in what reaches Sentry; a unit test does the same for the web app's scrubber.",
+  },
+  {
     id: "checks",
     claim: "Every change is tested and security-scanned.",
     how: "Each change to Vaulta's code runs the full test suite, including the encryption and isolation checks above, plus automated security checks: a search of the code's entire history for leaked secrets, known-vulnerability audits of every dependency (pip-audit, npm audit), static analysis (Bandit, Semgrep) and an OWASP ZAP scan of the running app and API.",

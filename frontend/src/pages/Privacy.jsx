@@ -35,6 +35,7 @@ const PROCESSORS = [
   ['Cloudflare', 'receiving forwarded alert emails, which are passed on without being stored'],
   ['Telegram', 'the bot, only if you link it'],
   ['Razorpay', 'payments, only if you subscribe'],
+  ['Sentry (EU)', 'error reports: what kind of error happened and where in Vaulta\'s code. Before a report leaves your browser or our server, request contents, your identity, emails, UPI IDs, amounts, long numbers and quoted text are removed'],
 ]
 
 const RETENTION = [

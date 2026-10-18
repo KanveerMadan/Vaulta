@@ -18,6 +18,7 @@
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
     "@phosphor-icons/react": "^2.1.10",
+    "@sentry/browser": "10.76.0",
     "@tanstack/react-virtual": "3.14.13",
     "@tesseract.js-data/eng": "^1.0.0",
     "axios": "^1.20.0",

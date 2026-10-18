@@ -28,10 +28,13 @@ function cspCoversApi(env, mode) {
   return {
     name: 'csp-covers-api',
     buildStart() {
-      if (mode !== 'production' || !env.VITE_API_BASE_URL) return
-      const origin = new URL(env.VITE_API_BASE_URL).origin
-      if (!connectSrc.includes(origin)) {
-        this.error(`VITE_API_BASE_URL (${origin}) isn't in vercel.json's connect-src: the app couldn't reach its API. Update vercel.json.`)
+      if (mode !== 'production') return
+      for (const [name, url] of [['VITE_API_BASE_URL', env.VITE_API_BASE_URL], ['VITE_SENTRY_DSN', env.VITE_SENTRY_DSN]]) {
+        if (!url) continue
+        const origin = new URL(url).origin
+        if (!connectSrc.includes(origin)) {
+          this.error(`${name} (${origin}) isn't in vercel.json's connect-src: the app couldn't reach it. Update vercel.json.`)
+        }
       }
     },
   }

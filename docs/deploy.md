@@ -72,6 +72,7 @@ The service was created in the dashboard, so these are entered there (`render.ya
 | `APP_CHECK_DEBUG_TOKEN` | never in production | local runs and browser tests only; production refuses to start with it |
 | `GROQ_API_KEY` | for chat and report summaries | console.groq.com → API keys |
 | `GROQ_MODEL` | optional | default `openai/gpt-oss-120b` (Groq retired `llama-3.3-70b-versatile`; unset it if it is still set to that) |
+| `SENTRY_DSN` | optional | the API project's DSN (Sentry → Project settings → Client Keys). Unset = no error monitoring. Reports are scrubbed (`app/core/monitoring.py`) |
 | `MERCHANT_MODEL_ENABLED` | optional | default `true`: the merchant model categorises (docs/ml/model-card.md); `false` returns to the rule-based categories |
 | `RESEND_API_KEY` | for emails | resend.com → API keys (sending access, one domain) |
 | `EMAIL_FROM` | for emails | e.g. `Vaulta <reports@mail.vaulta.example>` on a domain verified in Resend |
@@ -116,6 +117,7 @@ All `VITE_*` values are compiled into the public JavaScript, so none of them is 
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` | Firebase console → Project settings → Your apps → Web app config. If `VITE_FIREBASE_AUTH_DOMAIN` changes, update `frame-src` in `vercel.json`. |
 | `VITE_SECURITY_CONTACT` | security contact email; becomes `/.well-known/security.txt` and is shown on `/security`. Required: the build fails without it. |
 | `VITE_PRIVACY_CONTACT` | privacy and grievance contact email shown on `/privacy`. Required. |
+| `VITE_SENTRY_DSN` | the web app project's DSN; Production only. Its host must be in `connect-src` in `vercel.json` (the build fails otherwise). Unset = no error monitoring |
 | `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` | the reCAPTCHA Enterprise key id for App Check (go-live step 3a). Without it the app sends no App Check token, so leave `APP_CHECK_ENFORCE` off. |
 
 ### Cloudflare: email worker (`infra/email-worker`)
