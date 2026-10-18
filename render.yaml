@@ -1,4 +1,5 @@
-# Render Blueprint: the API web service and the hourly report run, in Singapore (Render's region nearest India).
+# Render Blueprint: the API web service, on Render's free plan, in Singapore (Render's region nearest India). The
+# hourly run is a GitHub Actions schedule (.github/workflows/hourly-run.yml): Render's cron jobs aren't free.
 # Values are never in this file: every variable marked `sync: false` is entered in the Render dashboard (or asked
 # for when the Blueprint is first applied). docs/deploy.md lists each one, where it's set and how to generate it.
 # Migrations are not run here: they need the database owner's URL, which the API never gets (docs/go-live.md).
@@ -7,23 +8,25 @@ services:
     name: vaulta-api
     runtime: python
     region: singapore
-    plan: starter
+    plan: free                          # 512 MB; sleeps after 15 idle minutes, so UptimeRobot calls /health
+                                        # every 5 minutes (docs/deploy.md)
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    # 2 workers fit Starter's 512 MB. --proxy-headers so rate limits see the client's IP behind Render's proxy;
+    # One worker: a 12-month import peaks near 390 MB in one process (docs/ml/evaluation.md, an upper bound), so
+    # two could pass the free plan's 512 MB. --proxy-headers so rate limits see the client's IP behind Render's proxy;
     # no access log (it would carry query strings; app/core/logs.py logs each request instead).
     startCommand: >-
-      uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-2}
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-1}
       --proxy-headers --forwarded-allow-ips='*' --no-access-log
     healthCheckPath: /health/ready      # database up, migrations at head, row-level security enforced
-    autoDeploy: true                    # from the branch the service is connected to (main)
+    autoDeploy: false                   # off until cutover (go-live stage 11), then on, from main
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
       - key: ENVIRONMENT
         value: production
       - key: WEB_CONCURRENCY
-        value: "2"
+        value: "1"
       - key: DATABASE_URL               # the vaulta_app role (not the owner), pooled host
         sync: false
       - key: FIREBASE_SERVICE_ACCOUNT_JSON
@@ -71,26 +74,4 @@ services:
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
       - key: RAZORPAY_PLAN_ID
-        sync: false
-
-  # The hourly report run: calls the API's internal endpoint, which works out per user (in their timezone) which
-  # weekly / monthly / annual reports are due, builds missing ones, emails unsent ones, sends held alerts, purges
-  # 30-day-old chat and expired rate-limit counters, and rebuilds the demo once a day. Re-running is safe.
-  - type: cron
-    name: vaulta-report-run
-    runtime: python
-    region: singapore
-    schedule: "0 * * * *"
-    buildCommand: "echo no build needed"
-    startCommand: >-
-      python -c "import os, urllib.request;
-      req = urllib.request.Request(os.environ['API_URL'].rstrip('/') + '/internal/run-reports', method='POST',
-      headers={'X-Internal-Secret': os.environ['INTERNAL_SECRET']});
-      res = urllib.request.urlopen(req, timeout=600); print(res.status, res.read().decode()[:2000])"
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.7
-      - key: API_URL                    # the API's public base URL
-        sync: false
-      - key: INTERNAL_SECRET            # the same value as the API's INTERNAL_SECRET
         sync: false

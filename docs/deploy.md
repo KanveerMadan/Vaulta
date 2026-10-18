@@ -2,8 +2,9 @@
 
 | Piece | Where it runs | Config |
 |---|---|---|
-| API (FastAPI) | Render web service `vaulta-api`, Singapore | `render.yaml` |
-| Hourly report run | Render cron `vaulta-report-run`, Singapore | `render.yaml` |
+| API (FastAPI) | Render web service `vaulta-api`, free plan, Singapore | `render.yaml` and the settings below |
+| Hourly run | GitHub Actions schedule (Render's cron jobs aren't free) | `.github/workflows/hourly-run.yml` |
+| Keeping the API awake | UptimeRobot, `GET /health` every 5 minutes | UptimeRobot dashboard |
 | Web app (React, PWA) | Vercel, root directory `frontend` | `frontend/vercel.json` |
 | Database | Neon Postgres | roles: `docs/security/row-level-security.md` |
 | Inbound alert email | Cloudflare Email Routing + Worker `vaulta-inbound-email` | `infra/email-worker/` |
@@ -29,6 +30,22 @@ This gives 64 URL-safe characters (288 bits). The API refuses to start in produc
 Keep a copy of `MASTER_KEY` and `BLIND_INDEX_KEY` **outside Render** (a password manager). Without them, the encrypted
 data can't be read back, and a database backup can't replace them.
 
+## Render settings (`vaulta-api`)
+
+The service was created in the dashboard, so these are entered there (`render.yaml` holds the same values):
+
+| Setting | Value |
+|---|---|
+| Instance type | Free (512 MB; it sleeps after 15 idle minutes, which UptimeRobot prevents) |
+| Region | Singapore |
+| Root directory | `backend` |
+| Build command | `pip install -r requirements.txt` |
+| Start command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-1} --proxy-headers --forwarded-allow-ips='*' --no-access-log` |
+| Health check path | `/health/ready` (database up, migrations at head, row-level security enforced) |
+| Python | `PYTHON_VERSION=3.12.7` |
+| Auto-deploy | **off** until cutover (go-live stage 11); then on, from `main` |
+| Workers | `WEB_CONCURRENCY=1`: a 12-month import peaks near 390 MB in one process (`docs/ml/evaluation.md`, an upper bound), so two could pass 512 MB |
+
 ## Every variable
 
 ### Render: API web service (`vaulta-api`)
@@ -36,16 +53,16 @@ data can't be read back, and a database backup can't replace them.
 | Variable | Required | What / how to get it |
 |---|---|---|
 | `ENVIRONMENT` | yes | `production` (set by `render.yaml`) |
-| `PYTHON_VERSION`, `WEB_CONCURRENCY` | yes | set by `render.yaml` (`3.12.7`, `2`) |
+| `PYTHON_VERSION`, `WEB_CONCURRENCY` | yes | `3.12.7`, `1` |
 | `DATABASE_URL` | yes | Neon connection string for the **`vaulta_app`** role on the **pooled** host, with `?sslmode=require`. Never the owner. |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | yes | Firebase console → Project settings → Service accounts → Generate new private key; paste the JSON on one line |
 | `SECRET_KEY` | yes | random (above). Signs demo sessions and unsubscribe links. |
-| `INTERNAL_SECRET` | yes | random. Shared with the cron and the email worker. |
+| `INTERNAL_SECRET` | yes | random. Shared with the hourly run (a GitHub secret) and the email worker. |
 | `MASTER_KEY` | yes | random. Wraps each user's data key (`docs/security/encryption.md`). |
 | `BLIND_INDEX_KEY` | yes | random, different from `MASTER_KEY`. Keys the blind indexes. |
 | `MASTER_KEY_PREVIOUS` | only during a rotation | the old `MASTER_KEY` while `scripts/rotate_master_key.py` runs |
-| `BACKEND_CORS_ORIGINS` | yes | comma-separated https origins of the web app, e.g. `https://vaulta.example,https://www.vaulta.example` |
-| `BACKEND_CORS_ORIGIN_REGEX` | optional | Vercel previews, e.g. `^https://vaulta-[a-z0-9-]+-kanveer-madans-projects\.vercel\.app$` (must start `^https://` and end `$`) |
+| `BACKEND_CORS_ORIGINS` | yes | `https://vaulta.in,https://www.vaulta.in,https://vaulta-henna.vercel.app` (comma-separated https origins of the web app; production refuses `http://`, `localhost` and `*`; `http://localhost:5173` is only the local default) |
+| `BACKEND_CORS_ORIGIN_REGEX` | **leave unset in production** | it would let Vercel preview builds (any pushed branch) call the production API. Previews use their own Preview variables and a non-production API, or none |
 | `APP_BASE_URL` | yes | the web app's https URL (links in emails) |
 | `API_BASE_URL` | yes | the API's https URL (unsubscribe links) |
 | `SECURITY_CONTACT_EMAIL` | yes | the address published at the API's `/.well-known/security.txt` |
@@ -65,12 +82,20 @@ data can't be read back, and a database backup can't replace them.
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `RAZORPAY_PLAN_ID` | for subscriptions | Razorpay dashboard |
 | `ENCRYPTION_KEY` | no | Phase 4's Fernet key, read only by the encryption migration if old forwarding tokens exist; remove after go-live |
 
-### Render: cron (`vaulta-report-run`)
+### GitHub Actions: hourly run (`.github/workflows/hourly-run.yml`)
 
-| Variable | What |
-|---|---|
-| `API_URL` | the API's public base URL |
-| `INTERNAL_SECRET` | the same value as the API's |
+Repository → Settings → Secrets and variables → Actions:
+
+| Name | Kind | What |
+|---|---|---|
+| `API_URL` | variable | the API's public base URL, e.g. `https://vaulta-f6t8.onrender.com` (later `https://api.vaulta.in`) |
+| `INTERNAL_SECRET` | secret | the same value as the API's |
+
+It runs at minute 7 of every hour and can be started by hand (Actions → Hourly run → Run workflow). It waits for a
+sleeping free instance to wake, then calls `POST /internal/run-reports`, which is safe to repeat. **GitHub may delay a
+scheduled run** (often 5–30 minutes when busy) or skip one; the next run catches up, because each job does whatever
+is due and not yet done. GitHub also disables schedules in a public repository after 60 days without commits: if
+that happens, re-enable the workflow in the Actions tab.
 
 ### Vercel: web app (Production and Preview)
 

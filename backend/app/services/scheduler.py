@@ -1,5 +1,5 @@
 """
-Hourly report run (POST /internal/run-reports, called by the Render cron job).
+Hourly report run (POST /internal/run-reports, called by .github/workflows/hourly-run.yml).
 
 For each user, in their own timezone, the report due is the most recent
 period whose send time has passed:

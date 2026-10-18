@@ -97,18 +97,17 @@ leaves nothing behind.
 
 ## 2. Render
 
-1. Render dashboard → **New → Blueprint** → this repository, branch `main`. It creates `vaulta-api` and
-   `vaulta-report-run` in Singapore from `render.yaml`. The old service was created in another region, and a region
-   can't be changed.
+1. Render dashboard → **New → Blueprint** → this repository, branch `main`. It creates `vaulta-api` (free plan) in
+   Singapore from `render.yaml`. The old service was created in another region, and a region can't be changed.
 2. When asked for values, fill in every `sync: false` variable from `docs/deploy.md`:
    - `DATABASE_URL`: from step 1.6.
    - `BACKEND_CORS_ORIGINS`: `https://$DOMAIN`.
    - `APP_BASE_URL`: `https://$DOMAIN`.
    - `API_BASE_URL`: `https://api.$DOMAIN`.
    - Leave `MASTER_KEY_PREVIOUS` empty.
-3. On the cron, set:
-   - `API_URL`: `https://api.$DOMAIN`;
-   - `INTERNAL_SECRET`: the same value as the API's.
+3. For the hourly run (GitHub → Settings → Secrets and variables → Actions):
+   - variable `API_URL`: `https://api.$DOMAIN`;
+   - secret `INTERNAL_SECRET`: the same value as the API's.
 4. Under `vaulta-api` → **Settings → Custom domains**, add `api.$DOMAIN`. Render shows the target hostname for step 4.
 
 Blueprints deploy the branch they're connected to. Until the PR is merged (step 9), `main` holds the old code: let the
@@ -327,7 +326,7 @@ Do this in a private window, on your phone and on a laptop.
 - [ ] `curl -s https://api.$DOMAIN/health/ready` reports ready, migrations at head, RLS enforced.
 - [ ] `/security` and `/privacy` show the right contact addresses; `/.well-known/security.txt` on both domains
   answers.
-- [ ] After the next hour: the cron's log in Render shows `200` and a JSON summary.
+- [ ] After the next hour: Actions → Hourly run shows a green run whose log ends in a JSON summary.
 - [ ] Delete everything with a throwaway account: it ends on the welcome page and can't sign back in to its data.
 - [ ] Remove `ENCRYPTION_KEY` from Render (it was only for the migration).
 - [ ] Update `/privacy` after your review, and remove its draft notice.
@@ -340,7 +339,7 @@ Do this in a private window, on your phone and on a laptop.
 | 1.3 app role | `psql "$OWNER_URL" -c "DROP OWNED BY vaulta_app; DROP ROLE vaulta_app;"` |
 | 1.4 old API suspended | Render → old service → **Resume**. Only valid while the database is not yet migrated, or after restoring it (next row). |
 | 1.5 migrations | Fastest and complete: Neon → restore `$NEON_PROD_BRANCH` from `pre-phase6-…` (`npx neonctl@7.0.4 branches restore $NEON_PROD_BRANCH pre-phase6-… --project-id $NEON_PROJECT`), then resume the old API. Data written after the migration is lost. To keep the data: `alembic downgrade a5c1e7f9b0d3` (decrypts, drops RLS) with the same keys in the environment. |
-| 2 Render | Suspend or delete `vaulta-api` and `vaulta-report-run`. Resume the old service only after restoring the database. |
+| 2 Render | Suspend or delete `vaulta-api`, and disable the Hourly run workflow. Resume the old service only after restoring the database. |
 | 3 Vercel | Vercel → Deployments → the last old production deployment → **Promote to Production**. Revert the env vars. |
 | 3a Firebase / App Check | Unset `APP_CHECK_ENFORCE` on Render (back to monitor mode) and remove the App Check enforcement in the Firebase console. The other settings are safe to keep. |
 | 4 DNS | Delete the records added. Point `$DOMAIN` back where it was, and disable Email Routing for `in.$DOMAIN`. |

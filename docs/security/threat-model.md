@@ -1,7 +1,7 @@
 # Vaulta threat model
 
 Scope: the API (`backend/`), the web app (`frontend/`), the Cloudflare email worker (`infra/email-worker/`), the
-Render cron job, and the Postgres database on Neon. Written for Phase 6; every mitigation names the code or test that
+hourly GitHub Actions run, and the Postgres database on Neon. Written for Phase 6; every mitigation names the code or test that
 implements it. When you change one of those, update this file in the same commit.
 
 ## Assets
@@ -45,7 +45,7 @@ implements it. When you change one of those, update this file in the same commit
 | `/api/payments/create-subscription`, `/api/payments/status` | Firebase ID token | |
 | `POST /api/payments/webhook` | Razorpay HMAC signature | |
 | `GET/POST /unsubscribe?token=` | HMAC token (`SECRET_KEY`) | Turns one email type off, nothing else |
-| `POST /internal/run-reports` | `X-Internal-Secret` | Render cron |
+| `POST /internal/run-reports` | `X-Internal-Secret` | the hourly GitHub Actions run (secret in GitHub Secrets) |
 | `POST /internal/inbound-email` | `X-Internal-Secret` | Cloudflare email worker; one email ≤ 256 KB |
 | `POST /internal/telegram` | `X-Telegram-Bot-Api-Secret-Token` | Telegram webhook |
 | Inbound email (`*@in.<domain>`) | sender allowlist + DKIM/SPF verdict | Through the worker |

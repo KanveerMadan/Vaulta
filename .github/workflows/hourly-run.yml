@@ -1,0 +1,45 @@
+# The hourly run, on GitHub Actions because Render's cron jobs aren't free. It calls the API's internal endpoint, which
+# per user (in their timezone) builds and emails due weekly / monthly / annual reports, sends alerts (renewal
+# reminders included) and held ones, sends the Sunday cash reminder, purges expired sample rows, 30-day-old chat and
+# rate-limit counters, finishes pending account deletions (retrying the Firebase login deletion) and rebuilds the demo
+# once a day (backend/app/services/scheduler.py). Re-running is safe: nothing is built or sent twice.
+#
+# GitHub runs scheduled workflows late when it is busy (often 5–30 minutes, sometimes more) and may skip a run; the next
+# run catches up, since everything is "due and not done yet". GitHub also disables schedules in a public repository after
+# 60 days without commits: re-enable the workflow in the Actions tab if that happens. docs/deploy.md has the setup.
+name: Hourly run
+
+on:
+  schedule:
+    - cron: "7 * * * *"            # minute 7, away from the top of the hour when GitHub is busiest
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: hourly-run
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: POST /internal/run-reports
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Call the API (wakes it first if it is asleep)
+        env:
+          API_URL: ${{ vars.API_URL }}
+          INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET }}
+        run: |
+          if [ -z "$API_URL" ] || [ -z "$INTERNAL_SECRET" ]; then
+            echo "::error::Set the repository variable API_URL and the secret INTERNAL_SECRET (docs/deploy.md)."
+            exit 1
+          fi
+          # a free Render instance can take about a minute to wake: wait for /health first
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            curl -fsS --max-time 20 "$API_URL/health" > /dev/null && break
+            sleep 10
+          done
+          # the response is counts only (users, reports, alerts…); the secret is sent as a header and never printed
+          curl -fsS --max-time 600 --retry 2 --retry-delay 30 -X POST "$API_URL/internal/run-reports" \
+            -H "X-Internal-Secret: $INTERNAL_SECRET" | head -c 2000
