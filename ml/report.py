@@ -23,9 +23,14 @@ def pts(x) -> str:
     return "n/a" if x is None else f"{x * 100:.1f}"
 
 
-def table(ev: dict, name: str) -> list[str]:
+FRESH = (("fresh_brands", "Fresh: new brands"), ("fresh_local", "Fresh: new local shops"))
+PHASE9 = (("test", "Phase 9 main (unseen merchants)"), ("test_local", "Phase 9 unseen local shops"),
+          ("real_test", "Real narrations"))
+
+
+def table(ev: dict, name: str, splits=FRESH) -> list[str]:
     rows = ["| Test set | Rows | System | Agreement | Macro-F1 | Covered agreement | Review rate |", "|---|---|---|---|---|---|---|"]
-    for split, title in (("test", "Main (unseen merchants)"), ("test_local", "Unseen local shops"), ("real_test", "Real narrations")):
+    for split, title in splits:
         e = ev.get(split)
         if not e or not e["rows"]:
             rows.append(f"| {title} | 0 | (no data) | | | | |")
@@ -48,6 +53,7 @@ def main() -> None:
     votes = Counter(len(set(r["votes"])) for r in labels)
     a, b = m["model_a"], m.get("model_b")
     ea = a["eval"]
+    fr = m["fresh_test"]
     out = [
         "# Merchant model: evaluation",
         "",
@@ -73,56 +79,122 @@ def main() -> None:
         f"{m['data']['real_test']['rows']} rows." if not m["data"]["real_test"]["rows"] else
         f"- Real narrations: {m['data']['real_test']['rows']} (labelled by the same teacher; never committed).",
         "",
+        "## Results that count: the fresh frozen test set",
+        "",
+        "The Phase 9 test sets were looked at while the method was being chosen (see History below), so their numbers",
+        "are optimistic. **The fresh frozen test set is the one that counts.** It was built afterwards (`ml/fresh.py`)",
+        f"from {fr['merchants_by_kind'].get('brand', 0)} brands and {fr['merchants_by_kind'].get('local', 0)} local shops (on "
+        f"{fr['name_stems_used']} new name stems) that no earlier run used, by canonical merchant and by string "
+        f"({fr['dropped_as_used_before']['brands']} candidate brands and {fr['dropped_as_used_before']['name_stems']} stems "
+        "were dropped as used before), labelled by the same teacher procedure and frozen with its sha256 "
+        f"(`{fr['sha256'][:12]}…`, checked by `ml/tests/test_fresh.py`). It is never used for training, the threshold or "
+        f"the choice between models. Rows evaluated (ambiguous labels excluded): {fr['rows_evaluated']['fresh_brands']} "
+        f"narrations of new brands, {fr['rows_evaluated']['fresh_local']} of new local shops.",
+        "",
+        "| Fresh test set | Sent to review: rules today → with the model | Review reduction | Agreement where the model files | Agreement where a known merchant files | Agreement on all auto-filed rows |",
+        "|---|---|---|---|---|---|",
+    ]
+    for split, title in FRESH:
+        e = ea[split]
+        fb = e["filed_by"]
+        out.append(f"| {title} | {pct(e['rules']['review_rate'])} → {pct(e['rules_then_model']['review_rate'])} | "
+                   f"{pct(e['review_reduction'])} | {pct(fb['model']['agreement'])} ({pct(fb['model']['share_of_rows'])} of rows) | "
+                   f"{pct(fb['known_merchant']['agreement'])} ({pct(fb['known_merchant']['share_of_rows'])} of rows) | "
+                   f"{pct(e['rules_then_model']['covered_agreement'])} |")
+    vb = ea["val"]["filed_by"]
+    out += [
+        "",
+        f"- **Threshold {a['threshold']}, set on validation only:** the lowest at which the rows the model files (after the",
+        f"  known-merchant step) agree with the teacher at least {pct(m['threshold_target'])} on validation; there they agree "
+        f"{pct(vb['model']['agreement'])}. On the fresh new brands they agree {pct(ea['fresh_brands']['filed_by']['model']['agreement'])}"
+        + (", just under that target: it was not re-tuned on the fresh set." if (ea['fresh_brands']['filed_by']['model']['agreement'] or 0) < m['threshold_target'] else "."),
+        f"- **The known-merchant step is the weak part.** Matching the normalizer's patterns on the merchant's own words, it "
+        f"agrees with the teacher on {pct(vb['known_merchant']['agreement'])} of the validation rows it files and "
+        f"{pct(ea['fresh_brands']['filed_by']['known_merchant']['agreement'])} on fresh brands. The threshold can't change that, so "
+        "all auto-filed rows together stay below 90%. Letting a confident model overrule it would be a product change.",
+        f"- **Macro-F1** on fresh brands: rules {pts(ea['fresh_brands']['rules']['macro_f1'])} → "
+        f"{pts(ea['fresh_brands']['rules_then_model']['macro_f1'])}; on fresh local shops: "
+        f"{pts(ea['fresh_local']['rules']['macro_f1'])} → {pts(ea['fresh_local']['rules_then_model']['macro_f1'])}. The rules "
+        "can't categorise merchants they don't know, by design, so their macro-F1 on new merchants is near zero: this "
+        "compares the model with sending those rows to review, not with a competing classifier.",
+        "",
         "## Ship criteria and decision",
         "",
-        "Agreed bar: macro-F1 above today's rules on the main test set **and** on unseen local shops, and a lower",
-        "review rate at equal-or-better covered agreement. Prefer Model A unless Model B is ≥ 3 macro-F1 points better.",
+        "Judged on the fresh test set: macro-F1 above today's rules on fresh brands **and** on fresh local shops, and a lower",
+        "review rate at equal-or-better covered agreement on fresh brands. Prefer Model A unless Model B is ≥ 3 macro-F1",
+        "points better (that comparison uses the Phase 9 main test set, never the fresh one).",
         "",
         "The shipped order is: a known merchant (the normalizer's patterns, matched on the merchant's own words, without",
         "payment rails, banks, UPI handles, remarks or cities), then the model above its threshold, then the review queue.",
-        f"The threshold is picked on validation: the rows the model files must agree with the teacher at least "
-        f"{pct(m['threshold_target'])} there. On the main test set the shipped order's covered agreement is "
-        f"{pct(m['model_a']['eval']['test']['rules_then_model']['covered_agreement'])}, below that validation target: unseen brands are harder "
-        "than the validation brands. The baseline, \"rules today\", is the normalizer exactly as the app runs it now.",
+        "The baseline, \"rules today\", is the normalizer exactly as the app runs it now.",
         "",
         f"- Model A: threshold {a['threshold']}; checks {a['ship']['checks']}; **ships: {a['ship']['ships']}**.",
     ]
     if b:
         out.append(f"- Model B: threshold {b['threshold']}; checks {b['ship']['checks']}; ships: {b['ship']['ships']}.")
     out += [f"- **Choice: {m['choice']}; shipped: {m['ships']}.**", ""]
+    out += ["## History: three evaluation runs", "",
+            "The Phase 9 test sets were reused: the method was changed after the first run's test numbers had been seen, and",
+            "the second run's threshold rule was then judged on the same sets. Both runs are kept as they were.", ""]
     run1_path = ARTIFACTS / "metrics_run1.json"
     if run1_path.exists():
         r1 = json.loads(run1_path.read_text())
         t1 = r1["model_a"]["eval"]["test"]
-        out += ["### Two evaluation runs", "",
-                "The first run used today's rules unchanged as the first step of the order (patterns anywhere in the narration),",
-                "with the threshold picked so that the *whole order's* covered agreement reached 90% on validation. That was",
-                f"impossible: the rules alone agree with the teacher on only {pct(r1['rules_val']['covered_agreement'])} of the validation rows they file,",
-                "so the threshold went to 1.0, the model filed nothing and neither model met the bar "
-                f"(main test set macro-F1 {pts(t1['rules_then_model']['macro_f1'])}, the same as the rules). Most of the rules' wrong answers",
-                "were \"Payment apps\": the Paytm or PhonePe pattern matching a gateway, a VPA handle (`paytmqr…@paytm`) or a",
-                "remark (\"Payment from PhonePe\") instead of the merchant. The order was then changed as described above, from",
-                "that validation analysis; the change was made after the first run's test numbers had been seen, which is",
-                "recorded here. `ml/artifacts/metrics_run1.json` keeps the first run.", ""]
-    out += ["## Model A (character n-gram TF-IDF + logistic regression)", ""] + table(ea, "Model A")
+        out += ["1. **Run 1** (`ml/artifacts/metrics_run1.json`). Today's rules unchanged as the first step (patterns anywhere",
+                "   in the narration), with the threshold picked so that the *whole order's* covered agreement reached 90% on",
+                f"   validation. Impossible: the rules alone agree with the teacher on only {pct(r1['rules_val']['covered_agreement'])} of the validation rows",
+                f"   they file, so the threshold went to 1.0, the model filed nothing and neither model met the bar (main test set",
+                f"   macro-F1 {pts(t1['rules_then_model']['macro_f1'])}, the same as the rules). Most of the rules' wrong answers were \"Payment apps\":",
+                "   the Paytm or PhonePe pattern matching a gateway, a VPA handle or a remark instead of the merchant."]
+    run2_path = ARTIFACTS / "metrics_run2.json"
+    if run2_path.exists():
+        r2 = json.loads(run2_path.read_text())
+        t2, l2 = r2["model_a"]["eval"]["test"], r2["model_a"]["eval"]["test_local"]
+        out += ["2. **Run 2, Phase 9** (`ml/artifacts/metrics_run2.json`). The known-merchant step changed to the merchant's own",
+                f"   words, and the threshold ({r2['model_a']['threshold']}) set so that the model's rows agree ≥ 90% on validation. On the",
+                f"   reused Phase 9 test sets: unseen brands, review {pct(t2['rules']['review_rate'])} → {pct(t2['rules_then_model']['review_rate'])}, "
+                f"agreement where filed {pct(t2['rules_then_model']['covered_agreement'])};",
+                f"   unseen local shops, review {pct(l2['rules']['review_rate'])} → {pct(l2['rules_then_model']['review_rate'])}, "
+                f"agreement where filed {pct(l2['rules_then_model']['covered_agreement'])}. Optimistic, for the reason above."]
+    out += [f"3. **Run 3, go-live** (`ml/artifacts/metrics.json`, this page). The same model and order; the threshold "
+            f"({a['threshold']}) now set on the rows the model files *after* the known-merchant step, on validation; "
+            "judged on the fresh frozen set.", ""]
+    out += ["## Model A (character n-gram TF-IDF + logistic regression)", ""] + table(ea, "Model A") + [
+        "", "On the reused Phase 9 test sets (history only):", ""] + table(ea, "Model A", PHASE9)
     tr = a["training"]
     out += ["", f"C = {tr['C']} (grid {tr['c_grid']} macro-F1 on validation); vocabulary {tr['full_vocabulary']} n-grams → "
             f"{tr['kept_vocabulary']} kept, {tr['nonzero_weights']} non-zero int8 weights; temperature {tr['temperature']}; "
-            f"model file {a['size_bytes'] / 1e6:.1f} MB as JSON. Calibration (ECE, main test set): {ea['test']['model']['ece']}. "
-            f"Top-1 agreement with no threshold: {pct(ea['test']['model']['top1_agreement_no_threshold'])} (main), "
-            f"{pct(ea['test_local']['model']['top1_agreement_no_threshold'])} (local shops). Review reduction vs rules: "
-            f"{pct(ea['test']['review_reduction'])} (main), {pct(ea['test_local']['review_reduction'])} (local shops).", ""]
+            f"model file {a['size_bytes'] / 1e6:.1f} MB as JSON. Calibration (ECE, fresh brands): {ea['fresh_brands']['model']['ece']}. "
+            f"Top-1 agreement with no threshold: {pct(ea['fresh_brands']['model']['top1_agreement_no_threshold'])} (fresh brands), "
+            f"{pct(ea['fresh_local']['model']['top1_agreement_no_threshold'])} (fresh local shops).", ""]
     if b:
         out += ["## Model B (static multilingual embedding + logistic regression)", ""] + table(b["eval"], "Model B")
         trb = b["training"]
         out += ["", f"`static-similarity-mrl-multilingual-v1` truncated to {trb['dims']} dimensions, int8 ({trb['size_mb']} MB with its "
-                f"tokenizer); C = {trb['C']} (grid {trb['c_grid']}); temperature {trb['temperature']}; ECE {b['eval']['test']['model']['ece']}.", ""]
+                f"tokenizer); C = {trb['C']} (grid {trb['c_grid']}); temperature {trb['temperature']}; ECE {b['eval']['fresh_brands']['model']['ece']} (fresh brands).", ""]
     r = m["resolution"]
     out += ["## Merchant resolution", "",
             f"Nearest neighbour over character 3–5-gram sets against {r['index_names']} catalogue brand names, threshold "
             f"{r['threshold']} (tuned on validation for ≥ 95% precision and ≤ 2% false resolution of local shops).",
             f"Main + local test sets: coverage of brand narrations {pct(r['test']['coverage'])}, precision {pct(r['test']['precision'])}, "
-            f"local shops wrongly resolved {pct(r['test']['local_false_resolution_rate'])}.", ""]
+            f"local shops wrongly resolved {pct(r['test']['local_false_resolution_rate'])}. Fresh narrations (no fresh merchant is in "
+            f"the index, so every resolution is wrong) resolved: {pct(r.get('fresh_false_resolution_rate'))}.", ""]
+    perf_path = ARTIFACTS / "api_perf.json"
+    if perf_path.exists():
+        perf = json.loads(perf_path.read_text())
+        w, wo = perf.get("with_model", {}), perf.get("without_model", {})
+        out += ["## Memory and import time", "",
+                "`MEASURE_PERF=1 python -m pytest backend/tests/test_model_performance.py -s` (and `MEASURE_MODEL=0`): 12 months × 200",
+                "transactions through `/api/import/batch` in 500-row batches, the server predicting every row (no on-device",
+                f"predictions: the worst case), on a developer laptop ({w.get('platform', 'n/a')}). Peak memory is the test process's, so",
+                "it includes pytest: an upper bound for the API.", "",
+                "| | Without the model | With the model |", "|---|---|---|",
+                f"| Peak memory after loading | {wo.get('peak_rss_mb_after_model')} MB | {w.get('peak_rss_mb_after_model')} MB (load {w.get('model_load_seconds')} s) |",
+                f"| Peak memory after the 12-month import | {wo.get('peak_rss_mb_after_import')} MB | {w.get('peak_rss_mb_after_import')} MB |",
+                f"| Import time, {w.get('rows')} rows | {wo.get('total_seconds')} s | {w.get('total_seconds')} s |",
+                f"| Slowest 500-row batch | {wo.get('slowest_batch_seconds')} s | {w.get('slowest_batch_seconds')} s |", "",
+                "Render's free instance has 512 MB and a fraction of a laptop's CPU, so these times will be several times longer",
+                "there; the browser's own predictions (statement imports) skip the server-side model, as in the left column.", ""]
     if "person_narrations" in m:
         import metrics as M
         from model_a import Exported
@@ -141,11 +213,11 @@ def main() -> None:
                 "UPI-app payments to people never reach the model (they are Sent to People), and a person's tag, when the user "
                 "sets one, overrides the category.", ""]
     out += ["## Plots", "", "![Coverage vs agreement](coverage-agreement.png)", "", "![Reliability](reliability.png)", "",
-            "![F1 by group](f1-by-group.png)", "", "## Per-subcategory F1 (main test set, shipped order vs rules)", "",
+            "![F1 by group](f1-by-group.png)", "", "## Per-subcategory F1 (fresh brands, shipped order vs rules)", "",
             "| Subcategory | Rules | Rules → Model A |", "|---|---|---|"]
-    for c, f in sorted(ea["test"]["rules_then_model"]["per_class_f1"].items()):
-        out.append(f"| {SUBCATEGORIES[c]['group']} › {SUBCATEGORIES[c]['name']} | {ea['test']['rules']['per_class_f1'].get(c, 0):.2f} | {f:.2f} |")
-    out += ["", "## The 50 most confident disagreements (main test set)", "",
+    for c, f in sorted(ea["fresh_brands"]["rules_then_model"]["per_class_f1"].items()):
+        out.append(f"| {SUBCATEGORIES[c]['group']} › {SUBCATEGORIES[c]['name']} | {ea['fresh_brands']['rules']['per_class_f1'].get(c, 0):.2f} | {f:.2f} |")
+    out += ["", "## The 50 most confident disagreements (fresh brands)", "",
             "Synthetic narrations; \"teacher\" is the teacher's label for the merchant.", "",
             "| Confidence | Narration | Teacher | Model A |", "|---|---|---|---|"]
     for e in errors:
@@ -153,26 +225,27 @@ def main() -> None:
     DOCS.mkdir(parents=True, exist_ok=True)
     (DOCS / "evaluation.md").write_text("\n".join(out) + "\n")
     (DOCS / "model-card.md").write_text(model_card(m))
-    t, l, tr = ea["test"], ea["test_local"], a["training"]
+    t, l, tr = ea["fresh_brands"], ea["fresh_local"], a["training"]
     (DOCS / "resume-summary.md").write_text(
-        "# Resume summary\n\nGenerated by `ml/report.py`; every number is from `ml/artifacts/metrics.json`.\n\n"
+        "# Resume summary\n\nGenerated by `ml/report.py`; every number is from `ml/artifacts/metrics.json`, on a frozen test "
+        "set of merchants never used in development. All are agreement with LLM teacher labels on synthetic narrations.\n\n"
         f"Built a transaction categoriser for Vaulta, an Indian personal-finance app, by knowledge distillation: two LLMs "
-        f"on Groq labelled {m['teacher']['strings']} stripped merchant names (a third broke ties) from a 130-subcategory "
-        f"taxonomy, and a {tr['kept_vocabulary']:,}-n-gram character TF-IDF + logistic-regression model (0.75 MB gzipped, "
-        f"identical in the browser and in Python) learned from {m['data']['train']['rows']:,} synthetic bank narrations. "
-        f"On merchants never seen in training it raised macro-F1 against the teacher labels from {pts(t['rules']['macro_f1'])} "
-        f"to {pts(t['rules_then_model']['macro_f1'])} and cut the share of transactions sent to manual review from "
-        f"{pct(t['rules']['review_rate'])} to {pct(t['rules_then_model']['review_rate'])}; on unseen local shops, from "
-        f"{pct(l['rules']['review_rate'])} to {pct(l['rules_then_model']['review_rate'])}, with "
-        f"{pct(l['rules_then_model']['covered_agreement'])} agreement where it files. Includes calibration "
-        f"(ECE {t['model']['ece']}), per-user correction memory, reversible re-categorisation and opt-in retraining "
-        f"gated on frozen test sets; a 16 MB multilingual embedding alternative was evaluated and rejected.\n")
+        f"on Groq labelled stripped merchant names (a third broke ties) from a 130-subcategory taxonomy, and a "
+        f"{tr['kept_vocabulary']:,}-n-gram character TF-IDF + logistic-regression model (0.75 MB gzipped, identical in the "
+        f"browser and in Python) learned from {m['data']['train']['rows']:,} synthetic bank narrations. On a frozen set of "
+        f"merchants never used in development it cut the share of transactions sent to manual review from "
+        f"{pct(t['rules']['review_rate'])} to {pct(t['rules_then_model']['review_rate'])} for new brands and from "
+        f"{pct(l['rules']['review_rate'])} to {pct(l['rules_then_model']['review_rate'])} for new local shops, agreeing with "
+        f"the teacher on {pct(t['filed_by']['model']['agreement'])} and {pct(l['filed_by']['model']['agreement'])} of the rows "
+        f"it filed, with a threshold set on validation only. Includes calibration (ECE {t['model']['ece']}), per-user "
+        f"correction memory, reversible re-categorisation and opt-in retraining gated on frozen test sets; a 16 MB "
+        f"multilingual embedding alternative was evaluated and rejected.\n")
     print("wrote docs/ml/evaluation.md and docs/ml/model-card.md")
 
 
 def model_card(m: dict) -> str:
     a, ea = m["model_a"], m["model_a"]["eval"]
-    t, l = ea["test"], ea["test_local"]
+    t, l = ea["fresh_brands"], ea["fresh_local"]
     tr, teacher = a["training"], m.get("teacher") or {}
     shipped = m["ships"] and m["choice"] == "model_a"
     return f"""# Model card: Vaulta merchant categoriser
@@ -205,27 +278,33 @@ threshold ({a['threshold']}); everything else goes to the review queue (`backend
   Only merchant names were sent, never transactions. At least {teacher.get('llm_calls_total', 'n/a')} LLM calls.
 - **All metrics are agreement with these teacher labels, not accuracy.** No human-verified labels exist.
 
-## Performance (agreement with teacher labels; held-out merchants never seen in training)
+## Performance (agreement with teacher labels, on the fresh frozen test set)
+
+The test set that counts is the fresh frozen one: merchants and local shops never used in any earlier run
+(`ml/fresh.py`). The Phase 9 test sets were reused while the method was chosen; their numbers are kept in
+evaluation.md as history only.
 
 | | Today's rules | With the model (shipped order) |
 |---|---|---|
-| Unseen merchants: macro-F1 | {pts(t['rules']['macro_f1'])} | {pts(t['rules_then_model']['macro_f1'])} |
-| Unseen merchants: share sent to review | {pct(t['rules']['review_rate'])} | {pct(t['rules_then_model']['review_rate'])} |
-| Unseen merchants: agreement where it files | {pct(t['rules']['covered_agreement'])} | {pct(t['rules_then_model']['covered_agreement'])} |
-| Unseen local shops: macro-F1 | {pts(l['rules']['macro_f1'])} | {pts(l['rules_then_model']['macro_f1'])} |
-| Unseen local shops: share sent to review | {pct(l['rules']['review_rate'])} | {pct(l['rules_then_model']['review_rate'])} |
-| Unseen local shops: agreement where it files | {pct(l['rules']['covered_agreement'])} | {pct(l['rules_then_model']['covered_agreement'])} |
+| New brands: share sent to review | {pct(t['rules']['review_rate'])} | {pct(t['rules_then_model']['review_rate'])} |
+| New brands: agreement where the model files | n/a | {pct(t['filed_by']['model']['agreement'])} |
+| New brands: agreement on all auto-filed rows | {pct(t['rules']['covered_agreement'])} | {pct(t['rules_then_model']['covered_agreement'])} |
+| New local shops: share sent to review | {pct(l['rules']['review_rate'])} | {pct(l['rules_then_model']['review_rate'])} |
+| New local shops: agreement where the model files | n/a | {pct(l['filed_by']['model']['agreement'])} |
+| New local shops: agreement on all auto-filed rows | {pct(l['rules']['covered_agreement'])} | {pct(l['rules_then_model']['covered_agreement'])} |
+| Macro-F1, new brands / new local shops (rules can't categorise unknown merchants by design) | {pts(t['rules']['macro_f1'])} / {pts(l['rules']['macro_f1'])} | {pts(t['rules_then_model']['macro_f1'])} / {pts(l['rules_then_model']['macro_f1'])} |
 
-Calibration error (ECE) {t['model']['ece']} on unseen merchants. Model B (a 16 MB multilingual static embedding with a
-logistic-regression head) was evaluated too and not shipped: it sent more rows to review than the rules.
+Calibration error (ECE) {t['model']['ece']} on new brands. Model B (a 16 MB multilingual static embedding with a
+logistic-regression head) was evaluated too and not chosen: its macro-F1 is far lower.
 
 ## Limits
 
 - Every number is measured on **synthetic** narrations against **LLM** labels; real narrations and the teacher's own
   mistakes are not measured. Synthetic test merchants are unseen *names* but come from the same generator.
-- On unseen brands the model can only use the shape of the name. Known merchants and the model together file
-  {pct(1 - t['rules_then_model']['review_rate'])} of unseen-merchant narrations and agree with the teacher on {pct(t['rules_then_model']['covered_agreement'])} of those, below the 90% the
-  model's threshold was tuned to on validation.
+- On new brands the model can only use the shape of the name. Its threshold was set on validation so that the rows
+  it files agree with the teacher ≥ 90% there; on the fresh new brands they agree {pct(t['filed_by']['model']['agreement'])}.
+- The known-merchant step before it agrees with the teacher on only {pct(t['filed_by']['known_merchant']['agreement'])} of the fresh-brand rows it files
+  ({pct(t['filed_by']['known_merchant']['share_of_rows'])} of rows), so all auto-filed rows together agree {pct(t['rules_then_model']['covered_agreement'])}.
 - Bank narrations of payments to *people* can be filed by the remark ("Rent"), as the rules already did
   (see evaluation.md). UPI-app payments to people never reach the model.
 - English-script narrations only were generated; the model has not been tested on other scripts.
