@@ -1,7 +1,8 @@
 # Phase 8 report: guided tour, getting-started checklist, samples and simulations
 
 Branch `rebuild/phase8`, built on `rebuild/phase9`. That is the brief's first choice: Phase 9's report says it
-finished, with CI green. Pushed; PR #1 updated and still marked DO NOT MERGE.
+finished, with CI green. Pushed; PR #1 updated and still marked DO NOT MERGE. GitHub Actions run 39099999998 is
+green: all eight jobs, every browser engine and device. It took three CI runs; the fixes are below.
 
 ## What each step did
 
