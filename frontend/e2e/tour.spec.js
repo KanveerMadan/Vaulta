@@ -1,7 +1,7 @@
 // The guided tour and the getting-started checklist (Phase 8 steps 1–2): real data, empty states, keyboard, resume,
 // replay, phones (bottom sheet), accessibility, deep links, hide/restore, and neither in the demo.
 import AxeBuilder from '@axe-core/playwright'
-import { test, expect, checkLayout, newAccount, callApi, seedData, signIn } from './fixtures'
+import { test, expect, checkLayout, newAccount, callApi, seedData, signIn, reopen } from './fixtures'
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 const STEPS = 7
@@ -39,15 +39,18 @@ test('walks through the home page with the user\'s own numbers, by keyboard, and
   await card(page).getByRole('button', { name: 'Next' }).click()
   await expect(card(page)).toHaveAccessibleName('Questions that fix your numbers')
   await expect.poll(async () => (await callApi(request, a, 'GET', '/api/tour')).step).toBe(2)
-  await page.reload()                                                    // the server kept the place
+  await reopen(page)                                                     // the server kept the place
   await expect(card(page)).toHaveAccessibleName('Questions that fix your numbers')
 
-  for (let i = 3; i < STEPS; i++) await card(page).getByRole('button', { name: 'Next' }).click()
+  for (let i = 3; i < STEPS; i++) {                                     // by key: see "without data" below
+    await card(page).getByRole('button', { name: 'Next' }).press('Enter')
+    await expect(card(page)).toContainText(`Step ${i + 1} of ${STEPS}`)
+  }
   await expect(card(page)).toHaveAccessibleName("That's the tour")
   await card(page).getByRole('button', { name: 'Done' }).click()
   await expect(tour(page)).toHaveCount(0)
   await expect.poll(async () => (await callApi(request, a, 'GET', '/api/tour')).status).toBe('done')
-  await page.reload()
+  await reopen(page)
   await expect(page.getByText('Safe to spend today')).toBeVisible()
   await expect(tour(page)).toHaveCount(0)                                // finished: doesn't come back by itself
 })
@@ -84,7 +87,7 @@ test('without data, the steps say what will appear', async ({ page, request }) =
   await expect(card(page)).toContainText('Once Vaulta knows your income or a budget')
   for (let i = 1; i <= 3; i++) {
     // a key press, not a pointer click: the card follows the smooth scroll to the next element, and Firefox's clicks
-    // could land beside a card still moving
+    // could land beside a card still moving (the pointer click itself is tested once, in the first test)
     await card(page).getByRole('button', { name: 'Next' }).press('Enter')
     await expect(card(page)).toContainText(`Step ${i + 1} of ${STEPS}`)
   }

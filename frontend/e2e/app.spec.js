@@ -70,7 +70,7 @@ test('sign up → onboarding, all four steps', async ({ page, request }, testInf
   await expect(page.getByRole('dialog', { name: 'Safe to spend today' })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('tour')).toHaveCount(0)
-  await page.reload()
+  await reopen(page)
   await expect(page).not.toHaveURL(/onboarding/)                // done: not sent back
 })
 

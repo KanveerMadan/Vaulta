@@ -1,4 +1,4 @@
-import { test, expect, checkLayout, openMenu, openChatPanel } from './fixtures'
+import { test, expect, checkLayout, openMenu, openChatPanel, reopen } from './fixtures'
 
 test('landing → demo → home renders every card', async ({ page }, testInfo) => {
   await page.goto('/')
@@ -34,7 +34,7 @@ test('demo is read-only', async ({ page, guard }, testInfo) => {
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
   await page.getByLabel('Let me ask questions in chat').click()
   await expect(page.getByRole('alert').filter({ hasText: 'read-only' })).toBeVisible()
-  await page.reload()
+  await reopen(page)
   await expect(page.getByLabel('Let me ask questions in chat')).toBeChecked()   // nothing changed
 
   await openMenu(page)
