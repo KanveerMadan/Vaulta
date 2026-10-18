@@ -99,7 +99,16 @@ that happens, re-enable the workflow in the Actions tab.
 
 ### Vercel: web app (Production and Preview)
 
-All `VITE_*` values are compiled into the public JavaScript, so none of them is a secret.
+All `VITE_*` values are compiled into the public JavaScript, so none of them is a secret. `backend/.env.example` and
+`frontend/.env.example` list every name for local development.
+
+- **Production** (builds of `main`): every variable below, with `VITE_API_BASE_URL` set to the production API.
+- **Preview** (every other pushed branch): only `VITE_SECURITY_CONTACT`, `VITE_PRIVACY_CONTACT` and the Firebase web
+  config, so previews build. **Leave `VITE_API_BASE_URL` unset for Preview**: previews then have no API to call, and
+  with `BACKEND_CORS_ORIGIN_REGEX` unset on Render the production API refuses their origin anyway. Previews sit
+  behind Vercel's login (Deployment Protection), which should stay on.
+- SPA routing: `frontend/vercel.json` serves `index.html` for every path that isn't a file; `src/vercelConfig.test.js`
+  checks the file with Vercel's own parser.
 
 | Variable | What |
 |---|---|

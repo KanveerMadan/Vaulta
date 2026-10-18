@@ -76,3 +76,10 @@ def test_app_exits_at_startup_in_production_without_secrets(tmp_path):
 def test_production_refuses_an_app_check_debug_token():
     with pytest.raises(ValidationError, match="APP_CHECK_DEBUG_TOKEN"):
         make(**{**PROD, "APP_CHECK_DEBUG_TOKEN": "x"})
+
+
+def test_the_launch_origins_are_accepted_and_only_they_are_allowed():
+    """docs/deploy.md's BACKEND_CORS_ORIGINS for launch: the domain, www and the Vercel production URL."""
+    launch = "https://vaulta.in,https://www.vaulta.in,https://vaulta-henna.vercel.app"
+    s = make(**{**PROD, "BACKEND_CORS_ORIGINS": launch})
+    assert s.cors_origins() == ["https://vaulta.in", "https://www.vaulta.in", "https://vaulta-henna.vercel.app"]
