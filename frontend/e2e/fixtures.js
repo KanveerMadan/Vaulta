@@ -13,6 +13,8 @@ export const test = base.extend({
     const allowed = []   // console messages a test expects (e.g. the 403 a demo write produces)
     const origins = new Set(ALLOWED_ORIGINS)   // + origins a test opts into (guard.allowOrigin), each documented there
     page.on('console', (msg) => {
+      // Firefox logs a font download cut off by leaving the page (NS_BINDING_ABORTED, 2152398850) as an error
+      if (/^\[JavaScript Error: "downloadable font: download failed .* status=2152398850 source: http:\/\/localhost:4173\//.test(msg.text())) return
       if (msg.type() === 'error' && !allowed.some((re) => re.test(msg.text()))) problems.push(`console: ${msg.text()}`)
     })
     page.on('pageerror', (err) => {

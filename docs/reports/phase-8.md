@@ -85,6 +85,11 @@ finished, with CI green. Pushed; PR #1 updated and still marked DO NOT MERGE.
     any CORS error, and the backend tests check CORS directly.
   - Sign-in retries once if the page never sends the sign-in request (WebKit once stalled starting Firebase Auth
     on CI).
+- **Second CI run (2 of 364 failed):**
+  - The iPhone transactions page still opened mid-scroll. The list's window virtualizer adjusted the scroll as it
+    measured rows, after the reset had run. The reset now runs in the same commit as the new page.
+  - Firefox logs a font download cancelled by leaving the page (`NS_BINDING_ABORTED`) as an error. That one case is
+    ignored; any other font or console error still fails.
 
 ## Results
 
@@ -94,6 +99,8 @@ finished, with CI green. Pushed; PR #1 updated and still marked DO NOT MERGE.
 | Frontend unit / lint / build | 224 passed / clean / OK |
 | Playwright, all 18 projects (macOS): Chromium, Firefox, WebKit, iPhone WebKit and 9 device profiles | 364 passed, 8 skipped, 0 failed; after the CI fixes, 362 passed and 2 failed (the tour snapshot, one pixel row off under load) |
 | Tour and try specs after the CI fixes, 3 repeats on Chromium, mobile, Firefox, WebKit and iPhone WebKit | 105 passed |
+| Full matrix after the second CI run's fixes (macOS) | 358 passed, 8 skipped, 6 failed: Chromium failed to launch within 3 minutes while the machine was stalled; those 8 a11y tests then passed alone |
+| Try spec on mobile and iPhone WebKit, 6 repeats | 24 passed |
 | Tour snapshots after the fix (centred in whole pixels until still), 4 repeats under load | macOS 60 passed, Linux 60 passed |
 | Visual and device snapshots on Linux (Docker) | 76 passed |
 | Lighthouse (5 cold runs, mobile profile) | Landing 100/100/100, CLS 0 · Home 99–100/100/100, LCP 1.9–2.1 s, CLS 0 |

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useState } from 'react'
 import { Outlet, NavLink, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { useApi } from '../lib/format'
 import { signOut } from 'firebase/auth'
@@ -37,8 +37,10 @@ export default function Layout() {
   const { pathname, hash } = useLocation()
   const navType = useNavigationType()
 
-  // a new page opens at its top (back/forward keep the browser's own position; #links scroll to their target)
-  useEffect(() => { if (navType !== 'POP' && !hash) window.scrollTo(0, 0) }, [pathname, hash, navType])
+  // A new page opens at its top (back/forward keep the browser's own position; #links scroll to their target). A layout
+  // effect, in the same commit as the new page: the transactions list's window virtualizer adjusts the scroll as its
+  // rows are measured, and a later reset lost that race.
+  useLayoutEffect(() => { if (navType !== 'POP' && !hash) window.scrollTo(0, 0) }, [pathname, hash, navType])
 
   useEffect(() => {
     const show = (e) => setReadOnly(e.detail || "The demo is read-only.")
