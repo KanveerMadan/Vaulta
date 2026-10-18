@@ -118,6 +118,26 @@ def test_personal_memory_overrides_the_model(client, tiny_model):
     assert txns(client, BOB)["POS SHARMA TEA STALL BANGALORE"]["subcategory"] == "food.street_food"
 
 
+def test_user_rules_and_corrections_always_beat_the_model_and_the_device(client, tiny_model):
+    # a rule the user made: every narration of the merchant follows it, whatever the model or the browser predicts
+    rule = {"merchant_key": "raju kirana store", "merchant": "Raju Kirana", "field": "category", "value": "Shopping"}
+    assert client.post("/api/rules", json=rule, headers=ALICE).status_code == 201
+    post(client, [row(description_raw="RAJU KIRANA STORE", reference="412345678901"),
+                  row(description_raw="RAJU KIRANA STORE", date="2024-03-09", reference="412345678902",
+                      predicted_subcategory="groceries.kirana", predicted_confidence=0.99)])
+    items = client.get("/api/transactions", headers=ALICE).json()["items"]
+    assert [t["category"] for t in items if t["merchant_raw"] == "RAJU KIRANA STORE"] == ["Shopping", "Shopping"]
+    post(client, [row(description_raw="RAJU KIRANA STORE", reference="412345678901")], headers=BOB)     # no rule: the model
+    assert txns(client, BOB)["RAJU KIRANA STORE"]["category"] == "Groceries"
+    # a correction: a similar later narration follows it, even with a confident on-device prediction
+    post(client, [row(description_raw="UPI-SHARMA TEA STALL-S***@ybl-Payment", reference="412345678903")])
+    first = txns(client)["UPI-SHARMA TEA STALL-S***@ybl-Payment"]
+    client.patch(f"/api/transactions/{first['id']}", json={"subcategory": "food.canteen"}, headers=ALICE)
+    post(client, [row(description_raw="POS SHARMA TEA STALL BANGALORE", date="2024-03-10", reference="412345678904",
+                      predicted_subcategory="food.street_food", predicted_confidence=0.99)])
+    assert txns(client)["POS SHARMA TEA STALL BANGALORE"]["subcategory"] == "food.canteen"
+
+
 def test_recategorising_is_dry_run_reversible_and_never_touches_corrections(client, tiny_model, monkeypatch):
     monkeypatch.setattr(settings, "MERCHANT_MODEL_ENABLED", False)          # imported under the rules alone
     post(client, [row(description_raw="UPI-RAJU KIRANA-R***@okaxis", reference="412345678901"),
