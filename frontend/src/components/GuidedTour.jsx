@@ -51,7 +51,8 @@ export default function GuidedTour({ steps, start = 0, onFinish }) {
 
   // focus the card on every step, keep Tab inside it, arrows move, Escape skips
   useEffect(() => { box.current?.querySelector("[data-primary]")?.focus(); }, [i]);
-  useEffect(() => {
+  // a layout effect: the keys work as soon as the card is on screen (a passive effect could run after a quick Escape)
+  useLayoutEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") { e.preventDefault(); onFinish("skipped"); }
       else if (e.key === "ArrowRight") { e.preventDefault(); go(i + 1); }
