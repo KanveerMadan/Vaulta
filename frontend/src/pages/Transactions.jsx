@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useNavigationType, useSearchParams } from "react-router-dom";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { MagnifyingGlass, Receipt } from "@phosphor-icons/react";
 import api from "../lib/api";
@@ -74,6 +74,11 @@ export default function Transactions() {
     overscan: 8,
     scrollMargin: listTop,
   });
+  // A list opened afresh starts at its top, set through the virtualizer so its own idea of the position agrees with the
+  // window's: it starts from the previous page's position, and in WebKit it went on compensating against that as rows
+  // were measured, which left a newly opened list at its middle. Back/forward keep their place.
+  const navType = useNavigationType();
+  useLayoutEffect(() => { if (navType !== "POP") virtualizer.scrollToOffset(0); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const virtual = virtualizer.getVirtualItems();
   const lastIndex = virtual.length ? virtual[virtual.length - 1].index : 0;
   useEffect(() => { if (lastIndex >= items.length - 20) more(); }, [lastIndex, items.length]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -61,6 +61,9 @@
     "brace-expansion@2": "2.1.7",
     "brace-expansion@5": "5.0.12",
     "@grpc/grpc-js": "^1.14.5",
-    "basic-ftp": "6.2.1"
+    "basic-ftp": "6.2.1",
+    "@vercel/routing-utils": {
+      "path-to-regexp": "6.3.0"
+    }
   }
 }
