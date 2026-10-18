@@ -29,3 +29,4 @@ httpx==0.28.1
 
 # Payments (razorpay 2.x reads its version with importlib.metadata, so no setuptools pin is needed)
 razorpay==2.0.1
+sentry-sdk==2.71.0

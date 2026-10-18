@@ -56,6 +56,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.database import db_ready, wait_for_db
+from app.core import monitoring
+
+monitoring.init()       # error monitoring, scrubbed (app/core/monitoring.py); off unless SENTRY_DSN is set
 
 
 @asynccontextmanager

@@ -88,6 +88,9 @@ class Settings(BaseSettings):
         """Alias so main.py's APP_ENV references keep working."""
         return self.ENVIRONMENT
 
+    # ── Error monitoring (app/core/monitoring.py): off unless set ────────────
+    SENTRY_DSN: str = ""
+
     # ── Groq (Phase 3) ───────────────────────────────────────────────────────
     GROQ_API_KEY: str = ""
     # Any Groq chat model with tool calling
