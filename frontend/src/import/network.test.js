@@ -2,6 +2,7 @@
 // StatementUpload.jsx calls (parseStatement → sanitizeRows → sendRows) with a
 // recording transport, and assert that only JSON rows leave the device.
 import { readFileSync, readdirSync } from "node:fs";
+import { parseCsvText } from "./readers.js";
 import { describe, expect, it } from "vitest";
 import { parseStatement } from "./index.js";
 import { sanitizeRows } from "./pii.js";
@@ -52,6 +53,29 @@ describe("import flow sends only JSON rows", () => {
       }
     });
   }
+
+  it("no balance ever leaves the device: only rows go, and no row carries a balance or a balance figure", async () => {
+    for (const name of ["hdfc.csv", "sbi.csv", "axis.csv", "icici.csv", "kotak.csv"]) {
+      const text = await fixtureFile(name).text();
+      const table = parseCsvText(text);
+      const header = table.find((r) => r.some((c) => /balance/i.test(c)));
+      const col = header.findIndex((c) => /balance/i.test(c));
+      const parsed = await parseStatement(fixtureFile(name), { pdfjs });
+      expect(parsed.balance_check, name).toMatch(/^(pass|fail)$/);             // checked on the device
+      const { rows } = sanitizeRows(parsed.rows);
+      const api = recordingApi();
+      await sendRows(api, rows);
+      const wire = JSON.stringify(api.calls.map((c) => c.body));
+      expect(wire).not.toMatch(/balance/i);
+      const amounts = new Set(rows.map((r) => Number(r.amount).toFixed(2)));
+      const balances = table.slice(table.indexOf(header) + 1).map((r) => String(r[col] ?? "").trim()).filter(Boolean)
+        .filter((b) => !amounts.has(Number(b.replace(/[,\s]|Dr|Cr/gi, "")).toFixed(2)));   // unless it equals an amount
+      for (const b of balances) {
+        expect(wire, `${name}: ${b}`).not.toContain(b);
+        expect(wire, `${name}: ${b}`).not.toContain(Number(b.replace(/[,\s]|Dr|Cr/gi, "")).toFixed(2));
+      }
+    }
+  });
 
   it("password never leaves parseStatement", async () => {
     const parsed = await parseStatement(fixtureFile("gpay_locked.pdf"), { pdfjs, password: "RAHU0503" });

@@ -5,7 +5,7 @@
 // amount: positive decimal string "1234.50"; direction: "debit" | "credit"
 // type: "transaction" | "transfer" (own-account movement, e.g. card bill payment)
 import { decodeText, parseCsvText, readSpreadsheet, loadPdfjs } from "./readers.js";
-import { findBankHeader, parseBankRows, BANKS } from "./banks.js";
+import { findBankHeader, parseBankRows, bankBalanceCheck, BANKS } from "./banks.js";
 import { parseUpiStatement, UPI_SOURCES } from "./upi.js";
 import { detectCardIssuer, parseCardStatement, ISSUERS } from "./creditCard.js";
 import { extractPdf, ocrPagesResult, PdfPasswordError } from "./pdfExtract.js";
@@ -45,8 +45,12 @@ async function fromTable(table, format) {
   const found = findBankHeader(table);
   if (found) {
     const header = table[found.headerIndex];
-    const rows = parseBankRows(found.bank, header, table.slice(found.headerIndex + 1), "bank_csv");
-    if (rows.length) return { status: "ok", rows, source_type: "bank_csv", source_label: BANKS[found.bank].label, format };
+    const body = table.slice(found.headerIndex + 1);
+    const rows = parseBankRows(found.bank, header, body, "bank_csv");
+    if (rows.length) {
+      return { status: "ok", rows, source_type: "bank_csv", source_label: BANKS[found.bank].label, format,
+               balance_check: bankBalanceCheck(found.bank, header, body) };
+    }
     return needsMapping(header, table.slice(found.headerIndex + 1), "bank_csv", format);
   }
   const h = guessHeaderRow(table);

@@ -18,7 +18,7 @@ export const TRUST = [
     id: "stripped",
     landing: true,
     claim: "Account numbers, balances and passwords are never stored.",
-    how: "The importer skips the statement header, the account number and the running balance column, and removes account and card numbers from descriptions before anything is sent. A statement's PDF password is used on your device to open the file and is never sent. Sign-in is handled by Google's Firebase, so Vaulta's servers never see your login password either.",
+    how: "The importer leaves out the statement header, the account number and the running balance, and removes account and card numbers from descriptions before anything is sent. The balances are only used on your device to check that the rows read add up to the statement's closing balance; the preview shows whether they do, never the figures. A statement's PDF password is used on your device to open the file and is never sent. Sign-in is handled by Google's Firebase, so Vaulta's servers never see your login password either.",
     checked: "Unit tests of every statement parser and of the personal-data stripping; browser tests of the import preview.",
   },
   {

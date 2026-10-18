@@ -2,7 +2,9 @@
 //
 // Parsers already emit only the eight row fields, so account numbers in
 // headers, customer name, address, running balance and header/footer rows
-// are never read into a row. What remains is personal data embedded in the
+// are never read into a row (the running balance is read once, on the device,
+// for the balance check in banks.js, and only pass/fail comes out of it).
+// What remains is personal data embedded in the
 // description and reference text, handled here:
 //   - personal UPI IDs  → "R***@okaxis"
 //   - phone numbers     → "XXXXXXXX10" (last 2 digits kept)

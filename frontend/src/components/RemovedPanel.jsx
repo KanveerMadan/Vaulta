@@ -48,7 +48,7 @@ export default function RemovedPanel({ rawRows, cleanRows, removed }) {
         {NEVER_READ.map((label, i) => (
           <li key={label} className="text-sm text-ink-2 flex items-start gap-2">
             <span aria-hidden className="mt-[3px] text-danger font-semibold leading-none">×</span>
-            <span className="never-read" style={{ '--i': i }}><span className="sr-only">Not read: </span>{label}</span>
+            <span className="never-read" style={{ '--i': i }}><span className="sr-only">Not imported: </span>{label}</span>
           </li>
         ))}
       </ul>

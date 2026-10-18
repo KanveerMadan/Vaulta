@@ -6,7 +6,7 @@ import { subcategoryName } from "../lib/categories";
 import api from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { parseStatement, ImportError } from "../import";
-import { applyMapping, guessMapping } from "../import/mapping";
+import { applyMapping, guessMapping, mappedBalanceCheck } from "../import/mapping";
 import { sanitizeRows } from "../import/pii";
 import RemovedPanel from "./RemovedPanel";
 import { sendRows, loadTemplate, saveTemplate } from "../import/submit";
@@ -68,6 +68,17 @@ function useMerchantModel() {
   return model;
 }
 
+// Whether the statement's running balances add up with the rows read (import/banks.js). Only the outcome is shown:
+// the balances themselves stay in the parser and are never sent.
+function BalanceCheck({ result }) {
+  if (!result) return null;
+  return result === "pass"
+    ? <p className="text-sm text-ink-700" data-testid="balance-check">Balances check out: the statement's opening balance plus these rows gives its closing balance.</p>
+    : <p role="status" className="bg-gold/10 border border-gold/30 rounded-xl px-3 py-2.5 text-sm text-ink-700" data-testid="balance-check">
+        Balances don't add up: some rows in the file couldn't be read, or were read wrongly. Compare the rows below with your statement before importing.
+      </p>;
+}
+
 function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit, sample = false }) {
   const { rows, removed, lowConfidence } = parsed;
   const model = useMerchantModel();
@@ -89,6 +100,8 @@ function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit
           {fmtDate(dates[0])} to {fmtDate(dates[dates.length - 1])}
         </p>
       </div>
+
+      <BalanceCheck result={parsed.balance_check} />
 
       {lowConfidence.size > 0 && (
         <div className="bg-gold/10 border border-gold/30 rounded-xl px-3 py-2.5 text-sm text-ink-700">
@@ -242,13 +255,13 @@ export default function StatementUpload({ onSuccess, onClose, sample = null }) {
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const showRows = (rows, source_type, source_label) => {
+  const showRows = (rows, source_type, source_label, balance_check = null) => {
     if (!rows.length) {
       setError("No transactions found in this file.");
       setStep("pick");
       return;
     }
-    setRawResult({ rows, source_type, source_label });
+    setRawResult({ rows, source_type, source_label, balance_check });
     setStep("preview");
   };
 
@@ -264,7 +277,7 @@ export default function StatementUpload({ onSuccess, onClose, sample = null }) {
       }
       setPassword(""); // never kept beyond opening the file
       if (parsed.status === "ok") {
-        showRows(parsed.rows, parsed.source_type, parsed.source_label);
+        showRows(parsed.rows, parsed.source_type, parsed.source_label, parsed.balance_check);
         return;
       }
       // needs_mapping: reuse a saved mapping for this header layout if there is one
@@ -273,7 +286,7 @@ export default function StatementUpload({ onSuccess, onClose, sample = null }) {
       if (template && template.column_count === parsed.table.header.length) {
         const rows = applyMapping(parsed.table, template.mapping, { source_type: parsed.source_type, source_label: label });
         if (rows.length) {
-          showRows(rows, parsed.source_type, label);
+          showRows(rows, parsed.source_type, label, mappedBalanceCheck(parsed.table, template.mapping));
           return;
         }
       }
@@ -307,7 +320,7 @@ export default function StatementUpload({ onSuccess, onClose, sample = null }) {
     const { fingerprint, table, source_type, label } = mappingState;
     saveTemplate(api, fingerprint, { columnCount: table.header.length, sourceType: source_type, mapping })
       .catch(() => {}); // remembering the layout is a convenience; import continues without it
-    showRows(rows, source_type, label);
+    showRows(rows, source_type, label, mappedBalanceCheck(table, mapping));
   };
 
   const confirm = async (rows) => {

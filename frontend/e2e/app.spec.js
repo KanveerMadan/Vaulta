@@ -84,6 +84,8 @@ test('statement import: file → preview → confirm → transactions appear', a
   await page.locator('input[type=file]').setInputFiles(STATEMENT)
   await expect(page.getByText('processed on your device and never uploaded').first()).toBeVisible()
   await expect(page.getByText(/transactions from HDFC Bank/)).toBeVisible()
+  // the fixture has rows the parser can't read (a bad date, an empty narration): its running balances say so
+  await expect(page.getByTestId('balance-check')).toContainText("Balances don't add up")
   await checkLayout(page, testInfo)
   await page.getByRole('button', { name: /^Import \d+ transactions$/ }).click()
   await expect(page.getByText('Added', { exact: true })).toBeVisible()

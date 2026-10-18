@@ -28,6 +28,7 @@ test('bank alert, statement and quick add samples, labelled and cleared in one c
   const sheet = page.getByRole('dialog', { name: 'Sample statement' })
   await expect(sheet.getByText(/transactions from HDFC Bank/)).toBeVisible()
   await expect(sheet.getByText(/This is a sample\. Nothing is imported/)).toBeVisible()
+  await expect(sheet.getByTestId('balance-check')).toContainText('Balances check out')
   await expect(sheet.getByText(/A\*\*\*@okaxis/).first()).toBeVisible()                    // the personal UPI ID, masked here
   await expect(sheet.getByRole('button', { name: /^Import \d+ transactions$/ })).toHaveCount(0)
   await expect(sheet.getByRole('link', { name: 'Import your own statement' })).toBeVisible()

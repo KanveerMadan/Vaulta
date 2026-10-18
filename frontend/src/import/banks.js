@@ -86,48 +86,101 @@ export function findBankHeader(table) {
   return null;
 }
 
+/** One data row of a detected bank's table, or null when it isn't a transaction the parser can read. */
+function parseBankRow(bank, names, cells, sourceType, confidence) {
+  const row = {};
+  names.forEach((name, i) => { row[name] = cells[i] == null ? "" : String(cells[i]); });
+  const get = (name) => (name in row ? row[name] : "");
+  const findKey = (needle) => names.find((k) => k.toLowerCase().includes(needle));
+
+  const dateStr = (bank.dateFallback && !(bank.date in row) ? get(bank.dateFallback) : get(bank.date)).trim();
+  if (!dateStr) return null;
+  const description = get(bank.description).trim();
+  if (!description) return null;
+
+  const debitKey = bank.debitContains ? findKey(bank.debitContains) : bank.debit;
+  if (!debitKey) return null;
+  const creditKey = bank.creditContains ? findKey(bank.creditContains) : bank.credit;
+
+  const debit = parseAmount(get(debitKey));
+  const credit = debit ? null : parseAmount(creditKey ? get(creditKey) : "");
+  if (!debit && !credit) return null;
+
+  const parsed = parseDate(dateStr, bank.formats);
+  if (!parsed) return null;
+
+  return {
+    date: formatDate(parsed),
+    description_raw: description,
+    amount: debit || credit,
+    direction: debit ? "debit" : "credit",
+    reference: get(bank.reference).trim() || null,
+    source_type: sourceType,
+    source_label: bank.label,
+    type: "transaction",
+    ...((confidence ?? 100) < LOW_CONFIDENCE && { low_confidence: true }),
+  };
+}
+
 /**
  * Parse data rows for a detected bank. `header` and `rows` are arrays of cells.
  * Rows that fail (no date, no description, unparseable date, no amount) are
  * skipped, like the Python per-row try/except.
  */
 export function parseBankRows(bankKey, header, rows, sourceType = "bank_csv", rowConfidence = null) {
-  const bank = BANKS[bankKey];
   const names = header.map((h) => String(h ?? "").trim());
-  const out = [];
-  for (const [i, cells] of rows.entries()) {
-    const row = {};
-    names.forEach((name, i) => { row[name] = cells[i] == null ? "" : String(cells[i]); });
-    const get = (name) => (name in row ? row[name] : "");
-    const findKey = (needle) => names.find((k) => k.toLowerCase().includes(needle));
+  return rows.map((cells, i) => parseBankRow(BANKS[bankKey], names, cells, sourceType, rowConfidence?.[i]))
+    .filter(Boolean);
+}
 
-    const dateStr = (bank.dateFallback && !(bank.date in row) ? get(bank.dateFallback) : get(bank.date)).trim();
-    if (!dateStr) continue;
-    const description = get(bank.description).trim();
-    if (!description) continue;
+// ── Balance check ─────────────────────────────────────────────────────────────────────────────────────────────
+// The running balance is read here, on the device, only to check the import and never leaves this module: no row
+// carries it, and the preview shows only whether the balances add up (go-live stage 2).
 
-    const debitKey = bank.debitContains ? findKey(bank.debitContains) : bank.debit;
-    if (!debitKey) continue;
-    const creditKey = bank.creditContains ? findKey(bank.creditContains) : bank.credit;
+/** A running-balance cell in paise ("1,23,456.78", "-500.00", "500.00 Dr" overdrawn), or null. */
+export function parseBalance(raw) {
+  let s = String(raw ?? "").replace(/[,\s₹]/g, "");
+  if (!s) return null;
+  let sign = 1;
+  const suffix = s.match(/(Dr|Cr)\.?$/i);
+  if (suffix) { sign = /dr/i.test(suffix[1]) ? -1 : 1; s = s.slice(0, suffix.index); }
+  if (!/^-?(\d+\.?\d{0,2}|\.\d{1,2})$/.test(s)) return null;
+  return sign * Math.round(Number(s) * 100);
+}
 
-    const debit = parseAmount(get(debitKey));
-    const credit = debit ? null : parseAmount(creditKey ? get(creditKey) : "");
-    if (!debit && !credit) continue;
+const paise = (amount) => Math.round(Number(amount) * 100);
 
-    const parsed = parseDate(dateStr, bank.formats);
-    if (!parsed) continue;
+/**
+ * entries: [{balance, delta}] in statement order: the row's running balance and its signed amount in paise (delta
+ * null when the parser dropped the row). "pass" when every balance follows from the one before it (oldest first or
+ * newest first), so the opening balance plus the imported rows gives the closing one; "fail" otherwise; null when
+ * there is nothing to check.
+ */
+export function reconcileBalances(entries) {
+  const e = entries.filter((x) => x.balance != null);
+  if (e.length < 2) return null;
+  const ascending = e.every((x, i) => i === 0 || (x.delta != null && e[i - 1].balance + x.delta === x.balance));
+  const descending = e.every((x, i) => i === 0 || (e[i - 1].delta != null && x.balance + e[i - 1].delta === e[i - 1].balance));
+  return ascending || descending ? "pass" : "fail";
+  // ponytail: the first row (oldest-first) is checked only against the rows after it; a printed opening balance
+  // line would check it too
+}
 
-    out.push({
-      date: formatDate(parsed),
-      description_raw: description,
-      amount: debit || credit,
-      direction: debit ? "debit" : "credit",
-      reference: get(bank.reference).trim() || null,
-      source_type: sourceType,
-      source_label: bank.label,
-      type: "transaction",
-      ...((rowConfidence?.[i] ?? 100) < LOW_CONFIDENCE && { low_confidence: true }),
-    });
-  }
-  return out;
+/** The balance check for a detected bank's table: the same row parse as parseBankRows. */
+export function bankBalanceCheck(bankKey, header, rows) {
+  const names = header.map((h) => String(h ?? "").trim());
+  const col = names.findIndex((n) => /balance/i.test(n));
+  if (col < 0) return null;
+  const bank = BANKS[bankKey];
+  const amountCols = names.map((n, i) => [n.toLowerCase(), i]).filter(([n]) =>
+    n === lc(bank.debit) || n === lc(bank.credit) || (bank.debitContains && n.includes(bank.debitContains)) ||
+    (bank.creditContains && n.includes(bank.creditContains))).map(([, i]) => i);
+  return reconcileBalances(rows.map((cells) => {
+    const r = parseBankRow(bank, names, cells, "bank_csv");
+    // a line with a balance but no amount ("Opening balance", "B/F") moves nothing; one with an amount that the
+    // parser couldn't read is a transaction the import would miss
+    const delta = r ? (r.direction === "credit" ? 1 : -1) * paise(r.amount)
+      : amountCols.some((i) => parseAmount(cells[i])) ? null : 0;
+    return { balance: parseBalance(cells[col]), delta };
+  }));
 }
