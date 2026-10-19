@@ -136,7 +136,7 @@ test('reduced motion gets the designed still story', async ({ page }, testInfo) 
 })
 
 test('public pages have their own title, description and canonical on vaulta.in; the app has none', async ({ page }) => {
-  for (const [path, title] of [['/welcome', 'Vaulta: every rupee, tracked'], ['/security', 'Security and privacy · Vaulta'], ['/privacy', 'Privacy policy · Vaulta']]) {
+  for (const [path, title] of [['/welcome', 'Vaulta: every rupee, tracked'], ['/security', 'Security and privacy · Vaulta'], ['/privacy', 'Privacy policy · Vaulta'], ['/terms', 'Terms of service · Vaulta']]) {
     await page.goto(path)
     await expect(page).toHaveTitle(title)
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://vaulta.in${path}`)

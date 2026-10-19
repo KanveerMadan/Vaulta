@@ -9,6 +9,7 @@ export const PUBLIC_PAGES = {
   '/welcome': { title: DEFAULT_TITLE, description: 'Vaulta tracks every rupee you spend, automatically. Your statements are read on your phone; only clean transaction rows reach us. Try the demo, no sign-up needed.' },
   '/security': { title: 'Security and privacy · Vaulta', description: 'How Vaulta protects your money data: what is read on your device, what reaches our servers, how it is encrypted, and what is never collected.' },
   '/privacy': { title: 'Privacy policy · Vaulta', description: 'What Vaulta collects and why, what it never collects, who else handles it, how long it is kept, and your rights.' },
+  '/terms': { title: 'Terms of service · Vaulta', description: 'The terms for using Vaulta: it is free, your data stays yours, it is not financial advice, and you can export or delete everything at any time.' },
 }
 
 function tag(selector, create) {

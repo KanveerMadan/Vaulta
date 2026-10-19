@@ -183,7 +183,7 @@ export default function Login() {
             )}
           </div>
           <p className="text-xs mt-8 text-muted">
-            By continuing you agree to our terms of service. <Link to="/security" className="underline">What happens to your data</Link>
+            By continuing you agree to our <Link to="/terms" className="underline">terms of service</Link>. <Link to="/security" className="underline">What happens to your data</Link>
           </p>
           <RecaptchaNotice className="mt-2" />
         </div>

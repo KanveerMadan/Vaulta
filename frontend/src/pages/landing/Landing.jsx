@@ -155,6 +155,7 @@ export default function Landing() {
           <nav aria-label="Footer" className="flex gap-4">
             <Link to="/security" className="hover:text-ink">Security</Link>
             <Link to="/privacy" className="hover:text-ink">Privacy</Link>
+            <Link to="/terms" className="hover:text-ink">Terms</Link>
             <Link to="/login" className="hover:text-ink">Log in</Link>
           </nav>
         </div>

@@ -90,7 +90,7 @@ export default function Privacy() {
         <ul className="mt-4 list-disc pl-5 space-y-1">
           <li><span className="text-ink">See your data:</span> Settings → Your data downloads all of it, as JSON and CSV.</li>
           <li><span className="text-ink">Correct it:</span> edit any transaction, category, note, person, budget or goal in the app, or ask us.</li>
-          <li><span className="text-ink">Erase it:</span> Settings → Delete everything, at any time: your data, then your sign-in, with an email to confirm.</li>
+          <li><span className="text-ink">Erase it:</span> Settings → Imports deletes one statement you imported; Reset my data deletes all your financial data and keeps your account; Delete everything removes your data, then your sign-in, with an email to confirm. All at any time.</li>
           <li><span className="text-ink">Withdraw consent:</span> delete your account; turn off AI chat, reports or Telegram individually in Settings.</li>
           <li><span className="text-ink">Nominate someone</span> to exercise these rights if you can't: write to the contact below.</li>
           <li><span className="text-ink">Complain:</span> write to the grievance contact below. If you're not satisfied with the answer, you can complain to the Data Protection Board of India.</li>
@@ -101,7 +101,7 @@ export default function Privacy() {
 
         <h2 className="mt-12 font-display text-2xl text-ink">Grievances and questions</h2>
         <p className="mt-4">
-          Contact for privacy questions, requests and grievances:{' '}
+          Grievance officer: Kanveer Madan. Contact for privacy questions, requests and grievances:{' '}
           {PRIVACY_CONTACT
             ? <a href={`mailto:${PRIVACY_CONTACT}`} className="font-medium text-accent-text underline underline-offset-2">{PRIVACY_CONTACT}</a>
             : <span className="text-ink">set by the deployment</span>}.

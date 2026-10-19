@@ -19,7 +19,7 @@ for (const scheme of ['light', 'dark']) {
     test.use({ colorScheme: scheme })
 
     test('public pages', async ({ page }) => {
-      for (const path of ['/welcome', '/security', '/privacy', '/login', '/verify-email']) {
+      for (const path of ['/welcome', '/security', '/privacy', '/terms', '/login', '/verify-email']) {
         await page.goto(path)
         await audit(page, `${scheme} ${path}`)
       }

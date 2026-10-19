@@ -13,6 +13,7 @@ import Landing from './pages/landing/Landing'   // in the main bundle: the first
 // library with them; the workspace never loads it. Firebase loads off the landing's critical path.
 const Security = lazy(() => import('./pages/Security'))
 const Privacy = lazy(() => import('./pages/Privacy'))
+const Terms = lazy(() => import('./pages/Terms'))
 const Login = lazy(() => import('./pages/Login'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
@@ -106,6 +107,7 @@ export default function App() {
       <Route path="/welcome" element={<Landing />} />
       <Route path="/security" element={page(<Security />)} />
       <Route path="/privacy" element={page(<Privacy />)} />
+      <Route path="/terms" element={page(<Terms />)} />
       <Route path="/verify-email" element={loading ? <Loader /> : page(<VerifyEmail />)} />
       <Route path="/login" element={loading ? <Loader /> : !user ? page(<Login />) : <AfterLogin />} />
       <Route element={<PrivateRoute />}>
