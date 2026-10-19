@@ -4,6 +4,7 @@
 // /internal/inbound-email. Nothing is stored or forwarded anywhere else.
 import PostalMime from "postal-mime";
 import { buildPayload, MAX_BYTES } from "./payload.js";
+import { deliver } from "./deliver.js";
 
 export default {
   async email(message, env) {
@@ -23,11 +24,6 @@ export default {
       authResults: message.headers.get("authentication-results") || message.headers.get("arc-authentication-results"),
     });
     if (!payload) return;
-    const res = await fetch(`${env.API_URL.replace(/\/$/, "")}/internal/inbound-email`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-internal-secret": env.INTERNAL_SECRET },
-      body: JSON.stringify(payload),
-    });
-    if (res.status >= 500) throw new Error(`Vaulta API ${res.status}`);   // let Cloudflare retry
+    await deliver(payload, env);   // waits out a sleeping API; throws (temporary failure) if it stays down
   },
 };

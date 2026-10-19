@@ -35,11 +35,17 @@ jobs:
             echo "::error::Set the repository variable API_URL and the secret INTERNAL_SECRET (docs/deploy.md)."
             exit 1
           fi
-          # a free Render instance can take about a minute to wake: wait for /health first
-          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
-            curl -fsS --max-time 20 "$API_URL/health" > /dev/null && break
-            sleep 10
+          # the API sleeps when idle (no keep-awake) and takes up to about a minute to start: poll /health with
+          # backoff (5, 10, 20, 30, 30… seconds) for up to ~2 minutes, then fail clearly; the next hour catches up
+          start=$SECONDS; delay=5
+          until curl -fsS --max-time 30 "$API_URL/health" > /dev/null; do
+            if [ $((SECONDS - start)) -ge 120 ]; then
+              echo "::error::The API didn't wake within 2 minutes; the next hourly run will catch up."
+              exit 1
+            fi
+            sleep $delay; delay=$((delay * 2 > 30 ? 30 : delay * 2))
           done
+          echo "API awake after $((SECONDS - start))s"
           # the response is counts only (users, reports, alerts…); the secret is sent as a header and never printed
           curl -fsS --max-time 600 --retry 2 --retry-delay 30 -X POST "$API_URL/internal/run-reports" \
             -H "X-Internal-Secret: $INTERNAL_SECRET" | head -c 2000

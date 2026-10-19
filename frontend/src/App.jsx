@@ -4,6 +4,9 @@ import { useAuthStore } from './store/authStore'
 import { Toaster } from './ui/Toast'
 import ReauthDialog from './components/ReauthDialog'
 import { applyPageMeta } from './lib/pageMeta'
+import { warmUp } from './lib/wake'
+import api from './lib/api'
+import WakeNotice from './ui/WakeNotice'
 import Landing from './pages/landing/Landing'   // in the main bundle: the first thing most visitors see
 
 // Every other page is its own chunk. Showpieces (the landing's story, onboarding, Wrapped) bring the animation
@@ -83,6 +86,7 @@ export default function App() {
 
   const { pathname } = useLocation()
   useEffect(() => applyPageMeta(pathname), [pathname])
+  useEffect(() => warmUp(api.defaults.baseURL), [])
 
   // The API said this account must confirm its email first (403 email_unverified): show the check-your-inbox screen
   const navigate = useNavigate()
@@ -96,6 +100,7 @@ export default function App() {
   return (
     <>
     <Toaster />
+    <WakeNotice />
     {user && <ReauthDialog />}
     <Routes>
       <Route path="/welcome" element={<Landing />} />

@@ -1,4 +1,4 @@
-import { test, expect, checkLayout, openMenu, openChatPanel, reopen } from './fixtures'
+import { test, expect, checkLayout, openMenu, openChatPanel, reopen, API } from './fixtures'
 
 test('landing → demo → home renders every card', async ({ page }, testInfo) => {
   await page.goto('/')
@@ -145,4 +145,17 @@ test('public pages have their own title, description and canonical on vaulta.in;
   await page.goto('/login')
   await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
   for (const file of ['/robots.txt', '/sitemap.xml', '/og.png']) expect((await page.request.get(file)).status(), file).toBe(200)
+})
+
+test('a sleeping API: "Waking up Vaulta…", then the demo opens on its own', async ({ page, guard }) => {
+  guard.allow(/Failed to load resource|ERR_FAILED|ERR_CONNECTION_REFUSED|NetworkError|Load failed|network connection was lost|Could not connect|CORS request did not succeed/i)   // a refused connection, as each browser logs it
+  await page.goto('/welcome')
+  await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
+  // the API refuses connections for 5 seconds, as a free instance does while it starts
+  const asleepUntil = Date.now() + 5000
+  await page.route(`${API}/**`, (route) => (Date.now() < asleepUntil ? route.abort('connectionrefused') : route.continue()))
+  await page.getByRole('button', { name: 'Try the demo' }).first().click()
+  await expect(page.getByText('Waking up Vaulta…')).toBeVisible()
+  await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 60_000 })
+  await expect(page.getByText('Waking up Vaulta…')).toHaveCount(0)
 })

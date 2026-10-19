@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
+import { canResend, isColdError, wake } from './wake'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
@@ -33,6 +34,14 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
+    // a sleeping API (lib/wake.js): wait for it, then send again where that's safe
+    if (err.config && !err.config._woke && isColdError(err)) {
+      if (await wake(api.defaults.baseURL) && canResend(err.config, err)) {
+        err.config._woke = true
+        return api(err.config)
+      }
+      return Promise.reject(err)
+    }
     const status = err.response?.status
     if (err.response?.data instanceof Blob && err.response.data.type.includes('json')) {
       err.response.data = JSON.parse(await err.response.data.text())     // blob requests (export) get JSON errors

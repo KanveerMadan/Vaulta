@@ -4,7 +4,8 @@
 |---|---|---|
 | API (FastAPI) | Render web service `vaulta-api`, free plan, Singapore | `render.yaml` and the settings below |
 | Hourly run | GitHub Actions schedule (Render's cron jobs aren't free) | `.github/workflows/hourly-run.yml` |
-| Keeping the API awake | UptimeRobot, `GET /health` every 5 minutes | UptimeRobot dashboard |
+| Cold starts | none kept awake: the API sleeps when idle and every caller waits for it (below) | — |
+| Outage alerts (optional) | UptimeRobot, `GET /health` every 60 minutes | UptimeRobot dashboard |
 | Web app (React, PWA) | Vercel, root directory `frontend` | `frontend/vercel.json` |
 | Database | Neon Postgres | roles: `docs/security/row-level-security.md` |
 | Inbound alert email | Cloudflare Email Routing + Worker `vaulta-inbound-email` | `infra/email-worker/` |
@@ -36,7 +37,7 @@ The service was created in the dashboard, so these are entered there (`render.ya
 
 | Setting | Value |
 |---|---|
-| Instance type | Free (512 MB; it sleeps after 15 idle minutes, which UptimeRobot prevents) |
+| Instance type | Free (512 MB; it sleeps after 15 idle minutes and takes up to about a minute to start: see Cold starts) |
 | Region | Singapore |
 | Root directory | `backend` |
 | Build command | `pip install -r requirements.txt` |
@@ -164,3 +165,20 @@ cd backend && python scripts/recategorise.py --apply
 |---|---|
 | `GET /health` | The process is up. |
 | `GET /health/ready` | The database answers, `alembic_version` equals the code's `MIGRATION_HEAD`, and the API's role can't bypass RLS. Returns 503 with the failing check otherwise. Render's health check uses it, so a deploy whose migrations haven't run never takes traffic. |
+
+## Cold starts (no keep-awake)
+
+The Render workspace's free services share 750 instance-hours a month, so the API is allowed to sleep after 15 idle
+minutes. Nothing pings it to stay awake. Every caller waits for it instead:
+
+| Caller | What happens while the API starts |
+|---|---|
+| Web app | A request with no answer, or 502/503/504, shows "Waking up Vaulta…", polls `/health` with backoff for up to 2 minutes, then sends the request again (reads always; writes only if they never reached the server). After 2 minutes: "Vaulta is taking longer than usual" with Try again. The app also pings `/health` silently on load so the API starts early. `frontend/src/lib/wake.js`, `ui/WakeNotice.jsx`; tested in `wake.test.js` and `e2e/public.spec.js`. |
+| Hourly run | Polls `/health` with backoff (5, 10, 20, 30 s…) for up to 2 minutes, then calls the API; if it never wakes the run fails and the next hour catches up. |
+| Telegram webhook | Telegram keeps an update it couldn't deliver and tries again (pending updates are kept for up to 24 hours), so a message sent while the API sleeps arrives once it's up. |
+| Inbound alert email | The worker retries the API with backoff (2, 4, 8, 16, 30 s…) for up to 2 minutes, then fails the delivery. `infra/email-worker/src/deliver.js`, tested. |
+
+**UptimeRobot (optional, outage alerts only).** A monitor on `https://api.vaulta.in/health` every **60 minutes**
+emails you when it fails twice in a row. At that interval it doesn't keep the API awake (it sleeps after 15 minutes),
+it only tells you when the API won't start. Set the monitor's timeout to its maximum, since a check that lands on a
+sleeping API waits for it to start. Not required.
