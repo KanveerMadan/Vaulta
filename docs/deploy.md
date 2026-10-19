@@ -119,7 +119,7 @@ All `VITE_*` values are compiled into the public JavaScript, so none of them is 
 | `VITE_SECURITY_CONTACT` | security contact email; becomes `/.well-known/security.txt` and is shown on `/security`. Required: the build fails without it. |
 | `VITE_PRIVACY_CONTACT` | privacy and grievance contact email shown on `/privacy`. Required. |
 | `VITE_SENTRY_DSN` | the web app project's DSN; Production only. Its host must be in `connect-src` in `vercel.json` (the build fails otherwise). Unset = no error monitoring |
-| `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` | the reCAPTCHA Enterprise key id for App Check (go-live step 3a). Without it the app sends no App Check token, so leave `APP_CHECK_ENFORCE` off. |
+| `VITE_RECAPTCHA_SITE_KEY` | the reCAPTCHA v3 **site** key for App Check (go-live step 3a; the secret key goes in the Firebase console, never here). Without it the app sends no App Check token, so leave `APP_CHECK_ENFORCE` off. |
 
 ### Cloudflare: email worker (`infra/email-worker`)
 

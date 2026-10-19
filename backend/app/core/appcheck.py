@@ -1,5 +1,5 @@
 """
-Firebase App Check: proof that a request comes from Vaulta's own web app in a real browser (reCAPTCHA Enterprise),
+Firebase App Check: proof that a request comes from Vaulta's own web app in a real browser (reCAPTCHA v3),
 not a script. Checked on the routes bots would abuse: demo sessions, account creation (the first sign-in),
 password-reset requests, imports and chat. Header: X-Firebase-AppCheck.
 

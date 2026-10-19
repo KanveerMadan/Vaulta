@@ -161,16 +161,29 @@ It must print `{"status":"ready","database":"ok","migrations":"at head","rls":"e
 
 ## 3. Vercel
 
-1. If the API's address changes (it does: `https://api.$DOMAIN`), edit `frontend/vercel.json`: in `connect-src`,
-   replace `https://vaulta-f6t8.onrender.com` with `https://api.$DOMAIN`. Commit it on `rebuild/phase6` and push. A
-   build whose `VITE_API_BASE_URL` isn't in `connect-src` fails on purpose.
-2. Vercel → Project → Settings → Environment Variables, for Production and Preview:
-   - `VITE_API_BASE_URL=https://api.$DOMAIN`;
-   - the six `VITE_FIREBASE_*` values (unchanged);
-   - `VITE_SECURITY_CONTACT`;
-   - `VITE_PRIVACY_CONTACT`.
+1. `frontend/vercel.json` already allows `https://api.vaulta.in` in `connect-src`, frames sign-in from `vaulta.in`,
+   and 308-redirects `vaulta-henna.vercel.app` and `www.vaulta.in` to `https://vaulta.in` (same path).
+2. Vercel → Project → Settings → Environment Variables. **Overwrite** the old June values (they're hidden, so edit
+   each and paste the new value); tick **Production and Preview** unless the row says otherwise:
+
+   | Variable | Value |
+   |---|---|
+   | `VITE_API_BASE_URL` | `https://api.vaulta.in` |
+   | `VITE_FIREBASE_API_KEY` | `apiKey` from Firebase console → Project settings → Your apps → web app → SDK setup (Config) |
+   | `VITE_FIREBASE_AUTH_DOMAIN` | `vaulta.in` (**not** the `authDomain` Firebase shows) |
+   | `VITE_FIREBASE_PROJECT_ID` | `projectId` (`vaulta-a3d7a`) |
+   | `VITE_FIREBASE_STORAGE_BUCKET` | `storageBucket` |
+   | `VITE_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` |
+   | `VITE_FIREBASE_APP_ID` | `appId` |
+   | `VITE_RECAPTCHA_SITE_KEY` | the reCAPTCHA v3 **site** key (step 3a.5) |
+   | `VITE_SECURITY_CONTACT` | `security@vaulta.in` once its routing rule exists (step 6), else `privacy@vaulta.in` (set) |
+   | `VITE_PRIVACY_CONTACT` | `privacy@vaulta.in` (set) |
+   | `VITE_SENTRY_DSN` | the web app project's DSN, **Production only** |
+
+   Never add `measurementId` (no analytics anywhere). Delete `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` if it exists.
+   A build whose `VITE_API_BASE_URL` or Sentry host isn't in `vercel.json`'s `connect-src` fails on purpose.
 3. Confirm that Settings → General → Root Directory is `frontend`.
-4. Settings → Domains: add `$DOMAIN` (and `www.$DOMAIN`, redirecting to it).
+4. Settings → Domains: add `vaulta.in` and `www.vaulta.in` (Vercel's own redirect for www is fine too; `vercel.json` does it either way).
 
 **Check (after step 9):**
 ```sh
@@ -207,21 +220,24 @@ them.
   password change, but a sign-up made directly against Firebase's API could set a shorter one.
 - **Check:** `curl` an `accounts:signUp` with a 6-character password. It fails with `PASSWORD_DOES_NOT_MEET_REQUIREMENTS`.
 
-**3a.4 Authorized domains.**
-- **Where:** Authentication → Settings → **Authorized domains**: add `$DOMAIN` (and `www.$DOMAIN`).
-- **Check:** after step 9, Google sign-in works on `https://$DOMAIN`.
+**3a.4 Authorized domains, and Google sign-in on vaulta.in.**
+- **Where:** Authentication → Settings → **Authorized domains**: `vaulta.in` and `www.vaulta.in` (done).
+- The web app's `authDomain` is `vaulta.in`, not `vaulta-a3d7a.firebaseapp.com`: `vercel.json` forwards
+  `https://vaulta.in/__/auth/*` to Firebase, so Google's sign-in popup shows vaulta.in.
+- Google Cloud console (project `vaulta-a3d7a`) → **APIs & Services → Credentials** → OAuth 2.0 Client IDs → **Web
+  client (auto created by Google Service)** → edit:
+  - **Authorized JavaScript origins:** add `https://vaulta.in`;
+  - **Authorized redirect URIs:** add `https://vaulta.in/__/auth/handler`;
+  - Save. Keep the existing firebaseapp.com entries (Firebase uses them too).
+- **Check:** after step 9, Google sign-in works on `https://vaulta.in` and the popup's address bar shows `vaulta.in`.
 
-**3a.5 App Check with reCAPTCHA Enterprise.**
-1. **Create the key.** Google Cloud console (same project) → Security → reCAPTCHA Enterprise → **Create key**:
-   - type **Website**;
-   - domains `$DOMAIN` and `www.$DOMAIN`;
-   - "Use checkbox challenge" off.
-
-   Copy the key id.
-2. **Register the web app.** Firebase console → App Check → Apps → the web app → **reCAPTCHA Enterprise** → paste the
-   key id → token TTL 1 hour → Save.
-3. **Set the site key.** On Vercel, set `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY=<key id>` (Production and Preview), then
-   redeploy.
+**3a.5 App Check with reCAPTCHA v3** (score-based, not Enterprise).
+1. **The key** (done): reCAPTCHA admin console, type v3, domains `vaulta.in`, `www.vaulta.in`,
+   `vaulta-henna.vercel.app`, `localhost`. Remove `vaulta-henna.vercel.app` after cutover (it then only redirects).
+2. **Register the web app.** Firebase console → App Check → Apps → the web app → **reCAPTCHA** (not "reCAPTCHA
+   Enterprise") → paste the **secret key** → token TTL 1 hour → Save. The secret key is entered only here.
+3. **Set the site key.** On Vercel, set `VITE_RECAPTCHA_SITE_KEY=<site key>` (Production and Preview), then redeploy.
+   If `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` exists there from before, delete it.
 4. **Watch before enforcing.** Leave `APP_CHECK_ENFORCE` unset on Render for a day. The API logs `app check: missing
    or invalid token` lines without refusing anything. They should only appear for bots.
 5. **Enforce.** Set `APP_CHECK_ENFORCE=true` on Render and redeploy.
