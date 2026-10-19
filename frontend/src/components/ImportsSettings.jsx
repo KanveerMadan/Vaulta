@@ -62,7 +62,7 @@ export default function ImportsSettings() {
                 <span className="text-sm text-ink-700">
                   {u.source_label || KIND[u.source_type]}
                   <span className="block text-xs text-ink-500">
-                    {plural(u.rows, "row")}{u.first_date && ` · ${day(u.first_date)} – ${day(u.last_date)}`} · imported {day(u.created_at)}
+                    {plural(u.rows, "row")}{u.first_date && ` · ${day(u.first_date)} to ${day(u.last_date)}`} · imported {day(u.created_at)}
                   </span>
                 </span>
                 <button className="btn-quiet h-9 text-[13px] text-danger" onClick={() => ask({ import_id: u.id }, title)}
