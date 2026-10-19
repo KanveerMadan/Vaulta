@@ -107,7 +107,11 @@ test('home, transactions, chat, sticky header, keyboard', async ({ page, request
   await settle(page)
   await expect(input).toBeInViewport()                             // the chat box isn't pushed off-screen
   await fits(page, testInfo)
-  await expect(page).toHaveScreenshot('chat.png', { ...SNAP, mask: [...dynamic(page), chat.locator('[aria-live="polite"]')] })
+  // the log is masked whole; figures inside it aren't masked again: a mask covers an element's whole box, so a long
+  // answer scrolled up inside the log would paint its figures' masks over the header
+  const outsideChat = (sel) => page.locator(`${sel}:not(aside[aria-label="AI Assistant"] *)`)
+  await expect(page).toHaveScreenshot('chat.png', { ...SNAP, mask: [outsideChat('.num'), outsideChat('[data-value]'), outsideChat('time'),
+    page.getByTestId('outlook'), chat.locator('[aria-live="polite"]')] })
 })
 
 test('import preview', async ({ page, request }, testInfo) => {
