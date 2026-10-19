@@ -3,7 +3,7 @@ import { PRIVACY_CONTACT } from '../lib/trust'
 import Wordmark from '../ui/Wordmark'
 
 // Plain-language terms of service. Everything described is what Vaulta does today (free, no payments configured).
-// It needs the owner's (and ideally a lawyer's) review before launch: the banner says so until then.
+// Reviewed by the owner for launch (v1.0, 2026-10-20).
 
 const SECTIONS = [
   ['What Vaulta is', [
@@ -45,10 +45,8 @@ export default function Terms() {
         <Link to="/welcome" className="text-sm text-ink-2 hover:text-ink">← Back to Vaulta</Link>
       </header>
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 text-ink-2 leading-relaxed">
-        <p role="note" className="rounded-md border border-line bg-sunken px-4 py-3 text-sm text-ink">
-          Draft for review: these terms describe how Vaulta works today, and are awaiting review by Vaulta's owner before launch.
-        </p>
-        <h1 className="mt-8 font-display text-display-m text-ink">Terms of service</h1>
+        <h1 className="font-display text-display-m text-ink">Terms of service</h1>
+        <p className="mt-2 text-sm text-muted">Last updated 20 October 2026</p>
         <p className="mt-4 max-w-[60ch]">
           The short version: Vaulta is free, your data is yours, it isn't financial advice, and you can leave with everything at
           any time. How your data is handled is in the <Link to="/privacy" className="text-accent-text underline underline-offset-2">privacy policy</Link>.
