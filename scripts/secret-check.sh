@@ -57,7 +57,7 @@ SECRET = [
 # made-up addresses used by tests and fixtures (incl. reserved TLDs: .test .example .invalid .localhost),
 # and the bank/UPI senders the app trusts
 SAFE_EMAIL = re.compile(rb"@(([a-z0-9-]+\.)*(example\.(com|org|in)|test\.local|[a-z0-9-]+\.(test|example|invalid|localhost)|yourdomain\.in|anthropic\.com|"
-                        rb"[a-z0-9-]+\.iam\.gserviceaccount\.com|gmail\.com|evil\.example|elsewhere\.example|shop\.example)|"
+                        rb"[a-z0-9-]+\.iam\.gserviceaccount\.com|vaulta\.in|[a-z0-9-]+\.firebaseapp\.com|gmail\.com|evil\.example|elsewhere\.example|shop\.example)|"
                         rb"([a-z0-9-]+\.)*(hdfcbank|icicibank|sbi|sbicard|axisbank|kotak|yesbank|indusind|idfcfirstbank|bankofbaroda|pnb|"
                         rb"canarabank|unionbankofindia|federalbank|aubank|rblbank|americanexpress|aexp|paytm|paytmbank|phonepe|google)\.(com|net|in|co\.in|bank\.in))$", re.I)
 EMAIL = re.compile(rb"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -69,7 +69,7 @@ DATA_FILE = re.compile(r"\.(pdf|csv|xlsx?|png|jpe?g|webp|heic)$", re.I)
 # snapshots (screenshots of seeded synthetic accounts, frontend/e2e/visual.spec.js and devices.spec.js), and the
 # merchant model's evaluation charts (aggregate metrics on synthetic data, written by ml/train.py), and the made-up
 # statement the "try it" page opens (frontend/public/samples/)
-DATA_OK = re.compile(r"^(fixtures/statements/|frontend/public/icon-|frontend/src/assets/|frontend/e2e/(visual|devices)\.spec\.js-snapshots/|docs/ml/[a-z0-9-]+\.png$|frontend/public/samples/[a-z0-9-]+\.csv$)")
+DATA_OK = re.compile(r"^(fixtures/statements/|frontend/public/icon-|frontend/src/assets/|frontend/e2e/(visual|devices)\.spec\.js-snapshots/|docs/ml/[a-z0-9-]+\.png$|frontend/public/samples/[a-z0-9-]+\.csv$|frontend/public/og\.png$)")
 
 findings = []
 for line in open(blobs_file):
