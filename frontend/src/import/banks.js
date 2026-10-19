@@ -66,6 +66,14 @@ export const BANKS = {
     reference: "Chq/Ref Number",
     formats: ["%d-%m-%yyyy", "%d/%m/%Y", "%d-%m-%Y", "%d %b %Y"],
   },
+  // Kotak's net-banking PDF ("AccountStatement_<from>_<to>.pdf"): different column names from its CSV
+  kotakPdf: {
+    label: "Kotak Mahindra Bank",
+    detect: ["date", "description", "chq/ref. no.", "withdrawal (dr.)", "deposit (cr.)", "balance"],
+    date: "Date", description: "Description", debit: "Withdrawal (Dr.)", credit: "Deposit (Cr.)",
+    reference: "Chq/Ref. No.",
+    formats: ["%d %b %Y", "%d-%m-%Y", "%d/%m/%Y"],
+  },
 };
 
 /** Python `_detect_bank`: same header subsets, same order. Returns a BANKS key or null. */

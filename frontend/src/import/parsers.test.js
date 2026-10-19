@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
 import { parseStatement } from "./index.js";
-import { parseGooglePay } from "./upi.js";
+import { parseGooglePay, parseUpiBlocks } from "./upi.js";
 import { extractPdf } from "./pdfExtract.js";
 import { applyMapping, guessMapping, headerFingerprint } from "./mapping.js";
 import { strptime } from "./strptime.js";
@@ -150,5 +150,18 @@ describe("credit card statements", () => {
       ["2024-05-04", "AUTOPAY PAYMENT RECEIVED", "9876.00", "credit", "transfer"],
       ["2024-05-06", "SPOTIFY INDIA ENTERTAINMENT", "119.00", "debit", "transaction"],
     ]);
+  });
+});
+
+describe("Google Pay block layout (pdf.js order)", () => {
+  // made-up rows in the order pdf.js reads a real Google Pay statement
+  const text = [
+    "01 Jul, 2026", "10:30 AM", "Self transfer to Test Bank 1234", "UPI Transaction ID: 111122223333", "Paid by Other Bank 9876", "₹500",
+    "02 Jul, 2026", "09:00 PM", "Paid to Chai Point", "UPI Transaction ID: 444455556666", "Paid by Test Bank 1234", "₹20",
+  ].join("\n");
+  it("keeps a self transfer a transfer", () => {
+    const rows = parseUpiBlocks("google_pay", text);
+    expect(rows.map((r) => [r.type, r.direction, r.amount, r.reference])).toEqual([
+      ["transfer", "debit", "500.00", "111122223333"], ["transaction", "debit", "20.00", "444455556666"]]);
   });
 });

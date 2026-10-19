@@ -96,7 +96,10 @@ async function fromExtracted(pdf, format) {
     const conf = pdf.ocr ? bankTable.rowConfidence : null;
     const found = findBankHeader([bankTable.header]);
     const rows = found ? parseBankRows(found.bank, bankTable.header, bankTable.rows, "bank_pdf", conf) : [];
-    if (rows.length) return { status: "ok", rows, source_type: "bank_pdf", source_label: BANKS[found.bank].label, format, ocr: !!pdf.ocr };
+    if (rows.length) {
+      return { status: "ok", rows, source_type: "bank_pdf", source_label: BANKS[found.bank].label, format, ocr: !!pdf.ocr,
+               balance_check: bankBalanceCheck(found.bank, bankTable.header, bankTable.rows) };
+    }
     return { ...(await needsMapping(bankTable.header, bankTable.rows, "bank_pdf", format, conf)), ocr: !!pdf.ocr };
   }
 

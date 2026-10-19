@@ -1,6 +1,6 @@
 // The balance check (banks.js, go-live stage 2): running balances reconcile on the device, only pass/fail comes out.
 import { describe, expect, it } from "vitest";
-import { bankBalanceCheck, parseBalance, reconcileBalances } from "./banks.js";
+import { bankBalanceCheck, detectBank, parseBankRows, parseBalance, reconcileBalances } from "./banks.js";
 import { mappedBalanceCheck } from "./mapping.js";
 
 const HEADER = ["Tran Date", "Particulars", "Chq No", "Debit", "Credit", "Balance"];
@@ -55,5 +55,22 @@ describe("mappedBalanceCheck", () => {
   it("checks a mapped table by its balance column, which is never mapped", () => {
     expect(mappedBalanceCheck({ header: HEADER, rows }, mapping)).toBe("pass");
     expect(mappedBalanceCheck({ header: HEADER, rows: rows.slice(0, 2).concat([rows[3]]) }, mapping)).toBe("fail");
+  });
+});
+
+describe("Kotak net-banking PDF layout", () => {
+  // the column names of Kotak's PDF statement (its CSV has others); made-up rows
+  const header = ["#", "Date", "Description", "Chq/Ref. No.", "Withdrawal (Dr.)", "Deposit (Cr.)", "Balance"];
+  const body = [
+    ["1", "01 Jul 2026", "UPI/SWIGGY/123", "UPI-111", "450.00", "", "9,550.00"],
+    ["2", "02 Jul 2026", "NEFT SALARY", "NEFT-222", "", "50,000.00", "59,550.00"],
+    ["3", "03 Jul 2026", "ATM WDL", "", "2,000.00", "", "57,550.00"],
+  ];
+  it("is detected, parsed and balanced", () => {
+    expect(detectBank(header)).toBe("kotakPdf");
+    const parsed = parseBankRows("kotakPdf", header, body, "bank_pdf");
+    expect(parsed.map((r) => [r.date, r.amount, r.direction])).toEqual(
+      [["2026-07-01", "450.00", "debit"], ["2026-07-02", "50000.00", "credit"], ["2026-07-03", "2000.00", "debit"]]);
+    expect(bankBalanceCheck("kotakPdf", header, body)).toBe("pass");
   });
 });

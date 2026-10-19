@@ -116,11 +116,12 @@ export function sanitizeRows(rows, { holderName } = {}) {
   const removed = {};
   const namePattern = holderNamePattern(holderName);
   const out = rows.map((r) => {
-    let reference = cleanReference(r.reference);
-    if (r.reference && !reference) removed.references = (removed.references || 0) + 1;
-    if (!reference && /\bUPI\b|UPI[/-]/i.test(r.description_raw)) {
-      reference = UTR_IN_UPI.exec(r.description_raw)?.[1] ?? null;
-    }
+    // A UPI narration's 12-digit UTR is the key the same payment carries in a UPI app's statement, so it wins over
+    // the bank's own reference column (Kotak's PDF has an internal number there): that's how they merge on import
+    const utr = /\bUPI\b|UPI[/-]/i.test(r.description_raw) ? UTR_IN_UPI.exec(r.description_raw)?.[1] ?? null : null;
+    const cleaned = cleanReference(r.reference);
+    if (r.reference && !cleaned && !utr) removed.references = (removed.references || 0) + 1;
+    const reference = utr ?? cleaned;
     return {
       date: r.date,
       description_raw: sanitizeDescription(r.description_raw, removed, namePattern) || "Unknown",

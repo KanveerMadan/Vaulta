@@ -179,7 +179,7 @@ export function parseUpiBlocks(sourceKey, fullText, { today = new Date() } = {})
     }
 
     let direction = directionOf(dirMatch[1]);
-    if (/sent to|transfer(?:red)? to|bill paid|payment to/i.test(dirMatch[1])) direction = "paid";
+    if (direction !== "self_transfer" && /sent to|transfer(?:red)? to|bill paid|payment to/i.test(dirMatch[1])) direction = "paid";
     if (/money received/i.test(dirMatch[1])) direction = "received";
     const type = /\b(DEBIT|CREDIT)\b/.exec(block);
     if (type && direction !== "self_transfer") direction = type[1] === "CREDIT" ? "received" : "paid";
