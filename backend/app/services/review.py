@@ -38,6 +38,7 @@ from app.services import taxonomy
 
 # ── Tunable thresholds (listed in the Phase 2 report) ─────────────────────────
 PERSON_MIN_PAYMENTS = 3       # untagged person paid this many times → ask what it is
+PERSON_MIN_TOTAL = Decimal("2000")   # …or this much in all: a few big payments to one person matter as much
 MERCHANT_SUGGESTIONS = 3      # category buttons on a "what is this merchant" card
 
 SKIP = {"value": "skip", "label": "Skip"}
@@ -66,7 +67,29 @@ def build_cards(db: Session, user: User) -> list[Card]:
     ctx = load_context(db, user)
     cards: list[Card] = []
 
-    # 1. One-sided transfer candidates
+    # 1. Untagged people, largest total first: most person-to-person money is covered by a few tags, so these
+    #    come before everything else (a tag files every payment to that person, past and future)
+    people = {p.id: p for p in db.query(Person).filter(Person.user_id == user.id)}
+    paid: dict = {}
+    for t in ctx.txns:
+        if t.person_id and t.direction == TransactionDirection.debit and t.kind == TransactionKind.spend:
+            paid.setdefault(t.person_id, []).append(t.amount)
+    for pid, amounts in sorted(paid.items(), key=lambda kv: -sum(kv[1])):
+        person = people.get(pid)
+        if person is None or person.tag or (len(amounts) < PERSON_MIN_PAYMENTS and sum(amounts) < PERSON_MIN_TOTAL):
+            continue
+        who = person.masked_vpa or person.display_name
+        what = (f"{_rupees(amounts[0])} {_times(len(amounts))}" if len(set(amounts)) == 1
+                else f"{_rupees(sum(amounts))} across {len(amounts)} payments")
+        cards.append(Card(
+            id=f"person:{pid}", type="person",
+            question=f"Paid {who} {what}. What is it?", detail=person.display_name,
+            options=[{"value": "Rent", "label": "Rent"}, {"value": "Splits", "label": "Split"},
+                     {"value": "Lent", "label": "Lent"}, {"value": "Other", "label": "Other"}, SKIP],
+            target=person,
+        ))
+
+    # 2. One-sided transfer candidates
     _, one_sided = find_transfer_pairs(ctx)
     for t in one_sided:
         own = "transfer"
@@ -81,8 +104,7 @@ def build_cards(db: Session, user: User) -> list[Card]:
             target=t,
         ))
 
-    # 2. Repayment suggestions
-    people = {p.id: p for p in db.query(Person).filter(Person.user_id == user.id)}
+    # 3. Repayment suggestions
     for t in repayment_candidates(ctx.txns):
         name = people[t.person_id].display_name if t.person_id in people else "They"
         sent = "sent you" if t.direction == TransactionDirection.credit else "got"
@@ -92,26 +114,6 @@ def build_cards(db: Session, user: User) -> list[Card]:
             detail="Repayments settle what was lent or borrowed and don't count as income or spending.",
             options=[{"value": "repayment", "label": "Yes, repayment"}, SKIP],
             target=t,
-        ))
-
-    # 3. Untagged people paid repeatedly
-    paid: dict = {}
-    for t in ctx.txns:
-        if t.person_id and t.direction == TransactionDirection.debit and t.kind == TransactionKind.spend:
-            paid.setdefault(t.person_id, []).append(t.amount)
-    for pid, amounts in paid.items():
-        person = people.get(pid)
-        if person is None or person.tag or len(amounts) < PERSON_MIN_PAYMENTS:
-            continue
-        who = person.masked_vpa or person.display_name
-        what = (f"{_rupees(amounts[0])} {_times(len(amounts))}" if len(set(amounts)) == 1
-                else f"{_rupees(sum(amounts))} across {len(amounts)} payments")
-        cards.append(Card(
-            id=f"person:{pid}", type="person",
-            question=f"Paid {who} {what}. What is it?", detail=person.display_name,
-            options=[{"value": "Rent", "label": "Rent"}, {"value": "Splits", "label": "Split"},
-                     {"value": "Lent", "label": "Lent"}, {"value": "Other", "label": "Other"}, SKIP],
-            target=person,
         ))
 
     # 4. Newly detected recurring series

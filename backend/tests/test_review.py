@@ -63,6 +63,20 @@ def test_person_paid_repeatedly(client):
     assert [c for c in queue(client)["items"] if c["type"] == "person"] == []
 
 
+def test_people_come_first_largest_total_first(client):
+    load(client,
+         *[r(d(n), "UPI-ASHA MEHTA-A***@okaxis-XXXX", "300.00") for n in (60, 30, 5)],     # ₹900 over three payments
+         r(d(20), "UPI-VIKRAM RAO-V***@okhdfc-XXXX", "15000.00"),                       # one big payment: still asked
+         r(d(12), "UPI-NEHA JAIN-N***@ybl-XXXX", "150.00"),                              # one small payment: not asked
+         r(d(9), "TRANSFER TO OWN A/C 4321", "8000.00"))                                  # a transfer card, after people
+    items = queue(client)["items"]
+    kinds = [c["type"] for c in items]
+    people = [c["question"] for c in items if c["type"] == "person"]
+    assert kinds[:2] == ["person", "person"] and "transfer" in kinds[2:]
+    assert people[0].startswith("Paid V***@okhdfc ₹15,000 once") and people[1].startswith("Paid A***@okaxis ₹300 three times")
+    assert not any("N***@ybl" in q for q in people)
+
+
 def test_repayment_suggestion(client):
     load(client, r(d(20), "UPI-AMIT KUMAR-A***@oksbi-XXXX", "2000.00"), r(d(4), "UPI-AMIT KUMAR-A***@oksbi-XXXX", "2000.00", "credit"))
     lent = next(t for t in client.get("/api/transactions", headers=ALICE).json()["items"] if t["direction"] == "debit")
