@@ -27,7 +27,7 @@ const SECTIONS = [
   ]],
   ['Availability', [
     'Vaulta runs on free hosting. It can be slow to wake after a quiet spell, and it can be unavailable at times or change as it improves. There\'s no guarantee of uptime. Keep your bank statements: Vaulta isn\'t a place to store records you\'re required to keep.',
-    'If Vaulta ever closes, you\'ll be told at least 30 days ahead by email, with time to export your data.',
+    'If Vaulta shuts down, we\'ll email you in advance whenever possible (we aim for at least 30 days) so you can export your data.',
   ]],
   ['Liability', [
     'Vaulta is provided as it is. As far as the law allows, Vaulta isn\'t liable for indirect losses, or for decisions made on its numbers, categories or answers. Nothing here limits rights you have under Indian consumer law that can\'t be limited.',
