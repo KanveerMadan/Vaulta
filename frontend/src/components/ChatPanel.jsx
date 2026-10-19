@@ -165,7 +165,7 @@ export default function ChatPanel() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4 bg-canvas" aria-live="polite">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 space-y-4 bg-canvas" aria-live="polite">
         {disabled ? (
           <div className="text-sm space-y-3 text-ink-2">
             <p>AI chat is turned off. Your questions and the figures needed to answer them go to an AI service only while it's on.</p>
