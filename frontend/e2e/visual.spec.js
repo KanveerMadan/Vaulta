@@ -24,12 +24,13 @@ for (const scheme of ['light', 'dark']) {
     test.use({ colorScheme: scheme })
 
     test('public screens', async ({ page }) => {
+      // soft: one run reports every public screen that changed, not just the first
       await page.goto('/welcome'); await settle(page)
-      await expect(page).toHaveScreenshot(`landing-${scheme}.png`, SNAP)
+      await expect.soft(page).toHaveScreenshot(`landing-${scheme}.png`, SNAP)
       await page.goto('/security'); await settle(page)
-      await expect(page).toHaveScreenshot(`security-${scheme}.png`, SNAP)
+      await expect.soft(page).toHaveScreenshot(`security-${scheme}.png`, SNAP)
       await page.goto('/login'); await settle(page)
-      await expect(page).toHaveScreenshot(`login-${scheme}.png`, SNAP)
+      await expect.soft(page).toHaveScreenshot(`login-${scheme}.png`, SNAP)
     })
 
     test('workspace screens', async ({ page, request }) => {
