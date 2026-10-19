@@ -257,63 +257,75 @@ Never set `APP_CHECK_DEBUG_TOKEN` on Render: production refuses to start with it
 
 ## 4. Domain and DNS (Cloudflare)
 
-In Cloudflare → `$DOMAIN` → DNS:
+`vaulta.in` is active on Cloudflare, with Email Routing on (`privacy@vaulta.in` → your Gmail; catch-all off).
+Cloudflare → `vaulta.in` → **DNS → Records → Add record**, every one **DNS only** (grey cloud): Vercel and Render
+issue their own certificates.
 
 | Name | Type | Target | Proxy |
 |---|---|---|---|
-| `@` | A | `76.76.21.21` (Vercel) | DNS only |
-| `www` | CNAME | `cname.vercel-dns.com` | DNS only |
-| `api` | CNAME | the hostname Render showed in step 2 (`vaulta-api.onrender.com`) | DNS only |
+| `@` | A | the address Vercel → Settings → Domains shows for `vaulta.in` (usually `76.76.21.21`) | DNS only |
+| `www` | CNAME | the target Vercel shows for `www.vaulta.in` (usually `cname.vercel-dns.com`) | DNS only |
+| `api` | CNAME | the new Render service's hostname (`vaulta-api….onrender.com`, step 2.5) | DNS only |
 
-Leave all three on **DNS only**, because Vercel and Render issue their own certificates.
+Email Routing's own MX and SPF records on `@` stay as they are.
 
-Then **Email → Email Routing → Settings → add subdomain `in.$DOMAIN`**. Cloudflare adds the MX and SPF records for it.
+**Inbound alerts on `in.vaulta.in`:** Email → Email Routing → **Settings → Subdomains → Add subdomain** `in` (Cloudflare
+adds MX and SPF for `in.vaulta.in`). The catch-all rule comes in step 6, after the worker is deployed.
+
+**`security@vaulta.in` (if you use it for `VITE_SECURITY_CONTACT`):** Email Routing → Routing rules → **Create
+address** `security` → your Gmail.
 
 **Checks:**
-- `dig +short $DOMAIN` prints `76.76.21.21`.
-- `dig +short api.$DOMAIN` ends with the Render hostname.
-- `dig +short MX in.$DOMAIN` prints Cloudflare's `route*.mx.cloudflare.net` hosts.
-- Vercel and Render show the domains as verified, with certificates issued.
+- `dig +short vaulta.in` prints Vercel's address; `dig +short api.vaulta.in` ends with `onrender.com`.
+- `dig +short MX in.vaulta.in` prints Cloudflare's `route*.mx.cloudflare.net` hosts.
+- Vercel and Render show the domains verified, certificates issued.
 
 ## 5. Resend: SPF, DKIM, DMARC
 
-1. Resend → Domains → **Add domain** `mail.$DOMAIN`, region closest to India.
-2. Add the records Resend shows to Cloudflare DNS, all DNS only:
-   - the `MX` and `TXT` (SPF) records on `send.mail.$DOMAIN`;
-   - the `TXT` DKIM record `resend._domainkey.mail.$DOMAIN`.
-3. Add DMARC:
+`vaulta.in` is added in Resend. Resend → Domains → `vaulta.in` lists three records; add each in Cloudflare DNS, DNS
+only, **copying name and value exactly from Resend** (the DKIM key is unique to your domain):
 
-   | Name | Type | Value |
-   |---|---|---|
-   | `_dmarc` | TXT | `v=DMARC1; p=quarantine; adkim=s; aspf=s; rua=mailto:<your address>` |
+| Name (in Cloudflare) | Type | Value | Priority |
+|---|---|---|---|
+| `send` | MX | `feedback-smtp.<region>.amazonses.com` (as Resend shows) | 10 |
+| `send` | TXT | `v=spf1 include:amazonses.com ~all` | |
+| `resend._domainkey` | TXT | `p=MIGf…` (Resend's DKIM key) | |
+| `_dmarc` | TXT | `v=DMARC1; p=quarantine; rua=mailto:privacy@vaulta.in` | |
 
-4. On Render, set `EMAIL_FROM=Vaulta <reports@mail.$DOMAIN>`.
+They live on `send.` and `resend._domainkey.`, so Email Routing's MX on `@` is untouched. Then Resend → **Verify DNS
+records**. On Render: `RESEND_API_KEY`, and `EMAIL_FROM=Vaulta <noreply@vaulta.in>`.
 
 **Checks:**
-- Resend shows the domain **Verified**.
-- `dig +short TXT _dmarc.$DOMAIN` prints the policy.
-- After step 9: in Render → `vaulta-api` → Shell, run
-  `python -c "from app.services import email; email.send('<your address>', 'Vaulta test', '<p>Test</p>', 'Test')"`.
-  The email arrives, and Gmail's "Show original" shows `SPF: PASS`, `DKIM: PASS` and `DMARC: PASS`.
+- Resend shows `vaulta.in` **Verified**.
+- `dig +short TXT _dmarc.vaulta.in` prints the policy.
+- After cutover: Render → `vaulta-api` → Shell,
+  `python -c "from app.services import email; email.send('<your Gmail>', 'Vaulta test', '<p>Test</p>', 'Test')"`.
+  It arrives from `noreply@vaulta.in`, and Gmail → Show original says `SPF: PASS`, `DKIM: PASS`, `DMARC: PASS`.
 
 ## 6. Cloudflare email worker and routing
 
+`wrangler.toml` already has `API_URL = "https://api.vaulta.in"` and `INBOUND_HOST = "in.vaulta.in"`. The worker
+bounces mail for any other address, since the catch-all covers the whole zone.
 ```sh
-cd ~/vaulta/infra/email-worker
-sed -i '' "s#^API_URL = .*#API_URL = \"https://api.$DOMAIN\"#" wrangler.toml
+cd ~/Desktop/vaulta/infra/email-worker
 npm ci
-npx wrangler login
-npx wrangler secret put INTERNAL_SECRET        # paste the API's INTERNAL_SECRET
+npx wrangler secret put INTERNAL_SECRET        # paste the API's INTERNAL_SECRET (from ~/vaulta-render-secrets.env)
 npx wrangler deploy
 ```
-Then go to Cloudflare → Email Routing → `in.$DOMAIN` → **Routing rules → Catch-all → Send to Worker
-`vaulta-inbound-email`**, and enable it. Commit the `wrangler.toml` change.
+Then Cloudflare → Email Routing → **Routing rules → Catch-all address → Edit → Action "Send to a Worker" →
+`vaulta-inbound-email` → Save**, and switch it **on**. Explicit rules (`privacy@`, `security@`) still go to your
+Gmail; they take precedence over the catch-all.
 
-**Check (after step 9):**
-1. Sign in → Settings → **Run setup again** → the alert forwarding step → **Send test**.
-2. Send any email to the address shown. Within a minute it says "✓ Your forwarding address works": the email went
-   through Cloudflare and the worker and reached the API.
+The worker waits out a sleeping API (backoff, up to 2 minutes) before giving up (docs/deploy.md, Cold starts).
+
+**Check (after cutover):**
+1. Settings → **Run setup again** → the alert forwarding step → **Send test**.
+2. Send any email to the address shown. Within a minute (two if the API was asleep) it says "✓ Your forwarding
+   address works".
 3. A real bank alert forwarded from Gmail appears as a transaction.
+4. An email to a made-up `nobody@vaulta.in` bounces ("No such address").
+5. With the API asleep (no use for 20 minutes), send one more test: it still arrives. Note whether a delivery that
+   failed after 2 minutes was retried by the sender (Cloudflare → Email Routing → Activity log).
 
 ## 7. Telegram
 
