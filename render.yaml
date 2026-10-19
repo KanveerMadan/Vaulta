@@ -8,8 +8,8 @@ services:
     name: vaulta-api
     runtime: python
     region: singapore
-    plan: free                          # 512 MB; sleeps after 15 idle minutes, so UptimeRobot calls /health
-                                        # every 5 minutes (docs/deploy.md)
+    plan: free                          # 512 MB; sleeps after 15 idle minutes, and every caller waits for it
+                                        # to start (docs/deploy.md, Cold starts)
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     # One worker: a 12-month import peaks near 390 MB in one process (docs/ml/evaluation.md, an upper bound), so

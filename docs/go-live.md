@@ -97,25 +97,65 @@ leaves nothing behind.
 
 ## 2. Render
 
-1. Render dashboard → **New → Blueprint** → this repository, branch `main`. It creates `vaulta-api` (free plan) in
-   Singapore from `render.yaml`. The old service was created in another region, and a region can't be changed.
-2. When asked for values, fill in every `sync: false` variable from `docs/deploy.md`:
-   - `DATABASE_URL`: from step 1.6.
-   - `BACKEND_CORS_ORIGINS`: `https://$DOMAIN`.
-   - `APP_BASE_URL`: `https://$DOMAIN`.
-   - `API_BASE_URL`: `https://api.$DOMAIN`.
-   - Leave `MASTER_KEY_PREVIOUS` empty.
-3. For the hourly run (GitHub → Settings → Secrets and variables → Actions):
-   - variable `API_URL`: `https://api.$DOMAIN`;
-   - secret `INTERNAL_SECRET`: the same value as the API's.
-4. Under `vaulta-api` → **Settings → Custom domains**, add `api.$DOMAIN`. Render shows the target hostname for step 4.
+A **new** Python web service in Singapore replaces the old "Vaulta" service (`srv-d8hh6nt7vvec73acib30`: Oregon,
+labelled Node, deployed months ago). Render can't change a service's region, and a fresh service leaves the old one
+running untouched until cutover. Do this once step 1 has given you the `vaulta_app` `DATABASE_URL` (stage 6):
+without it the first deploy fails, and Render emails you about it.
 
-Blueprints deploy the branch they're connected to. Until the PR is merged (step 9), `main` holds the old code: let the
-first deploy fail its health check, or click **Suspend** on `vaulta-api` until step 9.
+**Create it** (Render dashboard):
+1. **+ New → Web Service** → *Git Provider* → `KanveerMadan/Vaulta` → **Connect**.
+2. Fill in:
+   - **Name** `vaulta-api` · **Language** `Python 3` · **Branch** `release/v1` (switched to `main` at cutover)
+   - **Region** `Singapore (Southeast Asia)` · **Root Directory** `backend`
+   - **Build Command** `pip install -r requirements.txt`
+   - **Start Command** `uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-1} --proxy-headers --forwarded-allow-ips='*' --no-access-log`
+   - **Instance Type** `Free`
+3. **Environment Variables → Add from .env**: no. Add each one by hand (**+ Add Environment Variable**). Copy secret
+   values to the clipboard without showing them, in Terminal:
+   ```sh
+   # one of SECRET_KEY, INTERNAL_SECRET, MASTER_KEY, BLIND_INDEX_KEY
+   grep '^SECRET_KEY=' ~/vaulta-render-secrets.env | cut -d= -f2- | tr -d '\n' | pbcopy
+   # the Firebase service account, on one line
+   python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))), end="")' \
+     ~/vaulta-secrets/vaulta-a3d7a-firebase-adminsdk-fbsvc-3742773cae.json | pbcopy
+   ```
+   | Variable | Value |
+   |---|---|
+   | `PYTHON_VERSION` | `3.12.7` |
+   | `ENVIRONMENT` | `production` |
+   | `WEB_CONCURRENCY` | `1` |
+   | `DATABASE_URL` | the `vaulta_app` pooled URL from step 1 (stage 6) |
+   | `FIREBASE_SERVICE_ACCOUNT_JSON` | the one-line JSON (command above) |
+   | `SECRET_KEY`, `INTERNAL_SECRET`, `MASTER_KEY`, `BLIND_INDEX_KEY` | from `~/vaulta-render-secrets.env` (command above) |
+   | `BACKEND_CORS_ORIGINS` | `https://vaulta.in` |
+   | `APP_BASE_URL` | `https://vaulta.in` |
+   | `API_BASE_URL` | `https://api.vaulta.in` |
+   | `SECURITY_CONTACT_EMAIL` | `security@vaulta.in` (or `privacy@vaulta.in`) |
+   | `GROQ_API_KEY` | the **new** key (rotate the old one first) |
+   | `SENTRY_DSN` | the API project's DSN |
+   | `RESEND_API_KEY`, `EMAIL_FROM`, `INBOUND_DOMAIN` | stage 7: `Vaulta <noreply@vaulta.in>`, `vaulta.in` |
+   | `TELEGRAM_*` | stage 7 |
 
-**Check (after step 9):**
+   Leave `BACKEND_CORS_ORIGIN_REGEX`, `MASTER_KEY_PREVIOUS`, `APP_CHECK_ENFORCE` and `APP_CHECK_DEBUG_TOKEN` unset.
+   Production refuses to start with a weak secret, an `http://` or local URL, or a vercel.app / onrender.com /
+   firebaseapp.com address in `APP_BASE_URL`, `API_BASE_URL` or `EMAIL_FROM`.
+4. **Advanced**: **Health Check Path** `/health/ready` · **Auto-Deploy** `No`. Then **Deploy Web Service**.
+5. When it's live: **Settings → Custom Domains → + Add Custom Domain** → `api.vaulta.in`. Render shows the hostname
+   for the `api` CNAME (stage 7) and issues the certificate once DNS points at it.
+6. GitHub → repository → **Settings → Secrets and variables → Actions**: variable `API_URL` = `https://api.vaulta.in`;
+   secret `INTERNAL_SECRET` = the same value as on Render.
+7. Once every value is on Render, delete `~/vaulta-render-secrets.env` (`rm -P ~/vaulta-render-secrets.env`).
+
+**At cutover (stage 11):** `vaulta-api` → Settings → **Branch** `main`, **Auto-Deploy** `On Commit`. **After**
+cutover, once `api.vaulta.in` serves the new API: old "Vaulta" service → Settings → **Suspend**, and a week later
+**Delete Web Service**.
+
+`render.yaml` describes the same service (as a Blueprint it would deploy `main`, which holds the old code until
+cutover, so the dashboard steps above are the ones to follow).
+
+**Check:**
 ```sh
-curl -s https://api.$DOMAIN/health/ready
+curl -s https://api.vaulta.in/health/ready
 ```
 It must print `{"status":"ready","database":"ok","migrations":"at head","rls":"enforced"}`.
 
@@ -330,6 +370,16 @@ Do this in a private window, on your phone and on a laptop.
 - [ ] Delete everything with a throwaway account: it ends on the welcome page and can't sign back in to its data.
 - [ ] Remove `ENCRYPTION_KEY` from Render (it was only for the migration).
 - [ ] Update `/privacy` after your review, and remove its draft notice.
+
+**Right after the new backend is live (cutover clean-up):**
+- [ ] Google Cloud → IAM & Admin → Service accounts → `firebase-adminsdk-fbsvc@…` → **Keys**: delete the old key
+  (id `6105c18b88…`). Only the new key (`…3742773cae`) stays; it's the one on Render.
+- [ ] reCAPTCHA admin console → the v3 site → **Domains**: remove `vaulta-henna.vercel.app` (it now redirects to
+  vaulta.in).
+- [ ] Render: suspend the old "Vaulta" service (`srv-d8hh6nt7vvec73acib30`); delete it a week later.
+- [ ] No default hosts anywhere users look: `scripts/check-default-domains.sh --live https://vaulta.in` prints CLEAN,
+  and `curl -sI https://vaulta-henna.vercel.app/security` answers `308` with `location: https://vaulta.in/security`.
+- [ ] Google sign-in shows `vaulta.in` in the popup, not `vaulta-a3d7a.firebaseapp.com`.
 
 ## 11. Rollback
 

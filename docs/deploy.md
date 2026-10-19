@@ -62,7 +62,7 @@ The service was created in the dashboard, so these are entered there (`render.ya
 | `MASTER_KEY` | yes | random. Wraps each user's data key (`docs/security/encryption.md`). |
 | `BLIND_INDEX_KEY` | yes | random, different from `MASTER_KEY`. Keys the blind indexes. |
 | `MASTER_KEY_PREVIOUS` | only during a rotation | the old `MASTER_KEY` while `scripts/rotate_master_key.py` runs |
-| `BACKEND_CORS_ORIGINS` | yes | `https://vaulta.in,https://www.vaulta.in,https://vaulta-henna.vercel.app` (comma-separated https origins of the web app; production refuses `http://`, `localhost` and `*`; `http://localhost:5173` is only the local default) |
+| `BACKEND_CORS_ORIGINS` | yes | `https://vaulta.in` (www and vaulta-henna.vercel.app redirect there; comma-separated https origins of the web app; production refuses `http://`, `localhost` and `*`; `http://localhost:5173` is only the local default) |
 | `BACKEND_CORS_ORIGIN_REGEX` | **leave unset in production** | it would let Vercel preview builds (any pushed branch) call the production API. Previews use their own Preview variables and a non-production API, or none |
 | `APP_BASE_URL` | yes | the web app's https URL (links in emails) |
 | `API_BASE_URL` | yes | the API's https URL (unsubscribe links) |
@@ -76,7 +76,7 @@ The service was created in the dashboard, so these are entered there (`render.ya
 | `SENTRY_DSN` | optional | the API project's DSN (Sentry → Project settings → Client Keys). Unset = no error monitoring. Reports are scrubbed (`app/core/monitoring.py`) |
 | `MERCHANT_MODEL_ENABLED` | optional | default `true`: the merchant model categorises (docs/ml/model-card.md); `false` returns to the rule-based categories |
 | `RESEND_API_KEY` | for emails | resend.com → API keys (sending access, one domain) |
-| `EMAIL_FROM` | for emails | e.g. `Vaulta <reports@mail.vaulta.example>` on a domain verified in Resend |
+| `EMAIL_FROM` | for emails | `Vaulta <noreply@vaulta.in>` (vaulta.in verified in Resend; never a default host) |
 | `INBOUND_DOMAIN` | for alert forwarding | your domain; addresses become `<token>@in.<domain>` |
 | `TELEGRAM_BOT_TOKEN` | for the bot | from @BotFather |
 | `TELEGRAM_BOT_USERNAME` | for the bot | the bot's username, without @ |
