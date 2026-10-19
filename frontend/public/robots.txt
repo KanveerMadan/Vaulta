@@ -1,0 +1,23 @@
+# Public pages are crawlable; the signed-in app isn't (src/lib/pageMeta.js lists the public pages).
+User-agent: *
+Allow: /welcome
+Allow: /security
+Allow: /privacy
+Allow: /terms
+Disallow: /transactions
+Disallow: /connect
+Disallow: /try
+Disallow: /recurring
+Disallow: /people
+Disallow: /rules
+Disallow: /budgets
+Disallow: /goals
+Disallow: /reports
+Disallow: /settings
+Disallow: /cash
+Disallow: /review
+Disallow: /onboarding
+Disallow: /login
+Disallow: /verify-email
+
+Sitemap: https://vaulta.in/sitemap.xml

@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { useAuthStore } from './store/authStore'
 import { Toaster } from './ui/Toast'
 import ReauthDialog from './components/ReauthDialog'
+import { applyPageMeta } from './lib/pageMeta'
 import Landing from './pages/landing/Landing'   // in the main bundle: the first thing most visitors see
 
 // Every other page is its own chunk. Showpieces (the landing's story, onboarding, Wrapped) bring the animation
@@ -79,6 +80,9 @@ export default function App() {
     })
     return () => { alive = false; unsub() }
   }, [setUser, setLoading])
+
+  const { pathname } = useLocation()
+  useEffect(() => applyPageMeta(pathname), [pathname])
 
   // The API said this account must confirm its email first (403 email_unverified): show the check-your-inbox screen
   const navigate = useNavigate()

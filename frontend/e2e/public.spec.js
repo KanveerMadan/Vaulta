@@ -134,3 +134,15 @@ test('reduced motion gets the designed still story', async ({ page }, testInfo) 
   await expect(story.getByRole('figure')).toHaveCount(4)
   await expect(story.getByText('Account number and IFSC')).toBeVisible()
 })
+
+test('public pages have their own title, description and canonical on vaulta.in; the app has none', async ({ page }) => {
+  for (const [path, title] of [['/welcome', 'Vaulta: every rupee, tracked'], ['/security', 'Security and privacy · Vaulta'], ['/privacy', 'Privacy policy · Vaulta']]) {
+    await page.goto(path)
+    await expect(page).toHaveTitle(title)
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://vaulta.in${path}`)
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /.{60,}/)
+  }
+  await page.goto('/login')
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
+  for (const file of ['/robots.txt', '/sitemap.xml', '/og.png']) expect((await page.request.get(file)).status(), file).toBe(200)
+})
