@@ -164,7 +164,8 @@ def test_change_password_needs_recent_login_policy_and_signs_out_other_sessions(
     assert updates == [("alice", {"password": "a-long-new-password"})] and ("revoke", "alice") in fake.calls
     signed_in_as(monkeypatch, iat=int(time.time()) + 5)                                   # this browser signed in again
     kinds = [e["kind"] for e in client.get("/api/activity", headers=USER).json()]
-    assert set(kinds[:2]) == {"signed_out_everywhere", "password_changed"}          # same moment, either order
+    # same moment, either order; the sign-in just before can share the timestamp, so it may sort among them
+    assert {"signed_out_everywhere", "password_changed"} <= set(kinds[:3])
 
 
 def test_a_google_account_can_add_a_password(client, monkeypatch):
