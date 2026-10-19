@@ -20,7 +20,8 @@ echo "Scanning: ${REFS[*]}"
 
 # Already-public, rotated secrets. Listed by blob id so the secret itself never appears here.
 #   5417a999… alembic.ini from 34e5052 (2026-06-14): Neon password, rotated 2026-10-16.
-KNOWN_BLOBS="5417a9999ee01a3b602f5273c3052837d5d61da6"
+#   05cb9a51… backend/tests/test_config.py from 0de226d: a made-up Sentry DSN (not a secret) in a test.
+KNOWN_BLOBS="5417a9999ee01a3b602f5273c3052837d5d61da6 05cb9a51aeda146c8a2acd6e7b43f0b2044e943d"
 
 status=0
 command -v gitleaks >/dev/null || { echo "gitleaks is not installed (brew install gitleaks)"; exit 1; }

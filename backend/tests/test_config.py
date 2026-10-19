@@ -93,8 +93,8 @@ def test_the_launch_origins_are_accepted_and_only_they_are_allowed():
 
 
 def test_printing_the_settings_never_shows_a_secret():
-    s = make(GROQ_API_KEY="gsk_" + "x" * 40, SENTRY_DSN="https://abc@o1.ingest.sentry.io/1", RESEND_API_KEY="re_" + "y" * 30)
+    s = make(GROQ_API_KEY="gsk_" + "x" * 40, SENTRY_DSN="https://abc@sentry.example/1", RESEND_API_KEY="re_" + "y" * 30)
     shown = repr(s) + str(s)
-    for secret in ("gsk_" + "x" * 40, "https://abc@o1", "re_" + "y" * 30, s.MASTER_KEY, s.BLIND_INDEX_KEY, "postgresql://x@"):
+    for secret in ("gsk_" + "x" * 40, "https://abc@sentry.example", "re_" + "y" * 30, s.MASTER_KEY, s.BLIND_INDEX_KEY, "postgresql://x@"):
         assert secret not in shown, secret
     assert "APP_BASE_URL='http://localhost:5173'" in shown           # ordinary settings still readable
