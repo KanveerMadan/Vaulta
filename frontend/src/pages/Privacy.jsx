@@ -3,8 +3,8 @@ import { PRIVACY_CONTACT } from '../lib/trust'
 import Wordmark from '../ui/Wordmark'
 
 // Plain-language privacy policy written to the Digital Personal Data Protection Act, 2023. Every retention period
-// and every flow described here is what the code does today. It still needs the owner's (and ideally a lawyer's)
-// review before launch: the banner says so until that review is done.
+// and every flow described here is what the code does today. Reviewed by the owner for launch (v1.0, 2026-10-20);
+// a change to what the code does means a change here, with the date below.
 
 const COLLECTED = [
   ['Your account', 'Your email address and name from Google or your sign-in, and a sign-in id from Firebase.', 'To sign you in and send you the emails you choose.'],
@@ -55,10 +55,8 @@ export default function Privacy() {
         <Link to="/welcome" className="text-sm text-ink-2 hover:text-ink">← Back to Vaulta</Link>
       </header>
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 text-ink-2 leading-relaxed">
-        <p role="note" className="rounded-md border border-line bg-sunken px-4 py-3 text-sm text-ink">
-          Draft for review: this policy describes what Vaulta's code does today, and is awaiting review by Vaulta's owner before launch.
-        </p>
-        <h1 className="mt-8 font-display text-display-m text-ink">Privacy policy</h1>
+        <h1 className="font-display text-display-m text-ink">Privacy policy</h1>
+        <p className="mt-2 text-sm text-muted">Last updated 20 October 2026</p>
         <p className="mt-4 max-w-[60ch]">
           Vaulta helps you track your own spending. This page explains, in plain language, what personal data it handles,
           why, how long it keeps it and the rights you have under India's Digital Personal Data Protection Act, 2023. How the

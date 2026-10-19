@@ -84,7 +84,8 @@ test('privacy policy and security.txt', async ({ page, request }, testInfo) => {
   await page.goto('/welcome')
   await page.getByRole('navigation', { name: 'Footer' }).getByRole('link', { name: 'Privacy' }).click()
   await expect(page.getByRole('heading', { name: 'Privacy policy' })).toBeVisible()
-  await expect(page.getByRole('note')).toContainText('Draft for review')
+  await expect(page.getByText('Draft for review')).toHaveCount(0)                  // reviewed for launch
+  await expect(page.getByText('Last updated 20 October 2026')).toBeVisible()
   for (const h of ['What Vaulta collects and why', 'What Vaulta never collects', 'Who else handles it', "How long it's kept", 'Your rights', 'Grievances and questions']) {
     await expect(page.getByRole('heading', { name: h })).toBeVisible()
   }
