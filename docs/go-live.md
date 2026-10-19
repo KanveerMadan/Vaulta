@@ -1,428 +1,504 @@
-# Go-live runbook
+# Go-live runbook — Vaulta v1.0
 
-These steps take Vaulta from the old app on `main` to the rebuild (phases 1–7, plus 6). Run them in this order. Each
-step ends with a check: don't go on until it passes. Rollback for every step is at the end.
+This runbook takes Vaulta from the old app (on `main`, old Render service, US Neon project) to the rebuild
+(phases 1–9 + 6.5 + 8, consolidated on `release/v1`, PR #2). Run the steps **in order**. Every step ends with a
+**Check**: don't continue until it passes. Rollback for every step is in §12.
 
-**What to expect:**
-- **Downtime.** The old API on `main` can't read the migrated database. Expect about 15–30 minutes from step 1.4 until
-  the new API is live (step 9). Pick a quiet hour.
-- **Your machine.** You need `psql`, Python 3.12 with `backend/requirements.txt` installed (the repo's
-  `backend/venv` is fine), Node 22 and `gh`. `neonctl` is used with `npx neonctl@7.0.4`.
-- **No secrets in commands.** Values are read into shell variables with `read -rs`, so they never appear in your shell
-  history or in a file. `docs/deploy.md` says what each variable is and how to generate it.
+**Facts this runbook assumes**
+
+| Thing | Value |
+|---|---|
+| Local repo | `~/Desktop/vaulta` |
+| GitHub | `KanveerMadan/Vaulta`, release branch `release/v1`, PR #2 (`release/v1` → `main`, DO NOT MERGE until §9) |
+| Domain | `vaulta.in` (Cloudflare, Active). App `https://vaulta.in`, API `https://api.vaulta.in`, inbound mail `in.vaulta.in` |
+| Old database | Neon project `steep-smoke-31221922`, branch `production`, AWS US East. **Never migrated** — it stays as the rollback copy |
+| New database | New Neon project in **AWS Asia Pacific (Singapore)**, created in §1 |
+| Old API | Render service "Vaulta" `srv-d8hh6nt7vvec73acib30` (Oregon, auto-deploy OFF) |
+| New API | Render service `vaulta-api`, Python, Singapore, Free, created in §2 |
+| Frontend | Vercel project `vaulta` (Hobby), root `frontend`, production builds from `main` |
+| Firebase | Project `vaulta-a3d7a`; service account `~/vaulta-secrets/vaulta-a3d7a-firebase-adminsdk-fbsvc-3742773cae.json` |
+| Contacts | `privacy@vaulta.in` (grievance + privacy), `security@vaulta.in` — both forward to the owner's Gmail |
+| Generated secrets | `~/vaulta-render-secrets.env` (mode 600): `SECRET_KEY`, `INTERNAL_SECRET`, `MASTER_KEY`, `BLIND_INDEX_KEY`, `TELEGRAM_WEBHOOK_SECRET`, `VAULTA_APP_PASSWORD`, `VAULTA_BACKUP_PASSWORD`. Copy each to the password manager before deleting the file (§2.5) |
+
+**What to expect**
+- **Downtime:** from §1.2 (old API suspended) until §9 (merge) — plan 30–60 minutes. Pick a quiet hour.
+- **Cold starts:** the API runs on Render Free with no keep-awake. After ~15 minutes idle the first request takes
+  30–60 s; the app shows "Waking up Vaulta…" and retries. This is expected.
+- **Your machine:** `psql`/`pg_dump`/`pg_restore` **version ≥ the Neon Postgres version** (check in Neon → project →
+  Settings; it is **18**; `brew install postgresql@18` if needed), `backend/venv` (Python 3.12), Node 22, `gh`,
+  `age`, `npx neonctl@7.0.4` (authenticated), `npx wrangler` (logged in).
+- **No secrets on screen:** read values into shell variables with `read -rs` (nothing echoes, nothing goes in shell
+  history). Never paste a secret into a chat, a commit or a file inside the repo.
+
+---
 
 ## 0. Before you start
 
 ```sh
-cd ~/vaulta && git checkout rebuild/phase6 && git pull
-export DOMAIN=vaulta.example                     # your domain: the app at https://$DOMAIN, the API at https://api.$DOMAIN
-npx neonctl@7.0.4 auth                        # opens the browser once
-npx neonctl@7.0.4 projects list               # note the project id
-export NEON_PROJECT=<id from the list>
-npx neonctl@7.0.4 branches list --project-id $NEON_PROJECT   # note the production branch's name (usually "main" or "production")
-export NEON_PROD_BRANCH=<that name>
+cd ~/Desktop/vaulta
+git fetch && git checkout release/v1 && git pull
+export DOMAIN=vaulta.in
+export OLD_NEON_PROJECT=steep-smoke-31221922
+export OLD_NEON_BRANCH=production
+gh pr checks 2 --repo KanveerMadan/Vaulta      # every job green
+backend/venv/bin/python -m alembic heads        # prints the head revision (c8d4e6f0a1b3 today)
+export HEAD_REV=$(backend/venv/bin/python -m alembic heads | awk '{print $1}')
+# a secret from the generated file, without showing it:  secret NAME
+secret() { grep "^$1=" ~/vaulta-render-secrets.env | cut -d= -f2-; }
 ```
-
-**Check:** CI on the pull request is green (`gh pr checks`), and the staging rehearsal passes on a fresh copy of
-production:
-```sh
-NEON_PROJECT=$NEON_PROJECT NEON_PROD_BRANCH=$NEON_PROD_BRANCH scripts/staging-rehearsal.sh
-```
-It must end with `ALL CHECKS PASSED`, `PASS readiness` and the smoke tests passing. Then delete the branch with
-`npx neonctl@7.0.4 branches delete staging --project-id $NEON_PROJECT`. It only ever touches the `staging` branch.
-
-Generate the new secrets now, store them in your password manager, and keep them for steps 1–7:
-- `SECRET_KEY`, `INTERNAL_SECRET`, `MASTER_KEY`, `BLIND_INDEX_KEY`, `TELEGRAM_WEBHOOK_SECRET`: each one from
-  `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`;
-- the `vaulta_app` database password: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`.
-
-## 1. Neon: snapshot, app role, migrations, encryption, row-level security
-
-**1.1 Snapshot branch.** A copy of production as it is now, to roll back to:
-```sh
-npx neonctl@7.0.4 branches create --project-id $NEON_PROJECT --parent $NEON_PROD_BRANCH --name pre-phase6-$(date +%Y%m%d-%H%M)
-```
-**Check:** `npx neonctl@7.0.4 branches list --project-id $NEON_PROJECT` lists `pre-phase6-…`.
-
-**1.2 Connection strings.** Get both into your shell without echoing them:
-```sh
-read -rs OWNER_URL     # owner (neondb_owner) on the DIRECT host: Neon console → Connect → uncheck "Connection pooling"; add ?sslmode=require
-read -rs APP_PASSWORD  # the vaulta_app password you generated
-export OWNER_URL APP_PASSWORD
-```
-**Check:** `psql "$OWNER_URL" -Atc "select current_user"` prints `neondb_owner`.
-
-**1.3 The app role.** Create it with SQL, never in the Neon console: console roles can bypass RLS.
-```sh
-psql "$OWNER_URL" -v ON_ERROR_STOP=1 -v pw="$APP_PASSWORD" <<'SQL'
-CREATE ROLE vaulta_app WITH LOGIN PASSWORD :'pw' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
-GRANT CONNECT ON DATABASE neondb TO vaulta_app;
-SQL
-```
-**Check:** `psql "$OWNER_URL" -Atc "select rolsuper, rolbypassrls from pg_roles where rolname='vaulta_app'"` prints `f|f`.
-
-**1.4 Stop the old API.** In the Render dashboard, open the current API service and choose **Suspend**. From here until
-step 9, the API is down.
-
-**Check:** the old API's URL no longer answers `/health`.
-
-**1.5 Record row counts, then migrate.** This runs every migration, including the encryption (`f6a2c8e0b1d3`) and RLS
-(`a7c3e9f1d2b4`) ones.
-```sh
-psql "$OWNER_URL" -Atc "select 'users', count(*) from users union all select 'transactions', count(*) from transactions" | tee /tmp/vaulta-counts-before.txt
-cd ~/vaulta
-read -rs MASTER_KEY; read -rs BLIND_INDEX_KEY; export MASTER_KEY BLIND_INDEX_KEY   # the values you'll put on Render
-export MIGRATION_DATABASE_URL="$OWNER_URL" DATABASE_URL="$OWNER_URL" FIREBASE_SERVICE_ACCOUNT_JSON='{}'
-backend/venv/bin/python -m alembic current
-backend/venv/bin/python -m alembic upgrade head
-backend/venv/bin/python -m alembic current
-```
-**Checks:**
-- `alembic current` prints `e3f9a5b7c8d0 (head)`.
-- `psql "$OWNER_URL" -Atc "select 'users', count(*) from users union all select 'transactions', count(*) from transactions"`
-  matches `/tmp/vaulta-counts-before.txt`.
-- `psql "$OWNER_URL" -Atc "select count(*) from transactions where kind is null"` prints `0`.
-- `psql "$OWNER_URL" -Atc "select count(*) from transactions where merchant_raw not like 'e1:%' or (merchant_clean is not null and merchant_clean not like 's1:%')"` prints `0` (nothing left in plaintext).
-- `psql "$OWNER_URL" -Atc "select count(*) from users where data_key is null"` prints `0`.
-- `psql "$OWNER_URL" -Atc "select relname from pg_class where relname in ('transactions','users','activity_log') and relrowsecurity"` lists all three.
-
-If the migration says forwarding tokens need `ENCRYPTION_KEY`, run `read -rs ENCRYPTION_KEY; export ENCRYPTION_KEY`
-with the old Fernet key from Render, then run `alembic upgrade head` again. It is one transaction, so a failed run
-leaves nothing behind.
-
-**1.6 The API's connection string.** Use the pooled host, as `vaulta_app`:
-`postgresql://vaulta_app:<password>@<pooled host>/neondb?sslmode=require`.
-
-**Check:** `psql "postgresql://vaulta_app:$APP_PASSWORD@<pooled host>/neondb?sslmode=require" -Atc "select count(*) from transactions"` prints `0` (no user bound means no rows: RLS works).
-
-## 2. Render
-
-A **new** Python web service in Singapore replaces the old "Vaulta" service (`srv-d8hh6nt7vvec73acib30`: Oregon,
-labelled Node, deployed months ago). Render can't change a service's region, and a fresh service leaves the old one
-running untouched until cutover. Do this once step 1 has given you the `vaulta_app` `DATABASE_URL` (stage 6):
-without it the first deploy fails, and Render emails you about it.
-
-**Create it** (Render dashboard):
-1. **+ New → Web Service** → *Git Provider* → `KanveerMadan/Vaulta` → **Connect**.
-2. Fill in:
-   - **Name** `vaulta-api` · **Language** `Python 3` · **Branch** `release/v1` (switched to `main` at cutover)
-   - **Region** `Singapore (Southeast Asia)` · **Root Directory** `backend`
-   - **Build Command** `pip install -r requirements.txt`
-   - **Start Command** `uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-1} --proxy-headers --forwarded-allow-ips='*' --no-access-log`
-   - **Instance Type** `Free`
-3. **Environment Variables → Add from .env**: no. Add each one by hand (**+ Add Environment Variable**). Copy secret
-   values to the clipboard without showing them, in Terminal:
-   ```sh
-   # one of SECRET_KEY, INTERNAL_SECRET, MASTER_KEY, BLIND_INDEX_KEY
-   grep '^SECRET_KEY=' ~/vaulta-render-secrets.env | cut -d= -f2- | tr -d '\n' | pbcopy
-   # the Firebase service account, on one line
-   python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))), end="")' \
-     ~/vaulta-secrets/vaulta-a3d7a-firebase-adminsdk-fbsvc-3742773cae.json | pbcopy
-   ```
-   | Variable | Value |
-   |---|---|
-   | `PYTHON_VERSION` | `3.12.7` |
-   | `ENVIRONMENT` | `production` |
-   | `WEB_CONCURRENCY` | `1` |
-   | `DATABASE_URL` | the `vaulta_app` pooled URL from step 1 (stage 6) |
-   | `FIREBASE_SERVICE_ACCOUNT_JSON` | the one-line JSON (command above) |
-   | `SECRET_KEY`, `INTERNAL_SECRET`, `MASTER_KEY`, `BLIND_INDEX_KEY` | from `~/vaulta-render-secrets.env` (command above) |
-   | `BACKEND_CORS_ORIGINS` | `https://vaulta.in` |
-   | `APP_BASE_URL` | `https://vaulta.in` |
-   | `API_BASE_URL` | `https://api.vaulta.in` |
-   | `SECURITY_CONTACT_EMAIL` | `security@vaulta.in` (or `privacy@vaulta.in`) |
-   | `GROQ_API_KEY` | the **new** key (rotate the old one first) |
-   | `SENTRY_DSN` | the API project's DSN |
-   | `RESEND_API_KEY`, `EMAIL_FROM`, `INBOUND_DOMAIN` | stage 7: `Vaulta <noreply@vaulta.in>`, `vaulta.in` |
-   | `TELEGRAM_*` | stage 7 |
-
-   Leave `BACKEND_CORS_ORIGIN_REGEX`, `MASTER_KEY_PREVIOUS`, `APP_CHECK_ENFORCE` and `APP_CHECK_DEBUG_TOKEN` unset.
-   Production refuses to start with a weak secret, an `http://` or local URL, or a vercel.app / onrender.com /
-   firebaseapp.com address in `APP_BASE_URL`, `API_BASE_URL` or `EMAIL_FROM`.
-4. **Advanced**: **Health Check Path** `/health/ready` · **Auto-Deploy** `No`. Then **Deploy Web Service**.
-5. When it's live: **Settings → Custom Domains → + Add Custom Domain** → `api.vaulta.in`. Render shows the hostname
-   for the `api` CNAME (stage 7) and issues the certificate once DNS points at it.
-6. GitHub → repository → **Settings → Secrets and variables → Actions**: variable `API_URL` = `https://api.vaulta.in`;
-   secret `INTERNAL_SECRET` = the same value as on Render.
-7. Once every value is on Render, delete `~/vaulta-render-secrets.env` (`rm -P ~/vaulta-render-secrets.env`).
-
-**At cutover (stage 11):** `vaulta-api` → Settings → **Branch** `main`, **Auto-Deploy** `On Commit`. **After**
-cutover, once `api.vaulta.in` serves the new API: old "Vaulta" service → Settings → **Suspend**, and a week later
-**Delete Web Service**.
-
-`render.yaml` describes the same service (as a Blueprint it would deploy `main`, which holds the old code until
-cutover, so the dashboard steps above are the ones to follow).
 
 **Check:**
+- PR #2 checks are all green.
+- These are done (prep): Firebase password policy (§3a.3), authorised domains, reCAPTCHA v3 keys, Resend domain
+  added, Telegram bot created, Cloudflare Email Routing on with `privacy@` and `security@` rules, Groq key rotated,
+  `BACKUP_AGE_RECIPIENT` set in GitHub, Vercel variables set (§3).
+- The Groq key in `backend/.env` and in the password manager is the **new** one; the old one is deleted in Groq.
+
+---
+
+## 1. Neon: new Singapore project, copy data, migrate, app role, RLS
+
+The old US project is **copied, never migrated**. That keeps it as an instant rollback.
+
+**1.1 Create the new project.** Neon console → **New project**:
+- Name `vaulta`, **Region: AWS Asia Pacific (Singapore)**, **Postgres version 18** (the same as the old project).
+- Neon creates a default branch (`main` or `production`) and database `neondb` owned by `neondb_owner`.
+
+Or from the terminal (same result): `npx neonctl@7.0.4 projects create --name vaulta --region-id aws-ap-southeast-1 --pg-version 18`
+
+```sh
+npx neonctl@7.0.4 projects list                 # note the new project's id
+export NEW_NEON_PROJECT=<new id>
+npx neonctl@7.0.4 branches list --project-id $NEW_NEON_PROJECT   # note its default branch name
+export NEW_NEON_BRANCH=<that name>
+```
+If the free plan refuses a second project, stop and report it — the fallback is to keep the US project and accept
+the latency.
+
+**Check:** the new project shows region **Singapore** in the console.
+
+**1.2 Stop writes to the old database.** Render → old "Vaulta" service (`srv-d8hh6nt7vvec73acib30`) → **Suspend**.
+From here until §9 the app is down.
+
+**Check:** the old API URL no longer answers `/health`.
+
+**1.3 Connection strings** (owner, **direct** host — Neon → Connect → untick "Connection pooling", append
+`?sslmode=require`):
+```sh
+OLD_OWNER_URL=$(npx neonctl@7.0.4 connection-string $OLD_NEON_BRANCH --project-id $OLD_NEON_PROJECT --role-name neondb_owner --ssl require)
+NEW_OWNER_URL=$(npx neonctl@7.0.4 connection-string $NEW_NEON_BRANCH --project-id $NEW_NEON_PROJECT --role-name neondb_owner --ssl require)
+APP_PASSWORD=$(secret VAULTA_APP_PASSWORD); BACKUP_PASSWORD=$(secret VAULTA_BACKUP_PASSWORD)
+export OLD_OWNER_URL NEW_OWNER_URL APP_PASSWORD BACKUP_PASSWORD
+```
+**Check:** both of these print `neondb_owner`:
+```sh
+psql "$OLD_OWNER_URL" -Atc "select current_user"
+psql "$NEW_OWNER_URL" -Atc "select current_user"
+```
+
+**1.4 Copy the data.** The dump is **plaintext financial data** (the old DB is unencrypted) — it lives only in
+`/tmp` and is deleted right after.
+```sh
+psql "$OLD_OWNER_URL" -Atc "select 'users', count(*) from users union all select 'transactions', count(*) from transactions" | tee /tmp/vaulta-counts-before.txt
+pg_dump "$OLD_OWNER_URL" --no-owner --no-privileges -Fc -f /tmp/vaulta-old.dump
+pg_restore --no-owner --no-privileges -d "$NEW_OWNER_URL" /tmp/vaulta-old.dump
+rm -P /tmp/vaulta-old.dump
+```
+**Check:**
+- `psql "$NEW_OWNER_URL" -Atc "select 'users', count(*) from users union all select 'transactions', count(*) from transactions"` matches `/tmp/vaulta-counts-before.txt`.
+- `ls /tmp/vaulta-old.dump` → "No such file".
+- `pg_restore` printed no errors other than harmless "already exists" notices for extensions.
+
+**1.5 Snapshot the new project before migrating:**
+```sh
+npx neonctl@7.0.4 branches create --project-id $NEW_NEON_PROJECT --parent $NEW_NEON_BRANCH --name pre-v1-$(date +%Y%m%d-%H%M)
+```
+**Check:** `npx neonctl@7.0.4 branches list --project-id $NEW_NEON_PROJECT` lists `pre-v1-…`.
+
+**1.6 The app role and the backup role** (SQL only — roles created in the Neon console can bypass RLS). Before
+§1.7: the migrations grant the tables to `vaulta_app`, so it must exist first.
+```sh
+psql "$NEW_OWNER_URL" -v ON_ERROR_STOP=1 -v pw="$APP_PASSWORD" -v bpw="$BACKUP_PASSWORD" <<'SQL'
+CREATE ROLE vaulta_app WITH LOGIN PASSWORD :'pw' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+GRANT CONNECT ON DATABASE neondb TO vaulta_app;
+CREATE ROLE vaulta_backup WITH LOGIN PASSWORD :'bpw' NOSUPERUSER BYPASSRLS NOCREATEDB NOCREATEROLE;
+GRANT pg_read_all_data TO vaulta_backup;
+SQL
+```
+**Check:** `psql "$NEW_OWNER_URL" -Atc "select rolname, rolsuper, rolbypassrls from pg_roles where rolname like 'vaulta_%' order by 1"`
+prints `vaulta_app|f|f` and `vaulta_backup|f|t` (the backup role reads everything, writes nothing; tested on a Neon
+branch 2026-10-19).
+
+**1.7 Migrate** (all migrations: kind backfill, budgets constraint, encryption, RLS, and later ones):
+```sh
+cd ~/Desktop/vaulta
+MASTER_KEY=$(secret MASTER_KEY) BLIND_INDEX_KEY=$(secret BLIND_INDEX_KEY); export MASTER_KEY BLIND_INDEX_KEY   # the values that go on Render
+export MIGRATION_DATABASE_URL="$NEW_OWNER_URL" DATABASE_URL="$NEW_OWNER_URL" FIREBASE_SERVICE_ACCOUNT_JSON='{}'
+backend/venv/bin/python -m alembic current
+backend/venv/bin/python -m alembic upgrade head 2>&1 | grep -E "Running upgrade|Error"   # filtered: never print settings
+backend/venv/bin/python -m alembic current
+```
+If it says forwarding tokens need `ENCRYPTION_KEY`: `read -rs ENCRYPTION_KEY; export ENCRYPTION_KEY` (the old
+Fernet key from the old Render service's environment), then run `alembic upgrade head` again. A failed run is one
+transaction and leaves nothing behind.
+
+**Checks:**
+- `alembic current` prints `$HEAD_REV (head)`.
+- Counts still match `/tmp/vaulta-counts-before.txt`.
+- `psql "$NEW_OWNER_URL" -Atc "select count(*) from transactions where kind is null"` → `0`.
+- `psql "$NEW_OWNER_URL" -Atc "select count(*) from transactions where merchant_raw not like 'e1:%' or (merchant_clean is not null and merchant_clean not like 's1:%')"` → `0` (nothing in plaintext).
+- `psql "$NEW_OWNER_URL" -Atc "select count(*) from users where data_key is null"` → `0`.
+- `psql "$NEW_OWNER_URL" -Atc "select relname from pg_class where relname in ('transactions','users','activity_log') and relrowsecurity"` lists all three.
+
+**1.8 The API's connection string** — **pooled** host, as `vaulta_app`:
+`postgresql://vaulta_app:<password>@<new pooled host>/neondb?sslmode=require` → save it in the password manager as
+`Vaulta – DATABASE_URL (app)`.
+
+**Check:** `psql "postgresql://vaulta_app:$APP_PASSWORD@<new pooled host>/neondb?sslmode=require" -Atc "select count(*) from transactions"` → `0` (no user bound → no rows: RLS works).
+
+**1.9 Backups.** The `vaulta_backup` role exists (§1.6). GitHub → repo → Settings → Secrets and variables → Actions:
+- **Secret** `BACKUP_DATABASE_URL` = `postgresql://vaulta_backup:<VAULTA_BACKUP_PASSWORD>@<new direct (not pooled) host>/neondb?sslmode=require`
+- **Variable** `BACKUP_AGE_RECIPIENT` (set already).
+
+The backup can't be run yet: GitHub only runs (and offers "Run workflow" for) workflows on the default branch, and
+`weekly-backup.yml` reaches `main` in §9. The first run is a §10 clean-up item.
+
+---
+
+## 2. Render: new `vaulta-api` service
+
+Render can't change a service's region or runtime, so a new Python service in Singapore replaces the old one. The old
+one stays suspended (rollback) until a week after go-live.
+
+**2.1 Create it.** Render → **+ New → Web Service** → Git provider → `KanveerMadan/Vaulta` → **Connect**:
+- **Name** `vaulta-api` · **Language** `Python 3` · **Branch** `release/v1` (switched to `main` in §9)
+- **Region** `Singapore (Southeast Asia)` · **Root Directory** `backend`
+- **Build Command** `pip install -r requirements.txt`
+- **Start Command** `uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-1} --proxy-headers --forwarded-allow-ips='*' --no-access-log`
+- **Instance Type** `Free`
+- **Advanced → Health Check Path** `/health/ready` · **Auto-Deploy** `No`
+
+**2.2 Environment variables** — add each by hand (**not** "Add from .env"). Copy secrets to the clipboard without
+showing them:
+```sh
+grep '^SECRET_KEY=' ~/vaulta-render-secrets.env | cut -d= -f2- | tr -d '\n' | pbcopy   # repeat per key name
+python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))), end="")' \
+  ~/vaulta-secrets/vaulta-a3d7a-firebase-adminsdk-fbsvc-3742773cae.json | pbcopy
+```
+
+| Variable | Value |
+|---|---|
+| `PYTHON_VERSION` | `3.12.7` |
+| `ENVIRONMENT` | `production` |
+| `WEB_CONCURRENCY` | `1` |
+| `DATABASE_URL` | the `vaulta_app` **pooled** URL from §1.8 |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | the one-line JSON (command above) |
+| `SECRET_KEY`, `INTERNAL_SECRET`, `MASTER_KEY`, `BLIND_INDEX_KEY` | from `~/vaulta-render-secrets.env` |
+| `ENCRYPTION_KEY` | only if §1.7 needed it; removed after go-live (§10) |
+| `BACKEND_CORS_ORIGINS` | `https://vaulta.in` |
+| `APP_BASE_URL` | `https://vaulta.in` |
+| `API_BASE_URL` | `https://api.vaulta.in` |
+| `SECURITY_CONTACT_EMAIL` | `security@vaulta.in` |
+| `RECAPTCHA_SECRET_KEY` | the reCAPTCHA v3 **secret** key (only here, never in Vercel or git) |
+| `GROQ_API_KEY` | the **new** (rotated) key |
+| `SENTRY_DSN` | the **backend** Sentry project DSN |
+| `RESEND_API_KEY` | Resend API key (§5) |
+| `EMAIL_FROM` | `Vaulta <noreply@vaulta.in>` |
+| `INBOUND_DOMAIN` | `vaulta.in` (the app adds `in.`: addresses are `<token>@in.vaulta.in`) |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` | §7 |
+| `TELEGRAM_WEBHOOK_SECRET` | from `~/vaulta-render-secrets.env` |
+
+Leave unset: `BACKEND_CORS_ORIGIN_REGEX`, `MASTER_KEY_PREVIOUS`, `RECAPTCHA_ENFORCE` (monitor mode until §3a.5),
+`RECAPTCHA_DEBUG_TOKEN`. Production refuses to start with a weak secret, an `http://`/local URL, a reCAPTCHA debug
+token, `RECAPTCHA_ENFORCE` without `RECAPTCHA_SECRET_KEY`, or a
+vercel.app / onrender.com / firebaseapp.com host in `APP_BASE_URL`, `API_BASE_URL` or `EMAIL_FROM`.
+
+Then **Deploy Web Service**.
+
+**2.3 Custom domain:** `vaulta-api` → **Settings → Custom Domains → + Add** → `api.vaulta.in`. Note the target
+hostname Render shows (for §4).
+
+**2.4 GitHub Actions settings** (repo → Settings → Secrets and variables → Actions):
+- Variable `API_URL` = `https://api.vaulta.in`
+- Secret `INTERNAL_SECRET` = same value as on Render
+- Variable `BACKUP_AGE_RECIPIENT` (already set) and the backup secrets from §1.9
+
+**2.5** Once every secret is on Render **and** in the password manager: `rm -P ~/vaulta-render-secrets.env`.
+
+**Check** (after §4 DNS for `api` is in place):
 ```sh
 curl -s https://api.vaulta.in/health/ready
 ```
-It must print `{"status":"ready","database":"ok","migrations":"at head","rls":"enforced"}`.
+→ `{"status":"ready","database":"ok","migrations":"at head","rls":"enforced"}`. The first call may take up to a
+minute (cold start).
+
+---
 
 ## 3. Vercel
 
-1. `frontend/vercel.json` already allows `https://api.vaulta.in` in `connect-src`, frames sign-in from `vaulta.in`,
-   and 308-redirects `vaulta-henna.vercel.app` and `www.vaulta.in` to `https://vaulta.in` (same path).
-2. Vercel → Project → Settings → Environment Variables. **Overwrite** the old June values (they're hidden, so edit
-   each and paste the new value); tick **Production and Preview** unless the row says otherwise:
+`frontend/vercel.json` already allows `https://api.vaulta.in` in `connect-src`, proxies `https://vaulta.in/__/auth/*`
+to Firebase, and 308-redirects `vaulta-henna.vercel.app` and `www.vaulta.in` to `https://vaulta.in` (same path).
 
-   | Variable | Value |
-   |---|---|
-   | `VITE_API_BASE_URL` | `https://api.vaulta.in` |
-   | `VITE_FIREBASE_API_KEY` | `apiKey` from Firebase console → Project settings → Your apps → web app → SDK setup (Config) |
-   | `VITE_FIREBASE_AUTH_DOMAIN` | `vaulta.in` (**not** the `authDomain` Firebase shows) |
-   | `VITE_FIREBASE_PROJECT_ID` | `projectId` (`vaulta-a3d7a`) |
-   | `VITE_FIREBASE_STORAGE_BUCKET` | `storageBucket` |
-   | `VITE_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` |
-   | `VITE_FIREBASE_APP_ID` | `appId` |
-   | `VITE_RECAPTCHA_SITE_KEY` | the reCAPTCHA v3 **site** key (step 3a.5) |
-   | `VITE_SECURITY_CONTACT` | `security@vaulta.in` once its routing rule exists (step 6), else `privacy@vaulta.in` (set) |
-   | `VITE_PRIVACY_CONTACT` | `privacy@vaulta.in` (set) |
-   | `VITE_SENTRY_DSN` | the web app project's DSN, **Production only** |
+**3.1 Environment variables** (Settings → Environment Variables). Type **Config**. Edit the existing June values
+(hidden) or add new ones. **Production and Preview** unless stated:
 
-   Never add `measurementId` (no analytics anywhere). Delete `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` if it exists.
-   A build whose `VITE_API_BASE_URL` or Sentry host isn't in `vercel.json`'s `connect-src` fails on purpose.
-3. Confirm that Settings → General → Root Directory is `frontend`.
-4. Settings → Domains: add `vaulta.in` and `www.vaulta.in` (Vercel's own redirect for www is fine too; `vercel.json` does it either way).
+| Variable | Value |
+|---|---|
+| `VITE_API_BASE_URL` | `https://api.vaulta.in` |
+| `VITE_FIREBASE_API_KEY` | `apiKey` from Firebase → Project settings → Your apps → web app (set) |
+| `VITE_FIREBASE_AUTH_DOMAIN` | `vaulta.in` (**not** the firebaseapp.com domain) |
+| `VITE_FIREBASE_PROJECT_ID` | `vaulta-a3d7a` |
+| `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` | from the same Firebase config (set) |
+| `VITE_RECAPTCHA_SITE_KEY` | reCAPTCHA v3 **site** key |
+| `VITE_SENTRY_DSN` | frontend Sentry DSN — **Production only** |
+| `VITE_PRIVACY_CONTACT` | `privacy@vaulta.in` (set) |
+| `VITE_SECURITY_CONTACT` | `security@vaulta.in` (set) |
 
-**Check (after step 9):**
+Never add `measurementId` (no analytics) or `VITE_RECAPTCHA_DEBUG_TOKEN`. (Verified 2026-10-19 with `vercel env pull`:
+Preview has the right API, auth domain and contacts.)
+
+**3.2** Settings → General → **Root Directory** = `frontend`.
+
+**3.3** Settings → Deployment Protection → Vercel Authentication **on, Standard Protection** (previews need a Vercel
+login; production stays public). Already done.
+
+**3.4 Domains are added at cutover (§9), not now** — adding `vaulta.in` earlier would point it at the old `main`.
+
+**Check:** the latest `release/v1` preview build succeeds (it fails on purpose while any required variable is missing).
+
+---
+
+## 3a. Firebase and Google Cloud
+
+**3a.1 Email enumeration protection: on.** Authentication → Settings → User actions.
+Check (prints `INVALID_LOGIN_CREDENTIALS`, not `EMAIL_NOT_FOUND`):
 ```sh
-curl -sI https://$DOMAIN/ | grep -iE "content-security-policy|strict-transport|x-frame"
+read -r FIREBASE_WEB_API_KEY      # the public web apiKey (Firebase config)
+curl -s "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$FIREBASE_WEB_API_KEY" \
+  -H 'content-type: application/json' -d '{"email":"nobody-'$RANDOM'@example.com","password":"x","returnSecureToken":true}' | grep -o '"message": "[A-Z_]*'
 ```
-It must show the CSP, HSTS and `DENY`, and `curl -s https://$DOMAIN/.well-known/security.txt` must start with `Contact:`.
 
-## 3a. Firebase console: sign-in settings and App Check (required)
+**3a.2 One account per email: on.** Authentication → Settings → User account linking → link accounts with the same
+email (default).
 
-Open the Firebase console for `vaulta-a3d7a`. Every setting below is required: the app's security claims depend on
-them.
+**3a.3 Password policy: minimum 10, enforced.** Authentication → Settings → Password policy. Set (done). This
+setting is part of Firebase Authentication with Identity Platform; **if enabling it would require a billing
+account, leave it** — the app enforces 10 on sign-up and the API on every password change. Document whichever
+applies in `/security`.
 
-**3a.1 Email enumeration protection: on.**
-- **Where:** Authentication → Settings → User actions → **Email enumeration protection**: turn it on. It is on by
-  default for projects created since September 2023, but check.
-- **Check:** this prints `INVALID_LOGIN_CREDENTIALS`, not `EMAIL_NOT_FOUND`:
-  ```sh
-  curl -s "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=<VITE_FIREBASE_API_KEY>" \
-    -H 'content-type: application/json' -d '{"email":"nobody-'$RANDOM'@example.com","password":"x","returnSecureToken":true}' | grep -o '"message": "[A-Z_]*'
-  ```
-- **Note:** Firebase's own sign-up endpoint still answers `EMAIL_EXISTS` for an address in use. Firebase can't hide
-  that; Vaulta's screens show the same "Check your inbox" page either way.
+**3a.4 Google sign-in on vaulta.in.**
+- Authorized domains: `vaulta.in`, `www.vaulta.in` (done).
+- Google Cloud console (project `vaulta-a3d7a`) → APIs & Services → Credentials → OAuth 2.0 Client IDs → **Web
+  client (auto created by Google Service)**:
+  - Authorized JavaScript origins: add `https://vaulta.in`
+  - Authorized redirect URIs: add `https://vaulta.in/__/auth/handler`
+  - Keep the existing firebaseapp.com entries. Save.
 
-**3a.2 One account per email address: on.**
-- **Where:** Authentication → Settings → User account linking → **Link accounts that use the same email**. This is
-  the default.
-- **Check:** in the app, sign in with Google using the address of an email/password account. Settings → Security
-  lists both methods.
+**3a.5 Bot checks: reCAPTCHA v3 verified by the API** (no Firebase App Check: its reCAPTCHA v3 provider is
+deprecated and the replacement needs billing). Nothing to do in the Firebase console.
+1. Keys (done): reCAPTCHA admin console, v3, domains `vaulta.in`, `www.vaulta.in`, `vaulta-henna.vercel.app`, `localhost`.
+2. Site key on Vercel as `VITE_RECAPTCHA_SITE_KEY` (§3.1); secret key on Render as `RECAPTCHA_SECRET_KEY` (§2.2).
+3. **Monitor first:** leave `RECAPTCHA_ENFORCE` unset for about a day. Render → `vaulta-api` → Logs, search
+   `recaptcha:`: lines like `recaptcha: low (score 0.3) on demo (monitor mode)`. Real use should show few of them.
+   Optional: `RECAPTCHA_MIN_SCORE` (default `0.5`).
+4. **Enforce:** set `RECAPTCHA_ENFORCE=true` on Render → Manual Deploy. Missing or forged tokens are then refused
+   (401 `recaptcha_failed`); a low score is only slowed (5 an hour per IP and action), never refused, and writes
+   already need a verified email.
 
-**3a.3 Password policy: at least 10 characters, enforced.**
-- **Where:** Authentication → Settings → **Password policy** → enforcement **Require**, minimum length **10**. This
-  setting needs Firebase Authentication with Identity Platform.
-- **If you don't upgrade:** the 10-character minimum is still enforced by the app on sign-up and by the API on every
-  password change, but a sign-up made directly against Firebase's API could set a shorter one.
-- **Check:** `curl` an `accounts:signUp` with a 6-character password. It fails with `PASSWORD_DOES_NOT_MEET_REQUIREMENTS`.
+Never set `RECAPTCHA_DEBUG_TOKEN` on Render: production refuses to start with it.
 
-**3a.4 Authorized domains, and Google sign-in on vaulta.in.**
-- **Where:** Authentication → Settings → **Authorized domains**: `vaulta.in` and `www.vaulta.in` (done).
-- The web app's `authDomain` is `vaulta.in`, not `vaulta-a3d7a.firebaseapp.com`: `vercel.json` forwards
-  `https://vaulta.in/__/auth/*` to Firebase, so Google's sign-in popup shows vaulta.in.
-- Google Cloud console (project `vaulta-a3d7a`) → **APIs & Services → Credentials** → OAuth 2.0 Client IDs → **Web
-  client (auto created by Google Service)** → edit:
-  - **Authorized JavaScript origins:** add `https://vaulta.in`;
-  - **Authorized redirect URIs:** add `https://vaulta.in/__/auth/handler`;
-  - Save. Keep the existing firebaseapp.com entries (Firebase uses them too).
-- **Check:** after step 9, Google sign-in works on `https://vaulta.in` and the popup's address bar shows `vaulta.in`.
+**Check (after §9, enforcing):** `curl -s -X POST https://api.vaulta.in/auth/demo` (no token) answers `401` with
+`"code":"recaptcha_failed"`; the demo button on `https://vaulta.in` still works.
 
-**3a.5 App Check with reCAPTCHA v3** (score-based, not Enterprise).
-1. **The key** (done): reCAPTCHA admin console, type v3, domains `vaulta.in`, `www.vaulta.in`,
-   `vaulta-henna.vercel.app`, `localhost`. Remove `vaulta-henna.vercel.app` after cutover (it then only redirects).
-2. **Register the web app.** Firebase console → App Check → Apps → the web app → **reCAPTCHA** (not "reCAPTCHA
-   Enterprise") → paste the **secret key** → token TTL 1 hour → Save. The secret key is entered only here.
-3. **Set the site key.** On Vercel, set `VITE_RECAPTCHA_SITE_KEY=<site key>` (Production and Preview), then redeploy.
-   If `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` exists there from before, delete it.
-4. **Watch before enforcing.** Leave `APP_CHECK_ENFORCE` unset on Render for a day. The API logs `app check: missing
-   or invalid token` lines without refusing anything. They should only appear for bots.
-5. **Enforce.** Set `APP_CHECK_ENFORCE=true` on Render and redeploy.
-6. **Also enforce in Firebase (recommended).** Firebase console → App Check → APIs → **Identity Platform /
-   Authentication** → Enforce, so bots can't call Firebase's own sign-up API directly either.
+**3a.6 Email templates:** Authentication → Templates → sender name "Vaulta" for verification and password reset.
 
-Never set `APP_CHECK_DEBUG_TOKEN` on Render: production refuses to start with it.
+**Check (after §9):** Google sign-in works on `https://vaulta.in` and the popup shows `vaulta.in`.
 
-**Check:**
-- The app works normally.
-- `curl -s -X POST https://api.$DOMAIN/auth/demo` (no App Check header) answers `401` with `"code":"app_check_failed"`.
+---
 
-**3a.6 Email templates (optional).**
-- **Where:** Authentication → Templates.
-- **What:** set the sender name to "Vaulta" for the verification and password-reset emails. The action links can
-  stay on Firebase's hosted page.
+## 4. Cloudflare DNS
 
-## 4. Domain and DNS (Cloudflare)
+Cloudflare → `vaulta.in` → DNS → Records → **Add record**. All **DNS only** (grey cloud) — Vercel and Render issue
+their own certificates. SSL/TLS mode **Full (strict)**.
 
-`vaulta.in` is active on Cloudflare, with Email Routing on (`privacy@vaulta.in` → your Gmail; catch-all off).
-Cloudflare → `vaulta.in` → **DNS → Records → Add record**, every one **DNS only** (grey cloud): Vercel and Render
-issue their own certificates.
+**Now (before §9):**
 
 | Name | Type | Target | Proxy |
 |---|---|---|---|
-| `@` | A | the address Vercel → Settings → Domains shows for `vaulta.in` (usually `76.76.21.21`) | DNS only |
-| `www` | CNAME | the target Vercel shows for `www.vaulta.in` (usually `cname.vercel-dns.com`) | DNS only |
-| `api` | CNAME | the new Render service's hostname (`vaulta-api….onrender.com`, step 2.5) | DNS only |
+| `api` | CNAME | the `vaulta-api` hostname from §2.3 (`vaulta-api-….onrender.com`) | DNS only |
 
-Email Routing's own MX and SPF records on `@` stay as they are.
+**At cutover (§9), after adding the domains in Vercel:**
 
-**Inbound alerts on `in.vaulta.in`:** Email → Email Routing → **Settings → Subdomains → Add subdomain** `in` (Cloudflare
-adds MX and SPF for `in.vaulta.in`). The catch-all rule comes in step 6, after the worker is deployed.
-
-**`security@vaulta.in` (if you use it for `VITE_SECURITY_CONTACT`):** Email Routing → Routing rules → **Create
-address** `security` → your Gmail.
-
-**Checks:**
-- `dig +short vaulta.in` prints Vercel's address; `dig +short api.vaulta.in` ends with `onrender.com`.
-- `dig +short MX in.vaulta.in` prints Cloudflare's `route*.mx.cloudflare.net` hosts.
-- Vercel and Render show the domains verified, certificates issued.
-
-## 5. Resend: SPF, DKIM, DMARC
-
-`vaulta.in` is added in Resend. Resend → Domains → `vaulta.in` lists three records; add each in Cloudflare DNS, DNS
-only, **copying name and value exactly from Resend** (the DKIM key is unique to your domain):
-
-| Name (in Cloudflare) | Type | Value | Priority |
+| Name | Type | Target | Proxy |
 |---|---|---|---|
-| `send` | MX | `feedback-smtp.<region>.amazonses.com` (as Resend shows) | 10 |
-| `send` | TXT | `v=spf1 include:amazonses.com ~all` | |
-| `resend._domainkey` | TXT | `p=MIGf…` (Resend's DKIM key) | |
-| `_dmarc` | TXT | `v=DMARC1; p=quarantine; rua=mailto:privacy@vaulta.in` | |
+| `@` | A | the address Vercel shows for `vaulta.in` (usually `76.76.21.21`) | DNS only |
+| `www` | CNAME | the target Vercel shows for `www.vaulta.in` (usually `cname.vercel-dns.com`) | DNS only |
 
-They live on `send.` and `resend._domainkey.`, so Email Routing's MX on `@` is untouched. Then Resend → **Verify DNS
-records**. On Render: `RESEND_API_KEY`, and `EMAIL_FROM=Vaulta <noreply@vaulta.in>`.
+Email Routing's MX/SPF records on `@` stay untouched.
+
+**Inbound alerts:** Email → Email Routing → Settings → **Subdomains → Add** `in` (Cloudflare adds MX + SPF for
+`in.vaulta.in`).
+
+**Google Search Console:** add the `google-site-verification=…` TXT record on `@` (Search Console → Add property →
+Domain → `vaulta.in`) → Verify.
 
 **Checks:**
-- Resend shows `vaulta.in` **Verified**.
-- `dig +short TXT _dmarc.vaulta.in` prints the policy.
-- After cutover: Render → `vaulta-api` → Shell,
-  `python -c "from app.services import email; email.send('<your Gmail>', 'Vaulta test', '<p>Test</p>', 'Test')"`.
-  It arrives from `noreply@vaulta.in`, and Gmail → Show original says `SPF: PASS`, `DKIM: PASS`, `DMARC: PASS`.
+- `dig +short api.vaulta.in` ends with `onrender.com`; Render shows the certificate issued.
+- `dig +short MX in.vaulta.in` lists `route*.mx.cloudflare.net`.
+- After §9: `dig +short vaulta.in` prints Vercel's address; Vercel shows both domains verified.
 
-## 6. Cloudflare email worker and routing
+---
 
-`wrangler.toml` already has `API_URL = "https://api.vaulta.in"` and `INBOUND_HOST = "in.vaulta.in"`. The worker
-bounces mail for any other address, since the catch-all covers the whole zone.
+## 5. Resend (SPF, DKIM, DMARC)
+
+Done: `vaulta.in` added in Resend (region Tokyo), records added by Resend's Cloudflare connection (DKIM
+`resend._domainkey`, the `send` records for SPF/bounces), receiving off. DMARC added by hand:
+
+| Name | Type | Value |
+|---|---|---|
+| `_dmarc` | TXT | `v=DMARC1; p=none; rua=mailto:privacy@vaulta.in` |
+
+`p=none` only reports. **Tighten after two weeks** of aggregate reports (they arrive at privacy@) showing only Resend
+and Google passing: change it to `v=DMARC1; p=quarantine; rua=mailto:privacy@vaulta.in`.
+
+On Render: `RESEND_API_KEY`, `EMAIL_FROM=Vaulta <noreply@vaulta.in>` (§2.2).
+
+**Checks:**
+- Resend shows `vaulta.in` **Verified**; `dig +short TXT _dmarc.vaulta.in` prints the policy.
+- After §9: Render → `vaulta-api` → Shell →
+  `python -c "from app.services import email; email.send('<your Gmail>', 'Vaulta test', '<p>Test</p>', 'Test')"` →
+  arrives from `noreply@vaulta.in`; Gmail → Show original: SPF, DKIM, DMARC all PASS.
+
+---
+
+## 6. Inbound email worker
+
 ```sh
 cd ~/Desktop/vaulta/infra/email-worker
 npm ci
-npx wrangler secret put INTERNAL_SECRET        # paste the API's INTERNAL_SECRET (from ~/vaulta-render-secrets.env)
+npx wrangler secret put INTERNAL_SECRET      # same value as on Render
 npx wrangler deploy
 ```
-Then Cloudflare → Email Routing → **Routing rules → Catch-all address → Edit → Action "Send to a Worker" →
-`vaulta-inbound-email` → Save**, and switch it **on**. Explicit rules (`privacy@`, `security@`) still go to your
-Gmail; they take precedence over the catch-all.
+Cloudflare → Email Routing → Routing rules → **Catch-all → Edit → Send to a Worker → `vaulta-inbound-email`** →
+Save → enable. Explicit rules (`privacy@`, `security@`) keep going to Gmail. The worker only accepts
+`in.vaulta.in` addresses and retries with backoff for up to 2 minutes while the API wakes up.
 
-The worker waits out a sleeping API (backoff, up to 2 minutes) before giving up (docs/deploy.md, Cold starts).
+**Check (after §9):**
+1. Settings → Run setup again → forwarding step → **Send test** → "✓ Your forwarding address works" within ~2 minutes.
+2. A real forwarded bank alert appears as a transaction.
+3. Mail to `nobody@vaulta.in` bounces.
+4. With the API asleep (20 minutes idle), a test still arrives.
 
-**Check (after cutover):**
-1. Settings → **Run setup again** → the alert forwarding step → **Send test**.
-2. Send any email to the address shown. Within a minute (two if the API was asleep) it says "✓ Your forwarding
-   address works".
-3. A real bank alert forwarded from Gmail appears as a transaction.
-4. An email to a made-up `nobody@vaulta.in` bounces ("No such address").
-5. With the API asleep (no use for 20 minutes), send one more test: it still arrives. Note whether a delivery that
-   failed after 2 minutes was retried by the sender (Cloudflare → Email Routing → Activity log).
+---
 
 ## 7. Telegram
 
-1. In Telegram, @BotFather → `/newbot` (or `/token` for the existing bot). Set `TELEGRAM_BOT_TOKEN` and
-   `TELEGRAM_BOT_USERNAME` on Render, plus `TELEGRAM_WEBHOOK_SECRET` from step 0.
-2. Register the webhook. The values are read without echoing:
-   ```sh
-   read -rs TG_TOKEN; read -rs TG_SECRET
-   curl -s "https://api.telegram.org/bot$TG_TOKEN/setWebhook" \
-     --data-urlencode "url=https://api.$DOMAIN/internal/telegram" \
-     --data-urlencode "secret_token=$TG_SECRET" \
-     --data-urlencode 'allowed_updates=["message","callback_query"]' \
-     -d drop_pending_updates=true
-   ```
-
+Bot already created with @BotFather. On Render set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`,
+`TELEGRAM_WEBHOOK_SECRET`, redeploy, then:
+```sh
+read -rs TG_TOKEN; read -rs TG_SECRET
+curl -s "https://api.telegram.org/bot$TG_TOKEN/setWebhook" \
+  --data-urlencode "url=https://api.$DOMAIN/internal/telegram" \
+  --data-urlencode "secret_token=$TG_SECRET" \
+  --data-urlencode 'allowed_updates=["message","callback_query"]' \
+  -d drop_pending_updates=true
+```
 **Checks:**
-- `curl -s "https://api.telegram.org/bot$TG_TOKEN/getWebhookInfo"` shows the URL and `"pending_update_count":0`.
-- After step 9: Settings → Link Telegram → send the code → the bot replies "Linked to Vaulta".
+- `curl -s "https://api.telegram.org/bot$TG_TOKEN/getWebhookInfo"` shows the URL, `"pending_update_count":0`.
+- After §9: Settings → Link Telegram → send the code → bot replies "Linked to Vaulta".
 
-## 8. Seed the demo on production
+---
 
-The demo is built on the first visit to "Try the demo", and the hourly run rebuilds it daily. To build it ahead of
-time, after step 9 open Render → `vaulta-api` → **Shell** and run:
+## 8. Seed the demo
+
+After `vaulta-api` is live: Render → `vaulta-api` → **Shell**:
 ```sh
 python -m app.services.demo
 ```
-**Check:** it prints `demo user … seeded`, and `https://$DOMAIN/welcome` → "Try the demo" shows the home screen with
-four months of data.
+**Check:** prints `demo user … seeded`. (The hourly job rebuilds it daily.)
 
-## 9. Merge
+---
 
-The open PR #1 points at `rebuild/phase5`. Phase 6 (which contains phases 1–7) goes in from `rebuild/phase6`:
-```sh
-gh pr create --repo KanveerMadan/Vaulta --base main --head rebuild/phase6 --title "Vaulta rebuild: phases 1–7 and 6" \
-  --body "Supersedes #1. See #1 for the full description."
-gh pr checks rebuild/phase6 --repo KanveerMadan/Vaulta --watch   # every CI job green
-gh pr merge rebuild/phase6 --repo KanveerMadan/Vaulta --merge
-gh pr close 1 --repo KanveerMadan/Vaulta --comment "Merged via rebuild/phase6"
-```
-Merging deploys:
-- Vercel builds production from `main`;
-- the Render Blueprint deploys `vaulta-api` (resume it if you suspended it).
+## 9. Cutover — only on the owner's explicit "go"
 
-**Check:** steps 2, 3, 6 and 7's "after step 9" checks all pass.
+1. **Merge PR #2:**
+   ```sh
+   gh pr checks 2 --repo KanveerMadan/Vaulta --watch     # all green
+   gh pr merge 2 --repo KanveerMadan/Vaulta --merge
+   ```
+   Vercel starts building production from `main`.
+2. **Render:** `vaulta-api` → Settings → Branch **`main`**, Auto-Deploy **On Commit** → Manual Deploy → latest
+   commit.
+3. **Vercel domains:** Settings → Domains → add `vaulta.in` (primary) and `www.vaulta.in` → add the `@` and `www`
+   records from §4 in Cloudflare → wait for "Valid Configuration".
+4. Run the §2, §3a.4, §5, §6, §7 "after §9" checks.
+5. `git tag v1.0 && git push origin v1.0`.
 
-## 10. Smoke test after deploying
+---
 
-Do this in a private window, on your phone and on a laptop.
+## 10. Smoke test (private window, phone and laptop)
 
-- [ ] `https://$DOMAIN/welcome` loads. The browser console shows no CSP errors.
-- [ ] "Try the demo": home, transactions, budgets and chat answer. A change shows the read-only message.
-- [ ] Sign in with Google: a new account goes through onboarding.
-- [ ] Import `fixtures/statements/hdfc.csv`: the preview shows what was removed; the import lands; home totals look
-  right.
-- [ ] Chat: "how much did I spend this month?" gets an answer with figures. Settings → turn AI chat off → chat
-  refuses.
-- [ ] Settings → Activity lists your sign-up and sign-in (with the method).
-- [ ] Sign up with email and password: "Check your inbox". Importing is refused until you click the link; after it,
-  it works.
-- [ ] "Forgot password?" says the same for your address and a made-up one; the reset email arrives and works.
-- [ ] Settings → Security: sign out of all devices signs out a second browser too.
-- [ ] Wait 5 minutes after signing in, then Export: you're asked to sign in again first.
-- [ ] Settings → Export my data downloads a zip with `data.json`; Activity lists the export.
-- [ ] Connect: the forwarding address works (step 6 check).
-- [ ] Telegram: link, send `150 auto cash`, tap ✓ Save; `/undo` removes it.
-- [ ] `curl -s https://api.$DOMAIN/health/ready` reports ready, migrations at head, RLS enforced.
-- [ ] `/security` and `/privacy` show the right contact addresses; `/.well-known/security.txt` on both domains
-  answers.
-- [ ] After the next hour: Actions → Hourly run shows a green run whose log ends in a JSON summary.
-- [ ] Delete everything with a throwaway account: it ends on the welcome page and can't sign back in to its data.
-- [ ] Remove `ENCRYPTION_KEY` from Render (it was only for the migration).
-- [ ] Update `/privacy` after your review, and remove its draft notice.
+- [ ] `https://vaulta.in/welcome` loads; no CSP errors in the console; the cold-start screen appears and recovers if the API was asleep.
+- [ ] Try the demo: home, transactions, budgets, chat answer; a change shows the read-only message.
+- [ ] Google sign-in → new account → onboarding → guided tour → checklist.
+- [ ] Import a real statement: preview shows removed fields and balance check; import lands; totals look right.
+- [ ] Delete this import → preview count → gone; totals recompute.
+- [ ] Chat: "how much did I spend this month?" answers with figures; AI chat off → refused.
+- [ ] Email/password sign-up → "Check your inbox" → import refused until verified → works after.
+- [ ] Forgot password: same message for a real and a made-up address; reset works.
+- [ ] Sign out of all devices signs out a second browser.
+- [ ] 5 minutes after sign-in, Export asks to sign in again; the zip downloads; Activity lists it.
+- [ ] Reset my data (type RESET) clears data, keeps the login.
+- [ ] Forwarding address test (§6) and Telegram `150 auto cash` → ✓ Save → `/undo`.
+- [ ] `curl -s https://api.vaulta.in/health/ready` → ready, at head, RLS enforced.
+- [ ] `/security`, `/privacy`, `/terms` show the right contacts; `/.well-known/security.txt` answers on both domains.
+- [ ] After the next hour: Actions → Hourly run is green (and tolerated the cold start).
+- [ ] Delete everything with a throwaway account: data and login gone.
 
-**Right after the new backend is live (cutover clean-up):**
-- [ ] Google Cloud → IAM & Admin → Service accounts → `firebase-adminsdk-fbsvc@…` → **Keys**: delete the old key
-  (id `6105c18b88…`). Only the new key (`…3742773cae`) stays; it's the one on Render.
-- [ ] reCAPTCHA admin console → the v3 site → **Domains**: remove `vaulta-henna.vercel.app` (it now redirects to
-  vaulta.in).
-- [ ] Render: suspend the old "Vaulta" service (`srv-d8hh6nt7vvec73acib30`); delete it a week later.
-- [ ] No default hosts anywhere users look: `scripts/check-default-domains.sh --live https://vaulta.in` prints CLEAN,
-  and `curl -sI https://vaulta-henna.vercel.app/security` answers `308` with `location: https://vaulta.in/security`.
-- [ ] Google sign-in shows `vaulta.in` in the popup, not `vaulta-a3d7a.firebaseapp.com`.
+**Clean-up right after go-live:**
+- [ ] Remove `ENCRYPTION_KEY` from Render (migration only).
+- [ ] Google Cloud → IAM & Admin → Service accounts → `firebase-adminsdk-fbsvc@…` → Keys → delete the old key `6105c18b88…` (and its JSON file, if you still have a copy anywhere).
+- [ ] reCAPTCHA admin → v3 site → Domains → remove `vaulta-henna.vercel.app`.
+- [ ] `scripts/check-default-domains.sh --live https://vaulta.in` prints CLEAN; `curl -sI https://vaulta-henna.vercel.app/security` → `308` to `https://vaulta.in/security`.
+- [ ] Google sign-in popup shows `vaulta.in`.
+- [ ] Search Console → Sitemaps → `sitemap.xml` → Submit; URL inspection → `https://vaulta.in/welcome` → Request indexing.
+- [ ] Review `/privacy` and `/terms`, remove the draft notice.
+- [ ] After ~1 day of `recaptcha:` monitor logs: enforce (§3a.5 step 4).
+- [ ] Two weeks after go-live: DMARC `p=none` → `p=quarantine` (§5).
+- [ ] Backups: Actions → **Weekly backup** → **Run workflow** → green; download the artifact
+      (`gh run download <run-id> -n vaulta-<date>.dump.age`) and check it decrypts:
+      `age -d -i ~/vaulta-backup-key.txt vaulta-<date>.dump.age | pg_restore --list | head`; then delete the download.
+- [ ] Actions → **Hourly run** → Run workflow once by hand → green (it waits out a cold start).
+- [ ] UptimeRobot (optional): HTTP monitor `https://api.vaulta.in/health`, 60-minute interval — outage alert only.
 
-## 11. Rollback
+**One week after a stable go-live:**
+- [ ] Render: delete the old "Vaulta" service (`srv-d8hh6nt7vvec73acib30`).
+- [ ] Neon: delete the old US project `steep-smoke-31221922` and the `pre-v1-…` snapshot branch.
+
+---
+
+## 11. Not part of go-live
+
+Phase 10 (repo cleanup, README and docs, LinkedIn post) starts after v1.0 on the owner's approval.
+
+---
+
+## 12. Rollback
+
+Because the old US database is never migrated, rolling back is fast until the old project is deleted.
 
 | Step | How to undo |
 |---|---|
-| 1.1 snapshot | Nothing to undo. Delete the branch after a week of stable running: `npx neonctl@7.0.4 branches delete pre-phase6-… --project-id $NEON_PROJECT`. |
-| 1.3 app role | `psql "$OWNER_URL" -c "DROP OWNED BY vaulta_app; DROP ROLE vaulta_app;"` |
-| 1.4 old API suspended | Render → old service → **Resume**. Only valid while the database is not yet migrated, or after restoring it (next row). |
-| 1.5 migrations | Fastest and complete: Neon → restore `$NEON_PROD_BRANCH` from `pre-phase6-…` (`npx neonctl@7.0.4 branches restore $NEON_PROD_BRANCH pre-phase6-… --project-id $NEON_PROJECT`), then resume the old API. Data written after the migration is lost. To keep the data: `alembic downgrade a5c1e7f9b0d3` (decrypts, drops RLS) with the same keys in the environment. |
-| 2 Render | Suspend or delete `vaulta-api`, and disable the Hourly run workflow. Resume the old service only after restoring the database. |
-| 3 Vercel | Vercel → Deployments → the last old production deployment → **Promote to Production**. Revert the env vars. |
-| 3a Firebase / App Check | Unset `APP_CHECK_ENFORCE` on Render (back to monitor mode) and remove the App Check enforcement in the Firebase console. The other settings are safe to keep. |
-| 4 DNS | Delete the records added. Point `$DOMAIN` back where it was, and disable Email Routing for `in.$DOMAIN`. |
-| 5 Resend | Remove the domain and its records. Emails then stop (the app keeps working: email is optional). |
-| 6 Worker | `npx wrangler delete` and remove the routing rule. Alert forwarding stops; nothing else is affected. |
-| 7 Telegram | `curl -s "https://api.telegram.org/bot$TG_TOKEN/deleteWebhook"` and remove the three variables. |
-| 8 Demo | Nothing to undo. Delete it with `psql "$OWNER_URL" -c "delete from users where firebase_uid='vaulta-demo'"`. |
-| 9 Merge | `git revert -m 1 <merge commit> && git push` (Vercel and Render redeploy the old code). The database must then be restored as in 1.5, because the old code can't read it. |
+| 1.1–1.8 new Neon project | Nothing touches the old project. Resume the old Render service (§1.2) and the old app works as before. Delete the new project if abandoning. |
+| 1.2 old API suspended | Render → old "Vaulta" service → **Resume**. |
+| 1.6 app role | `psql "$NEW_OWNER_URL" -c "DROP OWNED BY vaulta_app; DROP ROLE vaulta_app;"` |
+| 1.7 migrations | Restore the new project's branch from `pre-v1-…`: `npx neonctl@7.0.4 branches restore $NEW_NEON_BRANCH pre-v1-… --project-id $NEW_NEON_PROJECT`, then rerun §1.7. |
+| 2 Render | Suspend or delete `vaulta-api`; disable the Hourly run workflow; resume the old service. |
+| 3 Vercel | Deployments → last old production deployment → **Promote to Production**; revert env vars. |
+| 3a Bot checks | Unset `RECAPTCHA_ENFORCE` (back to monitor mode) and redeploy. |
+| 4 DNS | Delete the added records; remove the domains from Vercel; disable Email Routing for `in.vaulta.in`. |
+| 5 Resend | Remove the domain and records; the app works without email. |
+| 6 Worker | `npx wrangler delete`; disable the catch-all rule. |
+| 7 Telegram | `curl -s "https://api.telegram.org/bot$TG_TOKEN/deleteWebhook"`; remove the three variables. |
+| 8 Demo | `psql "$NEW_OWNER_URL" -c "delete from users where firebase_uid='vaulta-demo'"` |
+| 9 Merge | `git revert -m 1 <merge commit> && git push`; promote the old Vercel deployment; Render `vaulta-api` back to `release/v1` or suspended; resume the old service. Data written to the new database after go-live stays there (not in the old one). |
