@@ -63,7 +63,7 @@ SAFE_EMAIL = re.compile(rb"@(([a-z0-9-]+\.)*(example\.(com|org|in)|test\.local|[
 EMAIL = re.compile(rb"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 # gmail.com appears only as made-up test senders; flag the repo owner's address if it ever shows up
 OWNER = re.compile(rb"kanveer" + rb"madan@", re.I)   # split so this file doesn't match itself
-BAD_PATH = re.compile(r"(^|/)\.env(\.|$)(?!e2e$)|\.(eml|msg|p12|pfx|pem|key)$|(^|/)local-statements/|service[-_]?account.*\.json$", re.I)
+BAD_PATH = re.compile(r"(^|/)\.env(\.|$)(?!(e2e|example)$)|\.(eml|msg|p12|pfx|pem|key)$|(^|/)local-statements/|service[-_]?account.*\.json$", re.I)
 DATA_FILE = re.compile(r"\.(pdf|csv|xlsx?|png|jpe?g|webp|heic)$", re.I)
 # allowed binary data: synthetic statement fixtures, app icons, and the browser tests' visual
 # snapshots (screenshots of seeded synthetic accounts, frontend/e2e/visual.spec.js and devices.spec.js), and the
