@@ -1,0 +1,54 @@
+# Weekly encrypted database backup (go-live stage 6). pg_dump of the production database as the read-only
+# vaulta_backup role, encrypted on the runner with age to a public key whose private half only the owner holds
+# (offline, never in GitHub), then kept as a workflow artifact for 35 days. Nothing unencrypted is uploaded or
+# printed. Sensitive columns are also encrypted inside the database (docs/security/encryption.md), so a backup is
+# double-locked. Restore: docs/deploy.md, "Backups".
+name: Weekly backup
+
+on:
+  schedule:
+    - cron: "23 20 * * 0"          # Sunday 20:23 UTC (Monday 01:53 IST), away from the hourly run's minute 7
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: weekly-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: pg_dump | age → artifact
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Install pg_dump 18 (the server's version) and age
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-18 age > /dev/null
+      - name: Dump and encrypt (no plaintext touches disk)
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BACKUP_DATABASE_URL" ] || [ -z "$BACKUP_AGE_RECIPIENT" ]; then
+            echo "::error::Set the secret BACKUP_DATABASE_URL and the variable BACKUP_AGE_RECIPIENT (docs/deploy.md, Backups)."
+            exit 1
+          fi
+          out="vaulta-$(date -u +%Y-%m-%d).dump.age"
+          /usr/lib/postgresql/18/bin/pg_dump "$BACKUP_DATABASE_URL" --format=custom --no-owner --no-privileges \
+            | age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$out"
+          head -c 21 "$out" | grep -q "age-encryption.org/v1" || { echo "::error::output isn't age-encrypted"; exit 1; }
+          [ "$(stat -c %s "$out")" -gt 1024 ] || { echo "::error::backup is suspiciously small"; exit 1; }
+          echo "BACKUP=$out" >> "$GITHUB_ENV"
+          echo "encrypted backup: $(stat -c %s "$out") bytes"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.BACKUP }}
+          path: ${{ env.BACKUP }}
+          retention-days: 35
+          if-no-files-found: error

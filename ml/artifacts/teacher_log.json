@@ -1,0 +1,79 @@
+{
+  "ambiguous": 731,
+  "labelled_merchants": 5018,
+  "llm_calls_total": 235,
+  "merchants": 5032,
+  "models": {
+    "A": "openai/gpt-oss-120b",
+    "B": "qwen/qwen3.8-27b",
+    "C": "openai/gpt-oss-20b"
+  },
+  "prompt_version": "v1",
+  "runs": [
+    {
+      "calls": 3,
+      "note": "probe: 25 names to each of A, B and C before the full run (separate cache, not used for labels)"
+    },
+    {
+      "calls": 125,
+      "note": "runs 1-2 stopped (Groq's daily token limit for gpt-oss-120b) before writing a log; reconstructed from the cache: 61 successful batches for A and 64 for B (80 names each, the last smaller). Calls refused with 429 and retries are not included, so this is a lower bound."
+    },
+    {
+      "calls": 51,
+      "calls:openai/gpt-oss-120b": 3,
+      "calls:openai/gpt-oss-20b": 44,
+      "calls:qwen/qwen3.8-27b": 4,
+      "disagreements": 1291,
+      "http_429:openai/gpt-oss-120b": 1,
+      "http_429:qwen/qwen3.8-27b": 1,
+      "retries:openai/gpt-oss-20b": 34,
+      "retries:qwen/qwen3.8-27b": 3,
+      "tokens:openai/gpt-oss-120b": 6932,
+      "tokens:openai/gpt-oss-20b": 76989,
+      "tokens:qwen/qwen3.8-27b": 3028
+    },
+    {
+      "calls": 43,
+      "calls:openai/gpt-oss-120b": 16,
+      "calls:openai/gpt-oss-20b": 7,
+      "calls:qwen/qwen3.8-27b": 20,
+      "disagreements": 176,
+      "http_429:openai/gpt-oss-120b": 4,
+      "http_429:qwen/qwen3.8-27b": 10,
+      "retries:openai/gpt-oss-120b": 3,
+      "retries:openai/gpt-oss-20b": 5,
+      "retries:qwen/qwen3.8-27b": 3,
+      "tokens:openai/gpt-oss-120b": 36147,
+      "tokens:openai/gpt-oss-20b": 10527,
+      "tokens:qwen/qwen3.8-27b": 24305
+    },
+    {
+      "calls": 0,
+      "disagreements": 0
+    },
+    {
+      "calls": 5,
+      "calls:openai/gpt-oss-20b": 1,
+      "calls:qwen/qwen3.8-27b": 4,
+      "disagreements": 176,
+      "retries:qwen/qwen3.8-27b": 4,
+      "tokens:openai/gpt-oss-20b": 1068,
+      "tokens:qwen/qwen3.8-27b": 3936
+    },
+    {
+      "calls": 4,
+      "calls:qwen/qwen3.8-27b": 4,
+      "disagreements": 176,
+      "retries:qwen/qwen3.8-27b": 4,
+      "tokens:qwen/qwen3.8-27b": 3908
+    },
+    {
+      "calls": 4,
+      "calls:qwen/qwen3.8-27b": 4,
+      "disagreements": 176,
+      "retries:qwen/qwen3.8-27b": 4,
+      "tokens:qwen/qwen3.8-27b": 3908
+    }
+  ],
+  "strings": 5018
+}

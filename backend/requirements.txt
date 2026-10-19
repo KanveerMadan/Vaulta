@@ -1,38 +1,32 @@
-fastapi==0.111.0
-uvicorn[standard]==0.29.0
+# Pinned to the versions the test suite runs against (Python 3.12, see runtime.txt).
+# Test-only deps: requirements-dev.txt
+
+fastapi==0.136.3
+starlette==1.3.1
+uvicorn[standard]==0.49.0
 
 # Database
-sqlalchemy==2.0.30
-psycopg2-binary==2.9.9
-alembic==1.13.1
+sqlalchemy==2.0.50
+psycopg2-binary==2.9.12
+alembic==1.18.4
 
 # Config & validation
-pydantic[email]==2.9.2
-pydantic-settings==2.5.2
-email-validator==2.1.1
+pydantic==2.13.4
+pydantic-settings==2.14.2
+email-validator==2.3.0
 
 # Firebase
-firebase-admin==6.5.0
+firebase-admin==7.4.0
 
-# Security — Fernet symmetric encryption for OAuth token storage
-cryptography==42.0.7
+# Security — AES-GCM field encryption and HKDF (core/crypto.py)
+cryptography==50.0.2
 
-# CSV & data parsing (stdlib csv used, but chardet helps with encoding detection)
-chardet==5.2.0
+# Statements are parsed in the browser (frontend/src/import/); no route takes
+# multipart uploads, so python-multipart is not needed.
 
-# PDF parsing — UPI app statement uploads (Google Pay, PhonePe, Paytm)
-pdfplumber==0.11.4
+# LLM API calls (Groq, OpenAI-compatible endpoint) and email (Resend)
+httpx==0.28.1
 
-# Payments (Phase 2)
-setuptools>=69.0.0  # provides pkg_resources, required by razorpay SDK
-razorpay==1.4.2
-pymupdf
-
-# AI inference (Phase 3)
-# groq==0.8.0
-
-# PDF generation (Phase 4)
-# weasyprint==62.1
-
-# Image generation (Phase 4 — share cards)
-# Pillow==10.3.0
+# Payments (razorpay 2.x reads its version with importlib.metadata, so no setuptools pin is needed)
+razorpay==2.0.1
+sentry-sdk==2.71.0

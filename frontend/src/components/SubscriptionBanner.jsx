@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import api from "../lib/api";
 
 // ─────────────────────────────────────────────
@@ -39,23 +39,20 @@ export default function SubscriptionBanner() {
   const [subscribing, setSubscribing] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      const { data } = await api.get("/api/payments/status");
-      setStatus(data);
-    } catch (err) {
-      // 503 = payments not configured yet — treat as no banner, not an error
-      if (err?.response?.status !== 503) {
-        setError("Couldn't load subscription status.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const fetchStatus = () => setRefreshKey((k) => k + 1);
 
   useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
+    let alive = true;
+    api.get("/api/payments/status")
+      .then(({ data }) => alive && setStatus(data))
+      .catch((err) => {
+        // 503 = payments not configured yet — treat as no banner, not an error
+        if (alive && err?.response?.status !== 503) setError("Couldn't load subscription status.");
+      })
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [refreshKey]);
 
   const handleSubscribe = async () => {
     setSubscribing(true);
@@ -68,7 +65,7 @@ export default function SubscriptionBanner() {
         key: data.razorpay_key_id,
         subscription_id: data.subscription_id,
         name: "Vaulta",
-        description: "Vaulta Monthly — ₹99/month",
+        description: "Vaulta Monthly, ₹99/month",
         theme: { color: "#2d6a4f" },
         handler: function () {
           // Webhook updates subscription_status asynchronously;
@@ -99,14 +96,14 @@ export default function SubscriptionBanner() {
   // Trial — informational, not urgent
   if (status.subscription_status === "trial") {
     return (
-      <div className="flex items-center justify-between gap-3 bg-forest-50 border border-forest-200 rounded-xl px-4 py-3">
+      <div className="flex flex-col items-stretch sm:flex-row sm:items-center justify-between gap-3 bg-forest-50 border border-forest-200 rounded-xl px-4 py-3">
         <div className="flex items-center gap-3">
           <svg className="w-4 h-4 text-forest-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-sm text-forest-800">
-            You're on the free tier — last 30 days of data only.
+            You're on the free tier: the last 30 days of data only.
           </p>
         </div>
         <button
@@ -114,7 +111,7 @@ export default function SubscriptionBanner() {
           disabled={subscribing}
           className="btn-primary text-sm py-1.5 px-4 shrink-0 disabled:opacity-50"
         >
-          {subscribing ? "Loading..." : "Subscribe — ₹99/mo"}
+          {subscribing ? "Loading..." : "Subscribe for ₹99/mo"}
         </button>
       </div>
     );
@@ -126,7 +123,7 @@ export default function SubscriptionBanner() {
     const expired = remaining === "expired";
     return (
       <div className={`
-        flex items-center justify-between gap-3 rounded-xl px-4 py-3 border
+        flex flex-col items-stretch sm:flex-row sm:items-center justify-between gap-3 rounded-xl px-4 py-3 border
         ${expired ? "bg-danger/5 border-danger/20" : "bg-gold/10 border-gold/30"}
       `}>
         <div className="flex items-center gap-3">
@@ -137,7 +134,7 @@ export default function SubscriptionBanner() {
           <p className={`text-sm ${expired ? "text-danger" : "text-ink-700"}`}>
             {expired
               ? "Your payment is overdue. Update your payment method to continue using Vaulta."
-              : `Payment failed — you have ${remaining} left before access is restricted.`}
+              : `Payment failed. You have ${remaining} left before access is restricted.`}
           </p>
         </div>
         <button
@@ -154,7 +151,7 @@ export default function SubscriptionBanner() {
   // Cancelled
   if (status.subscription_status === "cancelled") {
     return (
-      <div className="flex items-center justify-between gap-3 bg-danger/5 border border-danger/20 rounded-xl px-4 py-3">
+      <div className="flex flex-col items-stretch sm:flex-row sm:items-center justify-between gap-3 bg-danger/5 border border-danger/20 rounded-xl px-4 py-3">
         <div className="flex items-center gap-3">
           <svg className="w-4 h-4 text-danger shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -168,7 +165,7 @@ export default function SubscriptionBanner() {
           disabled={subscribing}
           className="btn-primary text-sm py-1.5 px-4 shrink-0 disabled:opacity-50"
         >
-          {subscribing ? "Loading..." : "Resubscribe — ₹99/mo"}
+          {subscribing ? "Loading..." : "Resubscribe for ₹99/mo"}
         </button>
       </div>
     );

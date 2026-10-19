@@ -1,0 +1,58 @@
+# Generic local-shop patterns: "<taxonomy id>: shop word; shop word; ...". ml/generate.py combines them with the name
+# stems below ("SRI BALAJI MEDICALS"). Held-out stems make the unseen-local-shops test set (ml/README.md).
+groceries.kirana: Kirana Store; General Stores; Provision Store; Departmental Store; Super Market; Mini Mart; Kirana; Traders; Grocery
+health.pharmacy: Medicals; Medical Store; Pharma; Chemists; Chemists & Druggists; Pharmacy; Medical Hall; Medicos
+personal_care.salon: Hair Salon; Gents Parlour; Hair Cutting Saloon; Unisex Salon; Hair Dressers; Men's Saloon
+personal_care.spa: Beauty Parlour; Ladies Beauty Parlour; Spa; Herbal Beauty Care
+food.restaurant: Hotel; Restaurant; Family Restaurant; Dhaba; Bhojanalaya; Veg Restaurant; Biryani House; Military Hotel; Lunch Home; Udupi Hotel
+food.bakery_sweets: Bakery; Sweets; Sweet House; Sweet Mart; Cake Shop; Bakers; Mithai Bhandar; Ice Cream Parlour
+food.street_food: Chaat Bhandar; Juice Centre; Tea Stall; Vada Pav Centre; Pani Puri Centre; Snacks Corner; Fast Food Centre; Chai Centre
+food.cafe: Tea House; Cafe; Coffee House; Coffee Bar
+food.bar: Wines; Wine Shop; Bar and Restaurant; Liquor Shop; Beer Shop
+food.canteen: Mess; Tiffin Centre; Canteen; Tiffin Service
+food.catering: Caterers; Catering Services
+groceries.fruits_vegetables: Fruits; Vegetables; Fruit Mart; Fruits and Vegetables; Sabzi Bhandar
+groceries.dairy: Dairy; Milk Centre; Milk Dairy; Dairy Farm
+groceries.meat_fish: Chicken Centre; Mutton Shop; Fish Stall; Meat Shop; Chicken and Mutton
+groceries.specialty: Dry Fruits; Organic Store; Dry Fruit House
+shopping.hardware: Hardware; Paints; Electricals; Sanitary; Hardware and Paints; Plywood; Steel Traders
+shopping.electronics: Mobiles; Mobile Shop; Electronics; Computers; Mobile World; Electronics and Home Appliances; Mobile Point
+shopping.fashion: Garments; Textiles; Cloth Centre; Collection; Readymades; Saree Centre; Fashions; Cloth House
+shopping.footwear: Footwear; Shoe Mart; Shoe House; Chappal Stores
+shopping.jewellery: Jewellers; Gold Palace; Jewellery; Bangle Store
+shopping.books_stationery: Stationery; Book Stall; Xerox; Book Depot; Stationers
+shopping.home_furniture: Furniture; Furnishings; Steel Furniture; Utensils; Vessels Store
+shopping.beauty: Cosmetics; Fancy Store; Fancy and Cosmetics
+shopping.gifts_flowers: Flower Shop; Florist; Gift Centre; Gift House; Flower Stall
+shopping.pets: Pet Shop; Pet Clinic and Shop; Aquarium Shop
+shopping.kids: Toy Centre; Toys; Kids World
+shopping.sports: Sports; Sports Corner; Cycle Stores
+shopping.watches_accessories: Watch Co; Bag House; Watch Centre
+shopping.eyewear: Opticals; Optics; Optical Centre
+shopping.paan_tobacco: Paan Shop; Paan Bhandar; Paan Corner; Beeda Stall
+transport.fuel: Filling Station; Petroleum; Service Station; Fuels; Fuel Point; Auto Fuels
+transport.vehicle_service: Auto Garage; Motors; Tyres; Car Care; Auto Works; Two Wheeler Works; Car Wash; Auto Spares
+transport.vehicle_rental: Bike Rentals; Self Drive Cars; Rent a Bike
+transport.ride_hailing: Taxi Service; Cabs; Car Travels
+travel.hotels: Lodge; Residency; Guest House; Inn; Comforts; Boarding and Lodging
+travel.bus: Travels; Tours and Travels; Bus Service
+personal_care.laundry: Dry Cleaners; Laundry; Dhobi Ghat; Ironing Centre
+personal_care.tailoring: Tailors; Ladies Tailors; Tailoring Centre
+health.doctor: Clinic; Polyclinic; Health Clinic; Child Care Clinic
+health.hospital: Hospital; Nursing Home; Multispeciality Hospital
+health.diagnostics: Diagnostic Centre; Scan Centre; Lab; Clinical Laboratory
+health.dental: Dental Clinic; Dental Care
+health.eye_care: Eye Clinic; Eye Hospital
+health.fitness: Gym; Fitness Centre; Yoga Centre; Fitness Studio
+education.school: School; Vidyalaya; Public School; High School
+education.coaching: Tutorials; Classes; Academy; Coaching Centre; Institute
+education.childcare: Play School; Kids Kingdom; Day Care
+housing.repairs: Electrical Works; Plumbing Works; Interiors; Aluminium Works; Glass House
+housing.movers: Packers and Movers; Transport Co
+housing.property: Estates; Real Estate; Properties; Developers
+utilities.water: Water Supply; Aqua; Water Suppliers
+utilities.lpg: Gas Agency; Gas Service; Gas Agencies
+utilities.dth_cable: Cable Network; Cable Vision; Digital Cable
+utilities.broadband: Net Services; Broadband; Fibernet; Internet Services
+entertainment.amusement: Gaming Zone; Fun World; Amusement Park
+donations.religious: Temple; Mandir; Devasthanam; Mandir Trust; Gurudwara Committee; Church

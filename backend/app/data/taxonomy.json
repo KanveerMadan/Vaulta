@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "groups": [
+    {"id": "food", "name": "Food & Dining", "subcategories": [
+      {"id": "food.delivery", "name": "Food delivery", "definition": "Restaurant food ordered through a delivery app (Swiggy, Zomato, EatSure)."},
+      {"id": "food.restaurant", "name": "Restaurants", "definition": "Sit-down restaurants, dhabas and family dining, paid at the venue."},
+      {"id": "food.fast_food", "name": "Fast food", "definition": "Quick-service chains and outlets (McDonald's, Domino's, KFC, Subway), at the outlet or on their own app."},
+      {"id": "food.cafe", "name": "Cafes & coffee", "definition": "Coffee shops, tea chains and cafes (Starbucks, Chaayos, Third Wave)."},
+      {"id": "food.bar", "name": "Bars & pubs", "definition": "Pubs, bars, breweries, lounges and liquor shops."},
+      {"id": "food.bakery_sweets", "name": "Bakeries & sweets", "definition": "Bakeries, cake shops, mithai and sweet shops, ice cream parlours."},
+      {"id": "food.street_food", "name": "Street food & snacks", "definition": "Chaat, juice, tea stalls, small snack counters and food carts."},
+      {"id": "food.canteen", "name": "Canteens & mess", "definition": "Office or college canteens, messes, tiffin and meal subscription services."},
+      {"id": "food.catering", "name": "Catering", "definition": "Caterers and bulk food orders for events."}
+    ]},
+    {"id": "groceries", "name": "Groceries", "subcategories": [
+      {"id": "groceries.quick_commerce", "name": "Quick commerce", "definition": "10–30 minute delivery apps (Blinkit, Zepto, Swiggy Instamart, BB Now, Flipkart Minutes). Counted as groceries even when the basket had other things: the narration can't show the basket."},
+      {"id": "groceries.online", "name": "Online grocery", "definition": "Scheduled online grocery delivery (BigBasket, JioMart, Amazon Fresh)."},
+      {"id": "groceries.supermarket", "name": "Supermarkets", "definition": "Supermarket and hypermarket chains (DMart, More, Reliance Fresh, Spencer's, Star Bazaar)."},
+      {"id": "groceries.kirana", "name": "Kirana & general stores", "definition": "Neighbourhood kirana, provision and general stores."},
+      {"id": "groceries.fruits_vegetables", "name": "Fruits & vegetables", "definition": "Fruit and vegetable vendors and chains (FreshToHome produce, Kisan Konnect, local sabzi shops)."},
+      {"id": "groceries.dairy", "name": "Milk & dairy", "definition": "Milk subscriptions and dairies (Country Delight, Milkbasket, Amul parlours, local dairy)."},
+      {"id": "groceries.meat_fish", "name": "Meat & fish", "definition": "Butchers, fish and meat shops and apps (Licious, FreshToHome)."},
+      {"id": "groceries.specialty", "name": "Gourmet & organic", "definition": "Gourmet, organic and imported food stores (Nature's Basket, Foodhall, organic stores)."}
+    ]},
+    {"id": "shopping", "name": "Shopping", "subcategories": [
+      {"id": "shopping.marketplace", "name": "Online marketplaces", "definition": "General online marketplaces where the item isn't visible (Amazon, Flipkart, Meesho, Snapdeal). Amazon Pay bill payments, Amazon Prime and Amazon Fresh go to their own subcategories."},
+      {"id": "shopping.fashion", "name": "Clothing & fashion", "definition": "Clothing stores and fashion apps (Myntra, Ajio, Zudio, Westside, Max, local garment shops)."},
+      {"id": "shopping.footwear", "name": "Footwear", "definition": "Shoe stores and brands (Bata, Metro Shoes, Puma, Nike stores)."},
+      {"id": "shopping.electronics", "name": "Electronics & appliances", "definition": "Phones, computers, appliances and their accessories (Croma, Reliance Digital, Vijay Sales, Apple, local mobile shops)."},
+      {"id": "shopping.home_furniture", "name": "Home & furniture", "definition": "Furniture, furnishing, kitchenware and decor (IKEA, Pepperfry, Urban Ladder, Home Centre)."},
+      {"id": "shopping.hardware", "name": "Hardware & home improvement", "definition": "Hardware, paint, plumbing, electrical and building-material shops."},
+      {"id": "shopping.beauty", "name": "Beauty & cosmetics", "definition": "Cosmetics, skincare and fragrance stores and apps (Nykaa, Purplle, Sugar, The Body Shop). Salons are Personal Care."},
+      {"id": "shopping.books_stationery", "name": "Books & stationery", "definition": "Bookshops, stationery and office supplies (Crossword, Sapna, local stationers)."},
+      {"id": "shopping.kids", "name": "Kids & toys", "definition": "Baby products, kids' clothing and toys (FirstCry, Hamleys)."},
+      {"id": "shopping.sports", "name": "Sports & outdoor", "definition": "Sports goods, cycles and outdoor gear (Decathlon)."},
+      {"id": "shopping.jewellery", "name": "Jewellery", "definition": "Jewellers and jewellery brands (Tanishq, Kalyan, CaratLane, local jewellers)."},
+      {"id": "shopping.eyewear", "name": "Eyewear", "definition": "Spectacles and sunglasses stores (Lenskart, Titan Eye+). Eye check-ups are Health."},
+      {"id": "shopping.watches_accessories", "name": "Watches, bags & accessories", "definition": "Watches, bags, luggage and fashion accessories (Titan, Fastrack, VIP, Safari)."},
+      {"id": "shopping.gifts_flowers", "name": "Gifts & flowers", "definition": "Gift shops, florists, gift cards and gifting sites (Ferns N Petals, IGP, Archies)."},
+      {"id": "shopping.pets", "name": "Pet supplies", "definition": "Pet food and supplies (Supertails, Heads Up For Tails). Vets are Health."},
+      {"id": "shopping.department_store", "name": "Department stores", "definition": "Multi-category department stores and malls (Shoppers Stop, Lifestyle, Pantaloons, Central)."},
+      {"id": "shopping.paan_tobacco", "name": "Paan & tobacco", "definition": "Paan shops and tobacco or cigarette sellers."}
+    ]},
+    {"id": "transport", "name": "Transport", "subcategories": [
+      {"id": "transport.ride_hailing", "name": "Cabs", "definition": "Cab rides booked in an app (Uber, Ola, BluSmart, Meru)."},
+      {"id": "transport.bike_auto", "name": "Bike taxis & autos", "definition": "Bike taxis and auto-rickshaws (Rapido, Namma Yatri, auto drivers paid by UPI QR)."},
+      {"id": "transport.fuel", "name": "Fuel", "definition": "Petrol pumps and fuel (Indian Oil, HPCL, BPCL, Shell, Nayara), also when paid by card at a POS."},
+      {"id": "transport.ev_charging", "name": "EV charging", "definition": "Electric vehicle charging (Tata Power EZ Charge, Statiq, ChargeZone)."},
+      {"id": "transport.public_transit", "name": "Metro, bus & local train", "definition": "City public transport: metro cards and tickets, city buses, suburban trains."},
+      {"id": "transport.parking", "name": "Parking", "definition": "Parking fees and parking apps."},
+      {"id": "transport.tolls", "name": "Tolls & FASTag", "definition": "Highway tolls and FASTag recharges."},
+      {"id": "transport.vehicle_service", "name": "Vehicle service & parts", "definition": "Car and bike servicing, repairs, tyres, washing, spare parts and accessories (GoMechanic, authorised service centres)."},
+      {"id": "transport.vehicle_rental", "name": "Vehicle rental", "definition": "Self-drive cars, bikes and scooters by the hour or day (Zoomcar, Yulu, Bounce, Royal Brothers)."}
+    ]},
+    {"id": "travel", "name": "Travel", "subcategories": [
+      {"id": "travel.flights", "name": "Flights", "definition": "Airline tickets bought from the airline (IndiGo, Air India, Akasa Air, SpiceJet)."},
+      {"id": "travel.trains", "name": "Trains", "definition": "Long-distance train tickets (IRCTC). City metro and local trains are Transport."},
+      {"id": "travel.bus", "name": "Intercity buses", "definition": "Intercity bus tickets (redBus, AbhiBus, state transport corporations)."},
+      {"id": "travel.hotels", "name": "Hotels & stays", "definition": "Hotels, homestays and hostels (OYO, Taj, Treebo, Zostel, Airbnb)."},
+      {"id": "travel.booking", "name": "Travel booking sites", "definition": "Online travel agencies where the booking type isn't visible (MakeMyTrip, Goibibo, Cleartrip, Yatra, EaseMyTrip)."},
+      {"id": "travel.holidays", "name": "Holidays & tours", "definition": "Tour operators, holiday packages and travel experiences (Thomas Cook, SOTC, Thrillophilia)."},
+      {"id": "travel.forex_visa", "name": "Forex, visa & passport services", "definition": "Currency exchange, forex cards, visa processing (VFS Global, BookMyForex). Government passport fees are Taxes & Government."}
+    ]},
+    {"id": "utilities", "name": "Utilities", "subcategories": [
+      {"id": "utilities.electricity", "name": "Electricity", "definition": "Electricity boards and distribution companies (BESCOM, MSEDCL, Tata Power, Adani Electricity, TNEB)."},
+      {"id": "utilities.water", "name": "Water", "definition": "Municipal water bills, water tankers and drinking-water can delivery."},
+      {"id": "utilities.piped_gas", "name": "Piped gas", "definition": "Piped natural gas (Mahanagar Gas, IGL, Gujarat Gas)."},
+      {"id": "utilities.lpg", "name": "LPG cylinders", "definition": "LPG cylinder bookings (Indane, HP Gas, Bharat Gas)."},
+      {"id": "utilities.mobile", "name": "Mobile recharge & bills", "definition": "Prepaid recharges and postpaid bills (Jio, Airtel, Vi, BSNL)."},
+      {"id": "utilities.broadband", "name": "Broadband & internet", "definition": "Home broadband and fibre (ACT Fibernet, Hathway, JioFiber, Airtel Xstream Fiber, Excitel)."},
+      {"id": "utilities.dth_cable", "name": "DTH & cable TV", "definition": "Satellite and cable TV (Tata Play, Dish TV, Airtel Digital TV, Sun Direct, local cable operators)."},
+      {"id": "utilities.bill_payments", "name": "Bill payment services", "definition": "Bill-payment services where the biller isn't visible (BillDesk, BBPS, Amazon Pay bills, Paytm bill payments)."}
+    ]},
+    {"id": "housing", "name": "Rent & Housing", "subcategories": [
+      {"id": "housing.rent", "name": "Rent", "definition": "Rent paid through a rent platform or to a company landlord (NoBroker, CRED Rent, RentPay, Housing.com Pay Rent). Rent paid to a person is handled by the person's tag: the model never sees personal payments."},
+      {"id": "housing.society_maintenance", "name": "Society maintenance", "definition": "Housing society maintenance and apartment management apps (MyGate, NoBrokerHood, ADDA)."},
+      {"id": "housing.home_services", "name": "Home services", "definition": "Booked home services: cleaning, pest control, appliance repair, salon at home (Urban Company, Housejoy)."},
+      {"id": "housing.repairs", "name": "Repairs & renovation", "definition": "Plumbers, electricians, carpenters, interior work and renovation (Livspace)."},
+      {"id": "housing.domestic_help", "name": "Domestic help", "definition": "Agencies for maids, cooks, drivers and nannies."},
+      {"id": "housing.movers", "name": "Packers & movers", "definition": "Moving and relocation services."},
+      {"id": "housing.property", "name": "Property sites & brokerage", "definition": "Property portals, brokers and deposits through them (99acres, Magicbricks, Housing.com, Square Yards)."}
+    ]},
+    {"id": "health", "name": "Health", "subcategories": [
+      {"id": "health.pharmacy", "name": "Pharmacy", "definition": "Chemists and online pharmacies (Apollo Pharmacy, MedPlus, Tata 1mg, PharmEasy, Netmeds, local medical stores)."},
+      {"id": "health.doctor", "name": "Doctors & consultations", "definition": "Clinics, doctors' fees and online consultations (Practo, Lybrate, MFine)."},
+      {"id": "health.hospital", "name": "Hospitals", "definition": "Hospital bills (Apollo Hospitals, Fortis, Manipal, Max, AIIMS). Apollo Pharmacy is Pharmacy."},
+      {"id": "health.diagnostics", "name": "Lab tests & diagnostics", "definition": "Labs, scans and health check-ups (Dr Lal PathLabs, Thyrocare, Metropolis, Redcliffe, Healthians)."},
+      {"id": "health.dental", "name": "Dental", "definition": "Dentists and dental clinics (Clove Dental)."},
+      {"id": "health.eye_care", "name": "Eye care", "definition": "Eye hospitals and check-ups (Dr Agarwal's, Vasan). Spectacles shops are Shopping."},
+      {"id": "health.fitness", "name": "Fitness & wellness", "definition": "Gyms, yoga, fitness and wellness apps (Cult.fit, Gold's Gym, Anytime Fitness, HealthifyMe)."},
+      {"id": "health.home_care", "name": "Home healthcare & vets", "definition": "Nursing at home, physiotherapy, elder care and veterinary clinics (Portea)."}
+    ]},
+    {"id": "personal_care", "name": "Personal Care", "subcategories": [
+      {"id": "personal_care.salon", "name": "Salons & barbers", "definition": "Hair salons and barbers (Naturals Salon, Lakme Salon, Green Trends, local barbers)."},
+      {"id": "personal_care.spa", "name": "Spa & massage", "definition": "Spas, massage and beauty parlours."},
+      {"id": "personal_care.laundry", "name": "Laundry & dry cleaning", "definition": "Laundry, ironing and dry cleaning (UClean, Tumbledry, local dhobi)."},
+      {"id": "personal_care.tailoring", "name": "Tailoring", "definition": "Tailors and alterations."}
+    ]},
+    {"id": "entertainment", "name": "Entertainment", "subcategories": [
+      {"id": "entertainment.video_streaming", "name": "Video streaming", "definition": "Video subscriptions (Netflix, Prime Video, JioHotstar, SonyLIV, ZEE5, YouTube Premium)."},
+      {"id": "entertainment.music_streaming", "name": "Music & audio", "definition": "Music, podcast and audiobook subscriptions (Spotify, JioSaavn, Gaana, Wynk, Audible, Pocket FM)."},
+      {"id": "entertainment.movies", "name": "Movies", "definition": "Cinema tickets and multiplexes (PVR INOX, Cinepolis, BookMyShow movie tickets)."},
+      {"id": "entertainment.events", "name": "Events & live shows", "definition": "Concerts, plays, sports matches and event tickets (District, Insider, BookMyShow events)."},
+      {"id": "entertainment.gaming", "name": "Gaming", "definition": "Video games, in-game purchases and game stores (Steam, PlayStation Store, Google Play games)."},
+      {"id": "entertainment.fantasy_sports", "name": "Fantasy sports & real-money games", "definition": "Fantasy sports, rummy, poker and other real-money gaming (Dream11, MPL, My11Circle, Rummy Circle)."},
+      {"id": "entertainment.amusement", "name": "Amusement & outings", "definition": "Amusement and water parks, gaming zones, bowling, zoos and museums (Wonderla, Imagica, Smaaash)."},
+      {"id": "entertainment.hobbies", "name": "Hobbies & clubs", "definition": "Clubs, hobby classes and memberships (sports clubs, art and music classes for adults)."}
+    ]},
+    {"id": "education", "name": "Education", "subcategories": [
+      {"id": "education.school", "name": "School fees", "definition": "School fees and school-related payments."},
+      {"id": "education.college", "name": "College & university", "definition": "College and university fees."},
+      {"id": "education.online_learning", "name": "Online courses", "definition": "Online learning platforms and courses (Coursera, Udemy, Unacademy, upGrad, Scaler)."},
+      {"id": "education.coaching", "name": "Coaching & tuition", "definition": "Coaching institutes and tuition (Allen, Aakash, FIITJEE, BYJU'S, Vedantu, PhysicsWallah)."},
+      {"id": "education.exams", "name": "Exam & application fees", "definition": "Entrance and certification exam fees (NTA, GMAC, ETS, university application fees)."},
+      {"id": "education.childcare", "name": "Daycare & preschool", "definition": "Creches, daycare and preschools (Kidzee, EuroKids, Klay)."}
+    ]},
+    {"id": "software", "name": "Software & Cloud", "subcategories": [
+      {"id": "software.cloud", "name": "Cloud & hosting", "definition": "Cloud computing and hosting (AWS, Google Cloud, Azure, DigitalOcean, Vercel)."},
+      {"id": "software.dev_tools", "name": "Developer tools", "definition": "Developer services (GitHub, Atlassian, JetBrains, OpenAI API)."},
+      {"id": "software.productivity", "name": "Productivity & work apps", "definition": "Work software (Notion, Slack, Zoom, Microsoft 365, Google Workspace, Figma, Canva, Adobe)."},
+      {"id": "software.storage", "name": "Cloud storage & app stores", "definition": "Personal storage and app store subscriptions (Google One, iCloud, Apple services, Google Play apps)."},
+      {"id": "software.domains", "name": "Domains & websites", "definition": "Domains and website builders (GoDaddy, Hostinger, Namecheap, Wix)."},
+      {"id": "software.ai_tools", "name": "AI tools", "definition": "AI assistant subscriptions (ChatGPT, Claude, Perplexity, Midjourney)."}
+    ]},
+    {"id": "finance", "name": "Finance", "subcategories": [
+      {"id": "finance.payment_app", "name": "Payment apps", "definition": "Payments through a payment app or wallet where the actual merchant isn't visible (Google Pay, PhonePe, Paytm, CRED, MobiKwik)."},
+      {"id": "finance.loan_emi", "name": "Loan EMIs", "definition": "Loan and EMI repayments (home, car, personal, consumer durable loans: Bajaj Finserv, HDFC loan EMI, NACH debits to lenders)."},
+      {"id": "finance.bnpl", "name": "Pay later", "definition": "Buy-now-pay-later repayments (Simpl, LazyPay, Amazon Pay Later, Slice)."},
+      {"id": "finance.bank_charges", "name": "Bank charges & fees", "definition": "Bank charges, card annual fees, late fees, interest charged, SMS and ATM fees."},
+      {"id": "finance.remittance", "name": "Money transfer services", "definition": "International money transfer services (Wise, Western Union, Remitly)."}
+    ]},
+    {"id": "insurance", "name": "Insurance", "subcategories": [
+      {"id": "insurance.health", "name": "Health insurance", "definition": "Health insurance premiums (Star Health, Niva Bupa, Care Health, HDFC Ergo health)."},
+      {"id": "insurance.life", "name": "Life insurance", "definition": "Life and term insurance premiums (LIC, HDFC Life, SBI Life, ICICI Prudential, Max Life)."},
+      {"id": "insurance.motor", "name": "Motor insurance", "definition": "Car and bike insurance (Acko, Digit, Bajaj Allianz motor)."},
+      {"id": "insurance.general", "name": "Other insurance", "definition": "General insurers where the policy type isn't visible, plus travel, home and gadget insurance (Bajaj Allianz, ICICI Lombard, Tata AIG)."},
+      {"id": "insurance.platform", "name": "Insurance platforms", "definition": "Insurance comparison and broking platforms (Policybazaar, InsuranceDekho, Turtlemint)."}
+    ]},
+    {"id": "investments", "name": "Investments", "subcategories": [
+      {"id": "investments.mutual_funds", "name": "Mutual funds & SIPs", "definition": "Mutual fund purchases and SIPs (Groww, Zerodha Coin, Kuvera, AMC collections via BSE StAR MF / CAMS / KFintech)."},
+      {"id": "investments.stocks", "name": "Stocks & brokers", "definition": "Money added to stock brokers (Zerodha, Upstox, Angel One, ICICI Direct, Dhan)."},
+      {"id": "investments.deposits", "name": "Fixed & recurring deposits", "definition": "FDs and RDs opened from the account."},
+      {"id": "investments.gold", "name": "Gold & silver", "definition": "Digital gold, sovereign gold bonds and bullion (SafeGold, MMTC-PAMP, Augmont)."},
+      {"id": "investments.retirement", "name": "PPF, NPS & retirement", "definition": "PPF, NPS, EPF voluntary contributions and Sukanya Samriddhi."},
+      {"id": "investments.crypto", "name": "Crypto", "definition": "Crypto exchanges (CoinDCX, WazirX, CoinSwitch, Mudrex)."}
+    ]},
+    {"id": "taxes", "name": "Taxes & Government", "subcategories": [
+      {"id": "taxes.income_tax", "name": "Income tax", "definition": "Income tax, advance tax and TDS payments (e-Pay Tax, TIN-NSDL)."},
+      {"id": "taxes.gst", "name": "GST", "definition": "GST payments."},
+      {"id": "taxes.property_tax", "name": "Property & municipal tax", "definition": "Property tax and municipal corporation payments (BBMP, MCGM, GHMC)."},
+      {"id": "taxes.government_fees", "name": "Government fees", "definition": "Passport, RTO, stamp duty, registration and other government service fees (Passport Seva, Parivahan, MCA)."},
+      {"id": "taxes.fines", "name": "Fines & challans", "definition": "Traffic challans and other penalties."}
+    ]},
+    {"id": "donations", "name": "Gifts & Donations", "subcategories": [
+      {"id": "donations.charity", "name": "Charity & NGOs", "definition": "Donations to charities and NGOs (GiveIndia, CRY, Akshaya Patra)."},
+      {"id": "donations.religious", "name": "Religious donations", "definition": "Temples, gurudwaras, churches, mosques and religious trusts (TTD, Shirdi Sai Baba Sansthan)."},
+      {"id": "donations.crowdfunding", "name": "Crowdfunding", "definition": "Crowdfunding campaigns (Ketto, Milaap, ImpactGuru)."}
+    ]},
+    {"id": "income", "name": "Income", "credit_only": true, "subcategories": [
+      {"id": "income.salary", "name": "Salary", "definition": "Salary and wages from an employer."},
+      {"id": "income.interest", "name": "Interest", "definition": "Interest credited on savings accounts and deposits."},
+      {"id": "income.dividends", "name": "Dividends", "definition": "Dividends from shares and mutual funds."},
+      {"id": "income.cashback", "name": "Cashback & rewards", "definition": "Cashback, rewards and referral bonuses credited."},
+      {"id": "income.business", "name": "Business & freelance", "definition": "Payments from clients and payment-gateway settlements for the user's own business."},
+      {"id": "income.government", "name": "Refunds from government", "definition": "Income tax refunds, subsidies (LPG DBT) and other government credits."}
+    ]},
+    {"id": "transfers", "name": "Transfers", "subcategories": [
+      {"id": "transfers.own_account", "name": "Own-account transfers", "definition": "Money moved between the user's own accounts or wallets."},
+      {"id": "transfers.credit_card_bill", "name": "Credit card bills", "definition": "Paying a credit card bill (CRED card payment, BillDesk card payment, \"CC payment\"). Not spending: the card's own statement has the purchases."}
+    ]},
+    {"id": "cash", "name": "Cash", "subcategories": [
+      {"id": "cash.atm", "name": "ATM withdrawals", "definition": "Cash withdrawn at an ATM or a bank branch."}
+    ]}
+  ],
+  "system_groups": [
+    {"name": "Sent to People", "definition": "Payments to individuals. Set from the payment's nature, never by the model."},
+    {"name": "Received from People", "definition": "Money from individuals. Set from the payment's nature, never by the model."},
+    {"name": "Misc cash", "definition": "Cash spending the user didn't itemise (weekly cash reconciliation)."},
+    {"name": "Other", "definition": "The user's own choice when nothing fits."}
+  ]
+}

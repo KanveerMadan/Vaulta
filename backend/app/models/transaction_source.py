@@ -15,12 +15,13 @@ import enum
 from datetime import date as date_type
 
 from sqlalchemy import (
-    Column, String, Numeric, DateTime, Date, ForeignKey,
+    Boolean, Column, String, Numeric, DateTime, Date, ForeignKey,
     Enum as SAEnum, Index, UniqueConstraint, JSON, SmallInteger, text
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
+from app.core.crypto import Encrypted, EncryptedJSON, Searchable
 from app.core.database import Base
 
 
@@ -42,6 +43,8 @@ class StatementSourceType(str, enum.Enum):
     upi_google_pay = "upi_google_pay"
     upi_phonepe = "upi_phonepe"
     upi_paytm = "upi_paytm"
+    credit_card = "credit_card"
+    email_alert = "email_alert"
     manual = "manual"
 
 
@@ -80,13 +83,17 @@ class TransactionSourceRecord(Base):
     )
 
     source = Column(SAEnum(StatementSourceType), nullable=False)
+    # Which account within the source type ("HDFC Bank", "SBI Card"). Account
+    # numbers are never sent, so (source, source_label) is the account key
+    # used to tell a user's accounts apart for transfer detection.
+    source_label = Column(String(60), nullable=True)
     direction = Column(SAEnum(TransactionDirection), nullable=False)
 
     # Matching signals, strongest to weakest — see Section 4 tier hierarchy.
     # All nullable: not every source provides every signal (a bank CSV
     # typically has no UTR, no VPA, and date-only precision).
-    utr = Column(String, nullable=True)
-    vpa = Column(String, nullable=True)
+    utr = Column(Searchable, nullable=True)
+    vpa = Column(Searchable, nullable=True)
     raw_timestamp = Column(DateTime(timezone=True), nullable=True)
     raw_date = Column(Date, nullable=True)
     raw_amount = Column(Numeric(precision=12, scale=2), nullable=False)
@@ -95,11 +102,11 @@ class TransactionSourceRecord(Base):
     # for tier 3/4 merchant-overlap comparison. Distinct from the canonical
     # Transaction's merchant_clean/merchant_raw, which may be enriched later
     # by a higher-quality source.
-    counterparty_raw = Column(String, nullable=True)
+    counterparty_raw = Column(Encrypted, nullable=True)
 
     # Full original row, preserved for re-derivation/audit if a match is
     # later found to be wrong.
-    raw_row = Column(JSON, nullable=True)
+    raw_row = Column(EncryptedJSON, nullable=True)
 
     # Same convention as Transaction.idempotency_key — re-ingesting the same
     # statement twice must be safe at the source-record level too, regardless
@@ -113,6 +120,10 @@ class TransactionSourceRecord(Base):
     match_tier = Column(SmallInteger, nullable=True)
     matched_at = Column(DateTime(timezone=True), nullable=True)
 
+    is_sample = Column(Boolean, nullable=False, default=False, server_default=text("false"))   # core/samples.py
+    # the statement upload this row came from (models/import_template.py Import); None for rows from before uploads
+    # were recorded, and for alerts, Telegram and manual entries
+    import_id = Column(UUID(as_uuid=True), ForeignKey("imports.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
 
     transaction = relationship("Transaction", back_populates="source_records")
@@ -122,6 +133,7 @@ class TransactionSourceRecord(Base):
         Index("ix_txn_sources_user_utr", "user_id", "utr"),
         Index("ix_txn_sources_user_vpa", "user_id", "vpa"),
         Index("ix_txn_sources_user_transaction", "user_id", "transaction_id"),
+        Index("ix_txn_sources_user_import", "user_id", "import_id"),
     )
 
     def __repr__(self) -> str:

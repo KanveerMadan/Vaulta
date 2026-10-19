@@ -1,0 +1,28 @@
+{
+  "with_model": {
+    "batches": 5,
+    "categorised_in_first_200": 68,
+    "model": true,
+    "model_load_seconds": 0.11,
+    "peak_rss_mb_after_import": 389.5,
+    "peak_rss_mb_after_model": 149.7,
+    "peak_rss_mb_before_model": 111.2,
+    "platform": "darwin",
+    "rows": 2400,
+    "slowest_batch_seconds": 5.27,
+    "total_seconds": 22.77
+  },
+  "without_model": {
+    "batches": 5,
+    "categorised_in_first_200": 29,
+    "model": false,
+    "model_load_seconds": 0.0,
+    "peak_rss_mb_after_import": 310.7,
+    "peak_rss_mb_after_model": 110.8,
+    "peak_rss_mb_before_model": 110.8,
+    "platform": "darwin",
+    "rows": 2400,
+    "slowest_batch_seconds": 3.92,
+    "total_seconds": 16.96
+  }
+}

@@ -1,428 +1,370 @@
-import { useEffect, useCallback, useState } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-} from "recharts";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowRight, CalendarBlank, CaretLeft, CaretRight, CheckCircle, ClipboardText, Plugs, Receipt, TrendUp, Warning } from "@phosphor-icons/react";
+import api from "../lib/api";
+import { shortDay, useApi } from "../lib/format";
+import { formatINR } from "../lib/money";
 import { useFinanceStore } from "../store/financeStore";
 import { useAuthStore } from "../store/authStore";
-import api from "../lib/api";
-import {
-  SkeletonMetricCard,
-  SkeletonChart,
-  SkeletonTransactionFeed,
-  SkeletonInsightCard,
-} from "../components/Skeletons";
 import SubscriptionBanner from "../components/SubscriptionBanner";
+import QuickAddBar from "../components/QuickAddBar";
+import GuidedTour from "../components/GuidedTour";
+import GettingStarted from "../components/GettingStarted";
+import SamplesBanner from "../components/SamplesBanner";
+import { saveTour, tourSteps } from "../lib/tour";
+import { ReviewCard } from "../components/ReviewQueue";
+import TransactionRow from "../components/TransactionRow";
+import { ruleToast } from "../lib/ruleToast";
+import Money from "../ui/Money";
+import Meter from "../ui/Meter";
+import Empty from "../ui/Empty";
+import { SkeletonRows } from "../ui/Skeleton";
 
-const CATEGORY_COLORS = [
-  "#2d6a4f", "#40916c", "#52b788", "#74c69d", "#95d5b2",
-  "#b7e4c7", "#d8f3dc", "#1b4332", "#081c15",
-];
+const RECENT = 10;
+const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+const shiftMonth = (key, by) => { const [y, m] = key.split("-").map(Number); return monthKey(new Date(y, m - 1 + by, 1)); };
+const monthLabel = (key) => new Date(`${key}-01T00:00:00`).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+const lastDay = (key) => { const [y, m] = key.split("-").map(Number); return new Date(y, m, 0).getDate(); };
+const todayLong = () => new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
-const PERIOD_OPTIONS = [
-  { value: "month",    label: "Month"    },
-  { value: "year",     label: "Year"     },
-  { value: "lifetime", label: "All Time" },
-];
-
-// ─────────────────────────────────────────────
-// Sub-components
-// ─────────────────────────────────────────────
-
-function MetricCard({ label, value, sub, progress, progressDanger, highlight }) {
+function Panel({ title, action, children, className = "" }) {
   return (
-    <div className={`card p-5 space-y-2 ${highlight ? "ring-1 ring-forest-300" : ""}`}>
-      <p className="text-xs font-medium text-ink-400 uppercase tracking-widest">{label}</p>
-      <p className="font-mono text-2xl font-semibold text-ink-900">{value}</p>
-      {progress !== undefined && (
-        <div className="h-1.5 bg-sage-100 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-700 ${
-              progressDanger ? "bg-danger" : "bg-forest-500"
-            }`}
-            style={{ width: `${Math.min(progress, 100)}%` }}
-          />
+    <section className={`rule pt-4 ${className}`} aria-label={title}>
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <h2 className="text-sm font-semibold text-ink">{title}</h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** The hero: what can be spent today, in the display face, and the arithmetic on tap. */
+function SafeToSpend({ safe }) {
+  const [open, setOpen] = useState(false);
+  if (!safe) return null;
+  if (safe.amount === null) {
+    return (
+      <div>
+        <p className="text-[15px] text-ink-2">Safe to spend today</p>
+        <p className="mt-2 font-display text-3xl text-ink-2">Not yet</p>
+        <Empty to="/budgets" cta="Set a monthly budget">It needs a budget or this month's income to measure against.</Empty>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <p className="text-sm text-muted"><time dateTime={new Date().toISOString().slice(0, 10)}>{todayLong()}</time></p>
+      <p className="mt-3 text-[15px] text-ink-2">Safe to spend today</p>
+      <Money value={safe.amount} decimals={0} className="block font-display font-semibold text-[clamp(3.6rem,9vw,6rem)] leading-[0.9] tracking-[-0.04em] text-ink mt-1" />
+      <p className="mt-3 text-sm text-ink-2">
+        <Money value={safe.remaining} decimals={0} className="font-semibold text-ink" /> left this month for <span className="num">{safe.days_left_including_today}</span> day{safe.days_left_including_today === 1 ? "" : "s"}
+      </p>
+      <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="mt-1 text-sm font-medium text-accent-text hover:underline">
+        {open ? "Hide the working" : "How is this worked out?"}
+      </button>
+      {open && (
+        <p className="mt-2 text-sm text-ink-2 max-w-[48ch] animate-rise" data-testid="safe-explanation">
+          Your {safe.basis} is {formatINR(safe.limit)}. You've spent {formatINR(safe.spent_so_far)} and {formatINR(safe.recurring_due)} of
+          recurring payments is still due, leaving {formatINR(safe.remaining)} for {safe.days_left_including_today} day{safe.days_left_including_today === 1 ? "" : "s"} including today.
+        </p>
+      )}
+    </div>
+  );
+}
+
+const STATUS = {
+  green: { icon: CheckCircle, cls: "text-accent-text" },
+  amber: { icon: Warning, cls: "text-warn" },
+  red: { icon: TrendUp, cls: "text-danger" },
+};
+
+/** Where the month is heading: spent, still due and the projection, against the limit. */
+function Outlook({ outlook, current }) {
+  const st = STATUS[outlook.status];
+  const diff = Number(outlook.difference);
+  const limit = Number(outlook.limit) || 0;
+  const scale = Math.max(limit, Number(outlook.forecast), 1);
+  const seg = (v) => `${Math.max((Number(v) / scale) * 100, 0)}%`;
+  const projected = Math.max(Number(outlook.forecast) - Number(outlook.so_far) - Number(outlook.recurring_due), 0);
+  return (
+    <div data-testid="outlook">
+      <p className="text-sm text-muted">{current ? "This month" : monthLabel(outlook.month)}</p>
+      <p className="mt-3 text-[15px] text-ink-2">{current ? "On pace for" : "Spent"}</p>
+      <Money value={outlook.forecast} decimals={0} className="block font-display font-semibold text-[2.6rem] leading-none tracking-tight text-ink mt-1" />
+      {st ? (
+        <p className={`mt-3 flex items-center gap-1.5 text-sm font-medium ${st.cls}`}>
+          <st.icon size={16} weight="bold" aria-hidden />
+          <Money value={Math.abs(diff)} decimals={0} tone={false} /> {diff > 0 ? "over" : "under"} {outlook.basis === "income this month" ? "your income" : "budget"}
+        </p>
+      ) : <Empty to="/budgets" cta="Set a budget">No budget to compare with yet.</Empty>}
+      {st && (
+        <div className="mt-4" aria-hidden="true">
+          <div className="relative h-2.5 rounded-full bg-sunken overflow-hidden flex">
+            <span className="h-full bg-accent" style={{ width: seg(outlook.so_far) }} />
+            {current && <span className="h-full outlook-due" style={{ width: seg(outlook.recurring_due) }} />}
+            {current && <span className="h-full bg-line-strong" style={{ width: seg(projected) }} />}
+          </div>
+          <div className="relative h-4">
+            {limit > 0 && <span className="absolute top-0.5 -translate-x-1/2 text-[10px] text-muted whitespace-nowrap" style={{ left: `min(${seg(limit)}, calc(100% - 1.6rem))` }}>▲ limit</span>}
+          </div>
+          {current && (
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-micro text-muted">
+              <li><span className="inline-block w-2 h-2 rounded-sm bg-accent mr-1.5" />Spent <Money value={outlook.so_far} className="text-ink-2" /></li>
+              <li><span className="inline-block w-2 h-2 rounded-sm outlook-due mr-1.5" />Still due <Money value={outlook.recurring_due} className="text-ink-2" /></li>
+              <li><span className="inline-block w-2 h-2 rounded-sm bg-line-strong mr-1.5" />At this pace <Money value={projected} className="text-ink-2" /></li>
+            </ul>
+          )}
         </div>
       )}
-      {sub && <p className="text-xs text-ink-400">{sub}</p>}
     </div>
   );
 }
 
-function InsightCard({ insight }) {
+function Upcoming({ items }) {
   return (
-    <div className="card p-5 space-y-2">
-      <p className="tag-positive inline-block text-xs">Insight</p>
-      <p className="text-sm text-ink-700 leading-relaxed">{insight.text}</p>
-      <p className="text-xs text-ink-400">{insight.sub}</p>
-    </div>
+    <Panel title="Coming up" action={<Link to="/recurring" className="text-micro font-medium text-accent-text hover:underline">All recurring</Link>}>
+      {items.length ? (
+        <ul className="divide-y divide-line">
+          {items.map((s) => (
+            <li key={s.id} className="flex items-center gap-3 py-2.5 text-sm">
+              <span className="w-12 shrink-0 text-micro text-muted num">{shortDay(s.next_expected)}</span>
+              <span className="flex-1 text-ink truncate">{s.name}</span>
+              <Money value={s.typical_amount} className="text-ink font-medium" />
+            </li>
+          ))}
+        </ul>
+      ) : <Empty icon={CalendarBlank} to="/recurring" cta="See recurring">Nothing due in the next 14 days. Bills and subscriptions appear here once they repeat.</Empty>}
+    </Panel>
   );
 }
 
-function TransactionRow({ txn }) {
-  const isCredit = txn.transaction_nature === "peer_payment_received"
-    || txn.transaction_nature === "income";
-  const isSelfTransfer = txn.transaction_nature === "self_transfer";
-
+function Attention({ attention, onAnswered }) {
+  const { review_count: count, review_cards: cards, anomaly_count: anomalies } = attention;
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-sage-50 last:border-0">
-      <div className="w-9 h-9 rounded-full bg-sage-100 flex items-center justify-center text-ink-500 text-sm shrink-0">
-        {(txn.merchant_clean || txn.merchant_raw || "?")[0].toUpperCase()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-ink-900 truncate">
-          {txn.merchant_clean || txn.merchant_raw}
-        </p>
-        <p className="text-xs text-ink-400">
-          {txn.category || "Uncategorized"} ·{" "}
-          {new Date(txn.transaction_date).toLocaleDateString("en-IN", {
-            day: "numeric", month: "short",
-          })}
-        </p>
-      </div>
-      <p className={`font-mono text-sm font-medium shrink-0 ${
-        isCredit ? "text-safe" : isSelfTransfer ? "text-ink-400" : "text-ink-800"
-      }`}>
-        {isSelfTransfer ? "↔" : isCredit ? "+" : "-"}
-        ₹{Math.abs(txn.amount).toLocaleString("en-IN")}
-      </p>
-    </div>
+    <Panel title="Needs attention" action={count > 0 && <span className="num text-micro font-semibold px-2 py-0.5 rounded-sm bg-warn-tint text-warn">{count}</span>}>
+      {count === 0 ? (
+        <Empty icon={CheckCircle} title="All caught up">New questions appear here when Vaulta isn't sure about something.</Empty>
+      ) : (
+        <div className="space-y-4">
+          {anomalies > 0 && <p className="text-sm text-ink-2 flex items-center gap-2"><Warning size={16} className="text-warn" aria-hidden />{anomalies} unusual charge{anomalies === 1 ? "" : "s"} worth a second look.</p>}
+          {cards.map((c) => <div key={c.id} className="rounded-md border border-line bg-surface p-4 animate-rise"><ReviewCard card={c} onAnswered={onAnswered} /></div>)}
+          {count > cards.length && <Link to="/review" className="inline-flex items-center gap-1 text-sm font-medium text-accent-text hover:underline">Answer all {count} <ArrowRight size={14} aria-hidden /></Link>}
+        </div>
+      )}
+    </Panel>
   );
 }
 
-function ErrorRetry({ message, onRetry }) {
+const ago = (iso) => {
+  const mins = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (mins < 60) return `${Math.max(mins, 1)} min ago`;
+  if (mins < 60 * 48) return `${Math.round(mins / 60)} h ago`;
+  return `${Math.round(mins / 1440)} days ago`;
+};
+
+function Coverage({ coverage, cashBalance }) {
+  const s = coverage.statements, e = coverage.email;
+  const items = [
+    ["Statements", s.active ? `${shortDay(s.from)} ${s.from.slice(0, 4)} to ${shortDay(s.to)} ${s.to.slice(0, 4)}` : "None imported", s.active],
+    ["Bank alerts", e.connected ? `Last ${ago(e.last_at)}${e.stale ? ", check forwarding" : ""}` : "Not set up", e.active],
+    ["Telegram", coverage.telegram.active ? "Linked" : "Not linked", coverage.telegram.active],
+    ["Cash wallet", coverage.cash.active ? `${formatINR(cashBalance)} expected in hand` : "No cash logged", coverage.cash.active],
+  ];
   return (
-    <div className="card p-5 flex flex-col items-center gap-3 text-center">
-      <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center">
-        <svg className="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </div>
-      <p className="text-sm text-ink-600">{message}</p>
-      <button onClick={onRetry} className="btn-ghost text-sm py-1.5 px-4">
-        Try again
-      </button>
-    </div>
+    <Panel title="Coverage" action={coverage.needs_attention.length > 0 && <Link to="/connect" className="inline-flex items-center gap-1 text-micro font-medium text-accent-text hover:underline"><Plugs size={13} aria-hidden />Fix in Connect</Link>}>
+      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+        {items.map(([name, text, ok]) => (
+          <li key={name} className="flex items-start gap-2 text-sm">
+            {ok ? <CheckCircle size={16} weight="fill" className="mt-0.5 text-accent-text shrink-0" aria-hidden />
+              : <span aria-hidden className="mt-[5px] w-3 h-3 rounded-full border border-line-strong shrink-0" />}
+            <span><span className="text-ink font-medium">{name}</span> <span className="text-muted">{text}</span><span className="sr-only">{ok ? ", active" : ", not active"}</span></span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
   );
 }
 
-// ─────────────────────────────────────────────
-// Main Dashboard
-// ─────────────────────────────────────────────
+function AskBar() {
+  const ask = useFinanceStore((s) => s.ask);
+  const [q, setQ] = useState("");
+  const submit = (e) => {
+    e.preventDefault();
+    if (q.trim()) { ask(q.trim()); setQ(""); }
+  };
+  return (
+    <form onSubmit={submit} className="flex gap-2" role="search">
+      <input value={q} onChange={(e) => setQ(e.target.value)} maxLength={1000} className="input flex-1"
+        placeholder="Ask anything, like “how much on food this month?”" aria-label="Ask a question" />
+      <button className="btn-primary shrink-0" disabled={!q.trim()}>Ask</button>
+    </form>
+  );
+}
+
+function PeriodTotals() {
+  const [period, setPeriod] = useState("month");
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    api.get(`/api/transactions/summary?period=${period}`).then((r) => alive && setData(r.data)).catch(() => alive && setData(null));
+    return () => { alive = false; };
+  }, [period]);
+  return (
+    <Panel title="Totals" action={
+      <div className="flex gap-0.5 bg-sunken rounded-sm p-0.5" role="group" aria-label="Period">
+        {[["month", "Month"], ["year", "Year"], ["lifetime", "All time"]].map(([v, l]) => (
+          <button key={v} onClick={() => setPeriod(v)} aria-pressed={period === v}
+            className={`px-3 h-8 rounded-[6px] text-micro font-medium ${period === v ? "bg-surface text-ink shadow-1" : "text-muted"}`}>{l}</button>
+        ))}
+      </div>
+    }>
+      {data ? (
+        <dl className="grid grid-cols-3 gap-3">
+          {[["Spent", data.total_spend], ["Money in", data.total_received], ["Net", data.net_cash_flow]].map(([k, v]) => (
+            <div key={k}><dt className="text-micro text-muted">{k}</dt><dd><Money value={v} className="font-display text-xl text-ink" /></dd></div>
+          ))}
+        </dl>
+      ) : <div className="skeleton h-8 w-full" aria-label="Loading totals" />}
+    </Panel>
+  );
+}
+
+/** Whether to show the tour now: resumed, replayed (location state from the "?" button or Settings), or first time after setup. */
+function useTour({ demo, onboarding, ready }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [state, setState] = useState({ open: false, start: 0 });
+  const replay = location.state?.tour;
+  const decided = useRef(false);       // resume / first run is decided once per visit: a skip isn't undone by a late reply
+  useEffect(() => {
+    if (demo || !ready || !onboarding) return undefined;
+    let alive = true;
+    api.get("/api/tour").then(async ({ data }) => {
+      if (!alive || !data.available) return;
+      if (!replay && decided.current) return;
+      decided.current = true;
+      if (replay) {
+        await api.patch("/api/tour", { status: "active" });
+        if (!alive) return;
+        setState({ open: true, start: 0 });
+        navigate(".", { replace: true, state: {} });                     // a reload doesn't replay it again
+      } else if (data.status === "active") {
+        setState({ open: true, start: data.step });
+      } else if (data.status === "new" && ["done", "skipped"].includes(onboarding.status)) {
+        await api.patch("/api/tour", { status: "active" });
+        if (alive) setState({ open: true, start: 0 });
+      }
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [demo, ready, onboarding, replay, navigate]);
+  const finish = (status) => { setState({ open: false, start: 0 }); saveTour({ status }); };
+  return { ...state, finish };
+}
 
 export default function Dashboard() {
-  const { user } = useAuthStore();
-  const [period, setPeriod] = useState("month");
-
-  const {
-    summary, summaryLoading, summaryError,
-    setSummary, setSummaryLoading, setSummaryError,
-    transactions, transactionsLoading, transactionsError,
-    setTransactions, setTransactionsLoading, setTransactionsError,
-    categorySpend, setCategorySpend,
-  } = useFinanceStore();
-
-  const fetchSummary = useCallback(async () => {
-    setSummaryLoading(true);
-    setSummaryError(null);
-    try {
-      const { data } = await api.get(`/api/transactions/summary?period=${period}`);
-      setSummary(data);
-      setCategorySpend(
-        (data.categories || []).map((c, i) => ({
-          name: c.category,
-          value: parseFloat(c.total),
-          color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
-          budget: c.budget_limit ? parseFloat(c.budget_limit) : null,
-          pct: parseFloat(c.percentage_of_spend),
-        }))
-      );
-    } catch (err) {
-      setSummaryError(
-        err?.response?.status === 404
-          ? "No transaction data yet. Upload a bank statement to get started."
-          : "Couldn't load your summary. Check your connection and try again."
-      );
-    } finally {
-      setSummaryLoading(false);
-    }
-  }, [period, setSummary, setSummaryLoading, setSummaryError, setCategorySpend]);
-
-  const fetchTransactions = useCallback(async () => {
-    setTransactionsLoading(true);
-    try {
-      const { data } = await api.get("/api/transactions?page=1&page_size=20");
-      setTransactions(data.items, data.total);
-    } catch (err) {
-      setTransactionsError("Couldn't load transactions. Try again in a moment.");
-    } finally {
-      setTransactionsLoading(false);
-    }
-  }, [setTransactions, setTransactionsLoading, setTransactionsError]);
-
-  useEffect(() => {
-    fetchSummary();
-  }, [fetchSummary]);
-
-  useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
-
-  // ── Derived values ─────────────────────────────────────────────────────────
-  const totalSpend        = summary ? parseFloat(summary.total_spend)       : 0;
-  const totalReceived     = summary ? parseFloat(summary.total_received)    : 0;
-  const netCashFlow       = summary ? parseFloat(summary.net_cash_flow)     : 0;
-  const totalBudget       = summary?.total_budget ? parseFloat(summary.total_budget) : null;
-  const budgetPct         = totalBudget ? (totalSpend / totalBudget) * 100 : null;
-  const daysRemaining     = summary?.days_remaining ?? null;
-  const avgMonthlySpend   = summary?.avg_monthly_spend ? parseFloat(summary.avg_monthly_spend) : null;
-  const momDelta          = summary?.mom_total_delta ? parseFloat(summary.mom_total_delta) : null;
-  const momPct            = summary?.mom_total_delta_pct ? parseFloat(summary.mom_total_delta_pct) : null;
-  const netPositive       = netCashFlow >= 0;
-  const isMonth           = period === "month";
-
-  const periodLabel = isMonth
-    ? new Date().toLocaleString("en-IN", { month: "long", year: "numeric" })
-    : period === "year"
-    ? new Date().getFullYear().toString()
-    : "All Time";
-
-  const insights = summary?.categories?.length
-    ? [
-        summary.categories[0] && {
-          text: `${summary.categories[0].category} is your biggest spend category at ₹${parseFloat(summary.categories[0].total).toLocaleString("en-IN")}.`,
-          sub: `${summary.categories[0].transaction_count} transactions`,
-        },
-        isMonth && momDelta !== null && {
-          text: momDelta > 0
-            ? `You've spent ₹${Math.abs(momDelta).toLocaleString("en-IN")} more than last month (${Math.abs(momPct ?? 0).toFixed(1)}% up).`
-            : `You've spent ₹${Math.abs(momDelta).toLocaleString("en-IN")} less than last month. Good going.`,
-          sub: "Month-over-month",
-        },
-        totalReceived > 0 && {
-          text: `₹${totalReceived.toLocaleString("en-IN")} received across payments and income.`,
-          sub: "Money in",
-        },
-      ].filter(Boolean)
-    : [];
+  const thisMonth = monthKey(new Date());
+  const [month, setMonth] = useState(thisMonth);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const demo = useAuthStore((s) => s.demoToken);
+  const current = month === thisMonth;
+  const range = current ? "" : `&date_from=${month}-01T00:00:00&date_to=${month}-${lastDay(month)}T23:59:59`;
+  const { data: home, error } = useApi(`/api/home?month=${month}`, refreshKey);
+  const { data: txnPage } = useApi(`/api/transactions?page=1&page_size=${RECENT}${range}`, refreshKey);
+  const txns = txnPage?.items ?? null;
+  const { data: onboarding } = useApi("/api/onboarding", 0);
+  const refresh = () => setRefreshKey((k) => k + 1);
+  const tour = useTour({ demo, onboarding, ready: Boolean(home && txns !== null && current) });
+  const setChatOpen = useFinanceStore((s) => s.setChatOpen);
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {                                   // /?ask=1 (the checklist's "Ask the assistant") opens the chat
+    if (params.get("ask")) { setChatOpen(true); setParams({}, { replace: true }); }
+  }, [params, setParams, setChatOpen]);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-
-      <SubscriptionBanner />
-
-      {summary && summary.transaction_count > 0 && (
-        <div className="flex items-center gap-3 bg-gold/10 border border-gold/30 rounded-xl px-4 py-3">
-          <svg className="w-4 h-4 text-gold shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm text-ink-700">
-            Upload your UPI app statement alongside your bank CSV for a complete picture.{" "}
-            <a href="/connect" className="font-medium text-forest-600 hover:underline">
-              Add another source →
-            </a>
-          </p>
-        </div>
+    <div className="max-w-5xl mx-auto space-y-8">
+      {tour.open && <GuidedTour steps={tourSteps(home, txns?.length ?? 0)} start={tour.start} onFinish={tour.finish} />}
+      {/* The banner and the month header appear with the page's data, in one go, so nothing above the content shifts
+          it down as it arrives (layout shift). The banner starts fetching at once, hidden. */}
+      {!demo && <div hidden={!home}><SubscriptionBanner /></div>}
+      {!demo && home?.samples > 0 && <SamplesBanner count={home.samples} onCleared={refresh} />}
+      {onboarding?.status === "active" && (
+        <Link to="/onboarding" className="flex items-center justify-between gap-3 rounded-md border border-accent-line bg-accent-tint/60 px-4 py-3 text-sm text-ink hover:bg-accent-tint">
+          <span>Finish setting up. Tracking coverage is {onboarding.coverage.percent}%.</span>
+          <span className="font-medium text-accent-text inline-flex items-center gap-1">Continue <ArrowRight size={14} aria-hidden /></span>
+        </Link>
       )}
 
-      {/* Period toggle + section header */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">
-            {periodLabel}
-          </h2>
-          <div className="flex gap-1 bg-sage-100 rounded-lg p-1">
-            {PERIOD_OPTIONS.map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => setPeriod(value)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                  period === value
-                    ? "bg-white text-ink-900 shadow-sm"
-                    : "text-ink-500 hover:text-ink-700"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Metric cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          {summaryLoading ? (
-            <>
-              <SkeletonMetricCard />
-              <SkeletonMetricCard />
-              <SkeletonMetricCard />
-              <SkeletonMetricCard />
-              <SkeletonMetricCard />
-              <SkeletonMetricCard />
-            </>
-          ) : summaryError ? (
-            <div className="col-span-2 lg:col-span-3">
-              <ErrorRetry message={summaryError} onRetry={fetchSummary} />
-            </div>
-          ) : summary ? (
-            <>
-              {/* Row 1 — money flow */}
-              <MetricCard
-                label="Total spent"
-                value={`₹${totalSpend.toLocaleString("en-IN")}`}
-                sub={isMonth && momDelta !== null
-                  ? `${momDelta > 0 ? "▲" : "▼"} ${Math.abs(momPct ?? 0).toFixed(1)}% vs last month`
-                  : "Merchant spend + payments to people"
-                }
-              />
-              <MetricCard
-                label="Money in"
-                value={`₹${totalReceived.toLocaleString("en-IN")}`}
-                sub="Income + payments received"
-              />
-              <MetricCard
-                label="Net cash flow"
-                value={`${netPositive ? "+" : "−"}₹${Math.abs(netCashFlow).toLocaleString("en-IN")}`}
-                sub={netPositive ? "You're ahead" : "Spending exceeded income"}
-                highlight={netPositive}
-              />
-
-              {/* Row 2 — budget / avg / activity */}
-              <MetricCard
-                label="Budget used"
-                value={isMonth && totalBudget ? `${budgetPct?.toFixed(0)}%` : "—"}
-                progress={isMonth ? (budgetPct ?? undefined) : undefined}
-                progressDanger={isMonth && budgetPct !== null && budgetPct > 80}
-                sub={isMonth
-                  ? (totalBudget
-                      ? `₹${(totalBudget - totalSpend).toLocaleString("en-IN")} remaining`
-                      : "No budget set")
-                  : "Budget tracking is monthly only"
-                }
-              />
-              <MetricCard
-                label="Transactions"
-                value={summary.transaction_count.toLocaleString("en-IN")}
-                sub={isMonth ? "This month" : period === "year" ? "This year" : "All time"}
-              />
-              <MetricCard
-                label={isMonth ? "Days left" : "Avg monthly spend"}
-                value={
-                  isMonth
-                    ? (daysRemaining ?? "—")
-                    : avgMonthlySpend !== null
-                    ? `₹${avgMonthlySpend.toLocaleString("en-IN")}`
-                    : "—"
-                }
-                sub={isMonth ? "In this billing period" : "Based on available data"}
-              />
-            </>
-          ) : (
-            <div className="col-span-2 lg:col-span-3 card p-6 text-center">
-              <p className="text-ink-400 text-sm">No data yet.</p>
-              <a href="/connect" className="text-forest-600 text-sm font-medium hover:underline mt-1 inline-block">
-                Upload a bank statement to get started →
-              </a>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Spend chart + Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <div className="lg:col-span-2">
-          {summaryLoading ? (
-            <SkeletonChart />
-          ) : summaryError ? (
-            <ErrorRetry message="Chart unavailable" onRetry={fetchSummary} />
-          ) : categorySpend.length > 0 ? (
-            <div className="card p-5">
-              <p className="text-xs font-semibold text-ink-400 uppercase tracking-widest mb-4">
-                Spending by category
-              </p>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={categorySpend} margin={{ left: 0, right: 0, top: 0, bottom: 0 }}>
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 10, fill: "#6b7280" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: "#6b7280" }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip
-                    formatter={(v) => [`₹${parseFloat(v).toLocaleString("en-IN")}`, "Spent"]}
-                    contentStyle={{
-                      background: "#fff",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {categorySpend.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="card p-5 flex items-center justify-center h-full min-h-[220px]">
-              <p className="text-ink-400 text-sm">No category data yet.</p>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          {summaryLoading ? (
-            <>
-              <SkeletonInsightCard />
-              <SkeletonInsightCard />
-            </>
-          ) : insights.length > 0 ? (
-            insights.map((insight, i) => <InsightCard key={i} insight={insight} />)
-          ) : (
-            <div className="card p-5 text-center">
-              <p className="text-ink-400 text-sm">Insights appear once your transactions are loaded.</p>
-            </div>
-          )}
+      <div className={`flex items-center justify-between gap-2 ${home || error ? "" : "invisible"}`}>
+        <h1 className="sr-only">{current ? "Today" : monthLabel(month)}</h1>
+        {!current ? (
+          <button onClick={() => setMonth(thisMonth)} className="btn-quiet text-accent-text"><CaretLeft size={14} aria-hidden />Back to this month</button>
+        ) : <span />}
+        <div className="flex items-center gap-1" role="group" aria-label="Month">
+          <button onClick={() => setMonth(shiftMonth(month, -1))} className="btn-ghost w-9 h-9 !p-0" aria-label="Previous month"><CaretLeft size={16} /></button>
+          <time dateTime={month} className="text-sm text-ink-2 min-w-[8.5rem] text-center">{monthLabel(month)}</time>
+          <button onClick={() => setMonth(shiftMonth(month, 1))} disabled={current} className="btn-ghost w-9 h-9 !p-0" aria-label="Next month"><CaretRight size={16} /></button>
         </div>
       </div>
 
-      {/* Recent transactions */}
-      <section>
-        <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest mb-3">
-          Recent transactions
-        </h2>
-        {transactionsLoading ? (
-          <SkeletonTransactionFeed />
-        ) : transactionsError ? (
-          <ErrorRetry message={transactionsError} onRetry={fetchTransactions} />
-        ) : transactions.length > 0 ? (
-          <div className="card p-5">
-            {transactions.map((txn) => (
-              <TransactionRow key={txn.id} txn={txn} />
-            ))}
-            {transactions.length >= 20 && (
-              <button className="w-full mt-3 text-sm text-forest-600 font-medium hover:underline py-2">
-                View all transactions →
-              </button>
-            )}
+      {error ? (
+        <div className="rounded-md border border-danger/30 bg-danger-tint p-5 flex items-center justify-between gap-3">
+          <p className="text-sm text-ink">{error}</p>
+          <button onClick={refresh} className="btn-secondary">Try again</button>
+        </div>
+      ) : !home ? (
+        <div className="grid md:grid-cols-[1.3fr_1fr] gap-10" aria-label="Loading">
+          <div className="space-y-3"><div className="skeleton h-4 w-40" /><div className="skeleton h-20 w-64" /><div className="skeleton h-4 w-56" /></div>
+          <div className="space-y-3"><div className="skeleton h-4 w-24" /><div className="skeleton h-12 w-48" /><div className="skeleton h-2.5 w-full" /></div>
+        </div>
+      ) : (
+        <>
+          <div className="grid md:grid-cols-[1.3fr_1fr] gap-10 md:gap-14 items-start">
+            <div data-tour="safe">{current ? <SafeToSpend safe={home.safe_to_spend} /> : <PeriodTotals />}</div>
+            <Outlook outlook={home.outlook} current={current} />
           </div>
-        ) : (
-          <div className="card p-6 text-center">
-            <p className="text-ink-400 text-sm">No transactions yet.</p>
-            <a href="/connect" className="text-forest-600 text-sm font-medium hover:underline mt-1 inline-block">
-              Upload a bank statement to see them here →
-            </a>
+
+          {current && (
+            <div className="grid gap-3">
+              <div data-tour="ask"><AskBar /></div>
+              <div data-tour="quick-add"><QuickAddBar onAdded={refresh} /></div>
+            </div>
+          )}
+
+          <div className="grid lg:grid-cols-[1.4fr_1fr] gap-x-12 gap-y-8 items-start">
+            <div className="space-y-8 min-w-0">
+              <div data-tour="attention"><Attention attention={home.attention} onAnswered={refresh} /></div>
+              <div data-tour="recent"><Panel title={current ? "Recent transactions" : `Transactions in ${monthLabel(month)}`}
+                action={<Link to="/transactions" className="text-micro font-medium text-accent-text hover:underline">All transactions</Link>}>
+                {txns === null ? <SkeletonRows rows={5} /> : txns.length ? (
+                  <div className="divide-y divide-line">
+                    {txns.map((t) => <TransactionRow key={t.id} txn={t} onChanged={refresh} onRuleLearned={(rule) => ruleToast(rule, refresh)} />)}
+                  </div>
+                ) : (
+                  <Empty icon={Receipt} to="/connect" cta="Import a statement">
+                    {current ? "No transactions yet. Add one above, forward your bank alerts, or" : "Nothing recorded in this month."}
+                  </Empty>
+                )}
+              </Panel></div>
+            </div>
+            <div className="space-y-8 min-w-0">
+              {current && !demo && <GettingStarted key={refreshKey} checklist={home.checklist} />}
+              <Panel title="Budgets" action={<Link to="/budgets" className="text-micro font-medium text-accent-text hover:underline">{home.budgets.categories.length || home.budgets.overall ? "Edit" : "Set limits"}</Link>}>
+                {home.budgets.overall || home.budgets.categories.length ? (
+                  <div className="space-y-4">
+                    {[...(home.budgets.overall ? [home.budgets.overall] : []), ...home.budgets.categories].map((b) => (
+                      <Meter key={b.category} label={b.category} spent={Number(b.spent)} limit={Number(b.limit)} />
+                    ))}
+                  </div>
+                ) : <Empty icon={ClipboardText} to="/budgets" cta="Set monthly limits">No budgets yet. Limits drive the bars here and the safe-to-spend figure.</Empty>}
+              </Panel>
+              {current && <Upcoming items={home.upcoming} />}
+              <div data-tour="coverage"><Coverage coverage={home.coverage} cashBalance={home.cash_balance} /></div>
+              {current && <PeriodTotals />}
+            </div>
           </div>
-        )}
-      </section>
+        </>
+      )}
     </div>
   );
 }

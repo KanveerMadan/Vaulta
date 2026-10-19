@@ -1,0 +1,117 @@
+"""
+Stable identities derived from sanitized narrations: which merchant or which
+person a transaction is with. Shared by refunds, recurring detection,
+people and learned rules so they all group the same way.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import re
+from typing import Optional
+
+from app.models.transaction import Transaction, TransactionNature
+
+# Personal UPI IDs arrive masked by the browser (frontend/src/import/pii.js)
+MASKED_VPA = re.compile(r"\b([A-Z]|X)\*\*\*@[a-z][a-z0-9.]*", re.IGNORECASE)
+
+_NOISE_WORDS = {
+    "upi", "imps", "neft", "rtgs", "p2a", "p2m", "dr", "cr", "sent", "received", "payment", "pay",
+    "paid", "to", "from", "by", "transfer", "trf", "self", "mr", "mrs", "ms", "bank", "ltd", "via",
+    "split", "share", "rent", "dinner", "lunch", "tea", "milk",
+}
+_BANK_WORDS = re.compile(r"\b(bank|bk|hdfc|icici|sbi|axis|kotak|paytm|ybl|yes)\b", re.IGNORECASE)
+_PREFIX = re.compile(r"^(paid to|received from|money sent to|money received from|sent to|transfer to)\s+", re.IGNORECASE)
+
+
+def merchant_key(txn: Transaction) -> str:
+    """Normalized merchant if known, else the narration minus numbers/masks and punctuation."""
+    if txn.merchant_clean:
+        return txn.merchant_clean.strip().lower()
+    raw = MASKED_VPA.sub(" ", txn.merchant_raw or "")
+    raw = re.sub(r"X{3,}|\d+", " ", raw)
+    return " ".join(re.split(r"[^a-z]+", raw.lower())).strip()[:80]
+
+
+def _name_token(text: str) -> Optional[str]:
+    """First narration segment that reads like a person's name (1–4 alphabetic words)."""
+    text = re.sub(r"\bX{3,}\w*|\d+", " ", MASKED_VPA.sub(" ", text))
+    for segment in re.split(r"[-/|]", text):
+        segment = _PREFIX.sub("", segment.strip())
+        words = [w for w in segment.split() if w.isalpha()]
+        if not words or len(words) > 4 or len(words) != len(segment.split()):
+            continue
+        if _BANK_WORDS.search(segment) or all(w.lower() in _NOISE_WORDS for w in words):
+            continue
+        if any(len(w) >= 3 for w in words):
+            return " ".join(w.lower() for w in words)
+    return None
+
+
+def identity_from_text(text: str, is_peer: bool, merchant_clean: Optional[str]) -> Optional[tuple[Optional[str], Optional[str]]]:
+    """(masked_vpa, name_token) if `text` describes a payment with an individual."""
+    text = text or ""
+    vpa_match = MASKED_VPA.search(text)
+    bank_peer = vpa_match or (not merchant_clean and re.search(r"\bP2A\b", text))
+    if not is_peer and not bank_peer:
+        return None
+    vpa = None
+    if vpa_match:
+        local, handle = vpa_match.group(0).split("@")
+        vpa = f"{local.upper()}@{handle.lower()}"
+    name = _name_token(text)
+    if not vpa and not name:
+        return None
+    return vpa, name
+
+
+def person_identity(txn: Transaction) -> Optional[tuple[Optional[str], Optional[str]]]:
+    """
+    (masked_vpa, name_token) when this transaction is with an individual:
+    UPI-app rows the importer classified as peer payments, bank rows with a
+    masked UPI ID (the browser masks only personal IDs; a remark like "Rent"
+    may still have matched a normalizer pattern), or bank rows with no
+    recognized merchant and a P2A (person-to-account) marker.
+    """
+    is_peer = txn.transaction_nature in (TransactionNature.peer_payment_sent, TransactionNature.peer_payment_received)
+    return identity_from_text(txn.merchant_raw, is_peer, txn.merchant_clean)
+
+
+def evidence_identities(txn: Transaction) -> list[tuple[Optional[str], Optional[str]]]:
+    """
+    The person as each source saw them, for a transaction already known to be
+    with a person. A payment imported from both Google Pay ("Rahul Sharma")
+    and the bank ("UPI-RAHUL SHARMA-R***@okaxis") yields both identities.
+    """
+    out = []
+    for r in txn.source_records:
+        is_upi_app = (r.source.value if hasattr(r.source, "value") else r.source).startswith("upi_")
+        identity = identity_from_text(r.counterparty_raw, is_upi_app, None)
+        if identity:
+            out.append(identity)
+    return out
+
+
+def person_key(identity: tuple[Optional[str], Optional[str]]) -> str:
+    vpa, name = identity
+    return hashlib.sha256(f"{vpa or ''}|{name or ''}".encode()).hexdigest()
+
+
+# ── Text search over encrypted columns ────────────────────────────────────────
+# merchant_clean is Searchable (deterministic per user), so its distinct values are read and matched here and the
+# query filters on the matches; merchant_raw is randomized, so it is matched row by row.
+
+def merchants_containing(db, user_id, needle: str) -> list[str]:
+    """The user's merchant names containing `needle` (case-insensitive), for Transaction.merchant_clean.in_()."""
+    needle = needle.lower()
+    names = db.query(Transaction.merchant_clean).filter(Transaction.user_id == user_id,
+                                                         Transaction.merchant_clean.isnot(None)).distinct()
+    return [m for (m,) in names if needle in m.lower()]
+
+
+def ids_with_narration_containing(db, user_id, needle: str) -> list:
+    """Ids of the user's transactions whose narration contains `needle` (case-insensitive)."""
+    # ponytail: decrypts every narration of the user per search; fine at personal-finance volumes (≈10⁴ rows)
+    needle = needle.lower()
+    rows = db.query(Transaction.id, Transaction.merchant_raw).filter(Transaction.user_id == user_id)
+    return [tid for tid, raw in rows if needle in (raw or "").lower()]

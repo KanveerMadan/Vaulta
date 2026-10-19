@@ -34,6 +34,16 @@ export const useFinanceStore = create((set) => ({
   addChatMessage: (message) =>
     set((state) => ({ chatMessages: [...state.chatMessages, message] })),
   setChatLoading: (loading) => set({ chatLoading: loading }),
+  // The home ask bar hands a question to the chat panel (and opens it on small screens)
+  chatOpen: false,
+  pendingQuestion: null,
+  setChatOpen: (chatOpen) => set({ chatOpen }),
+  ask: (question) => set({ pendingQuestion: question, chatOpen: true }),
+  takePendingQuestion: () => {
+    let q = null;
+    set((state) => { q = state.pendingQuestion; return { pendingQuestion: null }; });
+    return q;
+  },
 
   // ── Reset (e.g. on logout) ────────────────────────────────────────────────
   reset: () =>
@@ -49,5 +59,7 @@ export const useFinanceStore = create((set) => ({
       categorySpend: [],
       chatMessages: [],
       chatLoading: false,
+      chatOpen: false,
+      pendingQuestion: null,
     }),
 }));

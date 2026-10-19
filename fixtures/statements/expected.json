@@ -1,0 +1,136 @@
+{
+  "hdfc.csv": [
+    {
+      "date": "2024-03-05",
+      "description_raw": "UPI-SWIGGY-swiggy.rzp@axisbank-UTIB0000100-412345678901-Payment",
+      "amount": "450.00",
+      "direction": "debit"
+    },
+    {
+      "date": "2024-03-06",
+      "description_raw": "UPI-RAHUL SHARMA-rahul.s@okaxis-HDFC0001234-412398765432-Sent",
+      "amount": "1200.00",
+      "direction": "debit"
+    },
+    {
+      "date": "2024-03-08",
+      "description_raw": "ATW-512345XXXXXX6789-S1ANMU12-MUMBAI",
+      "amount": "2000.00",
+      "direction": "debit"
+    },
+    {
+      "date": "2024-03-10",
+      "description_raw": "POS 512345XXXXXX6789 DMART AVENUE",
+      "amount": "2345.50",
+      "direction": "debit"
+    },
+    {
+      "date": "2024-03-12",
+      "description_raw": "UPI-JIO PREPAID-9876543210@paytm-PYTM0123456-412311112222-Recharge",
+      "amount": "299.00",
+      "direction": "debit"
+    }
+  ],
+  "icici.csv": [
+    {
+      "date": "2024-04-01",
+      "description_raw": "UPI/412300001111/Zomato Order/zomato@hdfcbank/HDFC Bank",
+      "amount": "612.00",
+      "direction": "debit"
+    },
+    {
+      "date": "2024-04-02",
+      "description_raw": "UPI/412300002222/Paid to Priya/9123456789@ybl/Yes Bank",
+      "amount": "1500.00",
+      "direction": "debit"
+    },
+    {
+      "date": "2024-04-03",
+      "description_raw": "BIL/ONL/000123456/AIRTEL/Bill",
+      "amount": "799.00",
+      "direction": "debit"
+    }
+  ],
+  "sbi.csv": [
+    {
+      "date": "2024-05-15",
+      "description_raw": "TO TRANSFER-UPI/DR/413511112222/UBER/YESB/uber.rzp@ybl/Ride",
+      "amount": "325.00",
+      "direction": "debit"
+    },
+    {
+      "date": "2024-05-17",
+      "description_raw": "ATM WDL-ATM CASH 1234 SBI MUMBAI",
+      "amount": "3000.00",
+      "direction": "debit"
+    }
+  ],
+  "axis.csv": [
+    {
+      "date": "2024-06-01",
+      "description_raw": "UPI/P2M/415311110000/BIGBASKET/Groceries/AXIS BANK",
+      "amount": "1845.25",
+      "direction": "debit"
+    },
+    {
+      "date": "2024-06-02",
+      "description_raw": "UPI/P2A/415322220000/NEHA GUPTA/Rent share/HDFC",
+      "amount": "12000.00",
+      "direction": "debit"
+    },
+    {
+      "date": "2024-06-04",
+      "description_raw": "ECS/NETFLIX COM/SI/12345",
+      "amount": "649.00",
+      "direction": "debit"
+    }
+  ],
+  "kotak.csv": [
+    {
+      "date": "2024-07-05",
+      "description_raw": "UPI/ZEPTO MARKETPLACE/416511112222/Grocery",
+      "amount": "382.00",
+      "direction": "debit"
+    },
+    {
+      "date": "2024-07-07",
+      "description_raw": "NACH/LIC OF INDIA/POLICY 123456789",
+      "amount": "5230.00",
+      "direction": "debit"
+    }
+  ],
+  "gpay.pdf": [
+    {
+      "date": "2026-05-04T05:23:00",
+      "description_raw": "ZEPTO MARKETPLACE PRIVATE LIMITED",
+      "amount": "129.00",
+      "direction": "debit",
+      "reference": "612456562367",
+      "type": "transaction"
+    },
+    {
+      "date": "2026-05-05T21:10:00",
+      "description_raw": "Rahul Sharma",
+      "amount": "1500.00",
+      "direction": "credit",
+      "reference": "612456562368",
+      "type": "transaction"
+    },
+    {
+      "date": "2026-05-06T11:45:00",
+      "description_raw": "HDFC Bank 4321",
+      "amount": "10000.00",
+      "direction": "debit",
+      "reference": "612456562369",
+      "type": "transfer"
+    },
+    {
+      "date": "2026-05-07T13:05:00",
+      "description_raw": "9876543210@ybl",
+      "amount": "45.50",
+      "direction": "debit",
+      "reference": "612456562370",
+      "type": "transaction"
+    }
+  ]
+}

@@ -28,6 +28,26 @@ sys.path.insert(0, _BACKEND_DIR)
 from app.core.database import Base  # noqa: F401
 from app.models.user import User, Household  # noqa: F401
 from app.models.transaction import Transaction, Budget  # noqa: F401
+from app.models.transaction_source import TransactionSourceRecord  # noqa: F401
+from app.models.import_template import ImportTemplate  # noqa: F401
+from app.models.correction import Correction  # noqa: F401
+from app.models.recurring import RecurringSeries  # noqa: F401
+from app.models.person import Person  # noqa: F401
+from app.models.rule import Rule  # noqa: F401
+from app.models.review import ReviewDismissal  # noqa: F401
+from app.models.chat import ChatAction, ChatMessage  # noqa: F401
+from app.models.goal import Goal, GoalEntry  # noqa: F401
+from app.models.alert import Alert  # noqa: F401
+from app.models.anomaly import Anomaly  # noqa: F401
+from app.models.report import Report  # noqa: F401
+from app.models.inbound import GmailConfirmation, InboundEvent  # noqa: F401
+from app.models.telegram import TelegramEntry, TelegramLinkCode  # noqa: F401
+from app.models.cash import CashDeclaration  # noqa: F401
+from app.models.activity import ActivityEvent  # noqa: F401
+from app.models.ratelimit import RateLimit  # noqa: F401
+from app.models.deletion import PendingAuthDeletion  # noqa: F401
+from app.models.category import CustomSubcategory, Tag, TransactionTag  # noqa: F401
+from app.models.categorizer import ModelMetric, RecategorisationRun  # noqa: F401
 # Phase 2+: import new models here as they're created
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -40,11 +60,13 @@ target_metadata = Base.metadata
 
 def get_url() -> str:
     """
-    Read DATABASE_URL from environment — never from alembic.ini (no secrets in source).
+    MIGRATION_DATABASE_URL (the tables' owner) if set, else DATABASE_URL — from the environment, never from
+    alembic.ini (no secrets in source). In production the API's DATABASE_URL is the vaulta_app role, which can't
+    change the schema, so migrations need MIGRATION_DATABASE_URL (docs/deploy.md).
     Neon requires ?sslmode=require; add it if not already present.
     """
     from app.core.config import settings
-    url = settings.DATABASE_URL
+    url = os.environ.get("MIGRATION_DATABASE_URL") or settings.DATABASE_URL
     if "sslmode" not in url and "neon.tech" in url:
         url += "?sslmode=require"
     return url

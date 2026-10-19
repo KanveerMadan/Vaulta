@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, text
+from sqlalchemy import JSON, BigInteger, Column, Date, String, SmallInteger, Boolean, DateTime, ForeignKey, Text, text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import deferred, relationship
 
+from app.core.crypto import Encrypted
 from app.core.database import Base
 
 
@@ -27,11 +28,49 @@ class User(Base):
     sms_connected = Column(Boolean, default=False, nullable=False)
     aa_connected = Column(Boolean, default=False, nullable=False)
 
-    # --- DEPRECATED — Gmail OAuth tokens, no longer written to. Kept only to
-    # avoid a destructive column-drop migration. Safe to ignore/remove later. ---
-    gmail_access_token = Column(String, nullable=True)
-    gmail_refresh_token = Column(String, nullable=True)
-    gmail_last_sync_at = Column(DateTime(timezone=True), nullable=True)
+    # --- Settings ---
+    ai_chat_enabled = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    timezone = Column(String(64), nullable=False, default="Asia/Kolkata", server_default="Asia/Kolkata")
+    # Which reports are built for the user, and which are also emailed
+    reports_weekly = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    reports_monthly = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    reports_annual = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    email_weekly = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    email_monthly = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    email_annual = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+
+    # --- Inbound alert email: <token>@in.<INBOUND_DOMAIN> ---
+    # sha256 of the token for lookup; the token itself encrypted with the user's data key so the
+    # address can be shown again. Regenerating replaces both; the old address stops working.
+    inbound_token_hash = Column(String(64), nullable=True, unique=True)
+    inbound_token_encrypted = deferred(Column(Encrypted, nullable=True))   # loaded on use, after bind_user
+
+    # --- Field encryption: this user's data key, wrapped by MASTER_KEY (app/core/crypto.py) ---
+    data_key = Column(Text, nullable=True)
+
+    # --- Telegram bot ---
+    telegram_chat_id = Column(BigInteger, nullable=True, unique=True)
+    telegram_weekly = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    # Week end (Sunday) of the last unaccounted-cash reminder sent on Telegram
+    cash_reminded_week = Column(Date, nullable=True)
+
+    # --- Alerts: per-type channel choices ({type: {"telegram": bool, "email": bool}}; missing = default)
+    # and Telegram quiet hours in local time (start hour inclusive, end hour exclusive)
+    alert_prefs = Column(JSON, nullable=True)
+    quiet_start = Column(SmallInteger, nullable=False, default=22, server_default=text("22"))
+    quiet_end = Column(SmallInteger, nullable=False, default=8, server_default=text("8"))
+
+    # --- Onboarding (services/onboarding.py): step, answers, done/skipped ---
+    onboarding = Column(JSON, nullable=True)
+
+    # --- Last sign-in (Firebase auth_time); a newer one is logged in the activity log ---
+    last_sign_in_at = Column(DateTime(timezone=True), nullable=True)
+    # --- Sign out everywhere: ID tokens issued before this are refused (app/core/auth.py, services/account.py) ---
+    tokens_revoked_at = Column(DateTime(timezone=True), nullable=True)
+    # --- A password reset email was asked for; completion is detected at the next sign-in (services/account.py) ---
+    password_reset_requested_at = Column(DateTime(timezone=True), nullable=True)
+    # --- Opted in to letting their category corrections improve the merchant model (ml/retrain.py; off by default) ---
+    ml_training_consent = Column(Boolean, nullable=False, default=False, server_default=text("false"))
 
     # --- Subscription status (Phase 2) ---
     # Values: trial | active | past_due | cancelled

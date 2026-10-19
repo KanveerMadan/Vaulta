@@ -1,0 +1,302 @@
+[
+ {
+  "confidence": 0.995,
+  "text": "LG ELECTRONICS INDIA LI CHANDIGARH",
+  "teacher": "housing.home_services",
+  "model": "shopping.electronics"
+ },
+ {
+  "confidence": 0.9931,
+  "text": "UPI/P2M/XXXX/LG ELECTRONICS INDIA PVT LTD/HDFC BANK",
+  "teacher": "housing.home_services",
+  "model": "shopping.electronics"
+ },
+ {
+  "confidence": 0.9847,
+  "text": "BIL/BPAY/XXXX/VADODARA MUNICIPAL CORPORATION TAX",
+  "teacher": "taxes.property_tax",
+  "model": "taxes.government_fees"
+ },
+ {
+  "confidence": 0.9847,
+  "text": "BIL/BPAY/XXXX/VADODARA MUNICIPAL CORPORATION TAX",
+  "teacher": "taxes.property_tax",
+  "model": "taxes.government_fees"
+ },
+ {
+  "confidence": 0.9846,
+  "text": "IMPS/P2M/XXXX/BHARATI VIDYAP/UPI",
+  "teacher": "health.dental",
+  "model": "education.school"
+ },
+ {
+  "confidence": 0.981,
+  "text": "UPI/LG ELECTRONICS INDIA INDIA PRIVATE LIMITED/XXXX/",
+  "teacher": "housing.home_services",
+  "model": "shopping.electronics"
+ },
+ {
+  "confidence": 0.9801,
+  "text": "UPI/XXXX/LG ELECTRONICS INDIA/lgservicecentre.rzp@axisbank/STATE BANK OF INDIA/",
+  "teacher": "housing.home_services",
+  "model": "shopping.electronics"
+ },
+ {
+  "confidence": 0.9801,
+  "text": "BIL/BPAY/XXXX/RIA MONEY TRANSFER",
+  "teacher": "finance.remittance",
+  "model": "finance.payment_app"
+ },
+ {
+  "confidence": 0.9767,
+  "text": "TRAVELVISAPRO",
+  "teacher": "travel.forex_visa",
+  "model": "travel.booking"
+ },
+ {
+  "confidence": 0.9716,
+  "text": "BHARATI VIDYAPEET MUM IN",
+  "teacher": "health.dental",
+  "model": "education.school"
+ },
+ {
+  "confidence": 0.9706,
+  "text": "TO TRANSFER-UPI/DR/XXXX/HOTELSHIVSAG/ICIC/hotelshivsag/UPI Txn",
+  "teacher": "food.restaurant",
+  "model": "travel.hotels"
+ },
+ {
+  "confidence": 0.9679,
+  "text": "UPI/P2M/XXXX/VADODARA MUNICIPAL CORPORATION TAX/Pay to merchant/STATE BANK OF INDIA",
+  "teacher": "taxes.property_tax",
+  "model": "taxes.government_fees"
+ },
+ {
+  "confidence": 0.9634,
+  "text": "NEFT CR-STRIPE INDIA PAYOUT-SALARY-XXXX",
+  "teacher": "finance.payment_app",
+  "model": "income.salary"
+ },
+ {
+  "confidence": 0.9597,
+  "text": "UPI-DRISHTI EYE INSTITUTE-drishtieyeinstitute.rzp@axisbank-XXXX-",
+  "teacher": "health.eye_care",
+  "model": "education.coaching"
+ },
+ {
+  "confidence": 0.954,
+  "text": "UPI/XXXX/VADODARA MUNICIPAL CORPORATION TAX/V***@okaxis/PNB/Pay to merchant",
+  "teacher": "taxes.property_tax",
+  "model": "taxes.government_fees"
+ },
+ {
+  "confidence": 0.9525,
+  "text": "Hotel Polo Towers",
+  "teacher": "food.restaurant",
+  "model": "travel.hotels"
+ },
+ {
+  "confidence": 0.9525,
+  "text": "Hotel Polo Towers",
+  "teacher": "food.restaurant",
+  "model": "travel.hotels"
+ },
+ {
+  "confidence": 0.9518,
+  "text": "UPI/P2M/XXXX/VADODARAMUNICIPALCORPORATIONTAX/Payment/ICICI BANK",
+  "teacher": "taxes.property_tax",
+  "model": "taxes.government_fees"
+ },
+ {
+  "confidence": 0.9454,
+  "text": "BAAZIGAMES",
+  "teacher": "shopping.sports",
+  "model": "entertainment.gaming"
+ },
+ {
+  "confidence": 0.9448,
+  "text": "TO TRANSFER-UPI/DR/XXXX/HOTEL POLO T/HDFC/hotelpolotow/NA",
+  "teacher": "food.restaurant",
+  "model": "travel.hotels"
+ },
+ {
+  "confidence": 0.9441,
+  "text": "UPI-BAAZI GAMES INDIA PRIVATE LIMITED-X***@paytm-XXXX-NA",
+  "teacher": "shopping.sports",
+  "model": "entertainment.gaming"
+ },
+ {
+  "confidence": 0.9434,
+  "text": "UPI-HOTEL POLO TOWERS-hotelpolotowers.rzp@axisbank-XXXX-NA",
+  "teacher": "food.restaurant",
+  "model": "travel.hotels"
+ },
+ {
+  "confidence": 0.941,
+  "text": "IMPS/P2M/XXXX/HOTEL POLO TOWERS/UPI",
+  "teacher": "food.restaurant",
+  "model": "travel.hotels"
+ },
+ {
+  "confidence": 0.9345,
+  "text": "UPI/MUMBAI TIFFIN EXPRESS/XXXX/Order",
+  "teacher": "food.delivery",
+  "model": "food.canteen"
+ },
+ {
+  "confidence": 0.9341,
+  "text": "PAYU*RIA MONEY TRANSFER",
+  "teacher": "finance.remittance",
+  "model": "finance.payment_app"
+ },
+ {
+  "confidence": 0.9336,
+  "text": "PCD/8383/MUNICIPAL PENA/GURUGRAM",
+  "teacher": "taxes.fines",
+  "model": "taxes.government_fees"
+ },
+ {
+  "confidence": 0.9318,
+  "text": "UPI-MUMBAI TIFFIN EXPRESS-mumbaitiffinexpress.rzp@axisbank-XXXX-Pay",
+  "teacher": "food.delivery",
+  "model": "food.canteen"
+ },
+ {
+  "confidence": 0.9317,
+  "text": "IMPS/P2A/XXXX/SBI CARD/CREDIT",
+  "teacher": "income.cashback",
+  "model": "transfers.credit_card_bill"
+ },
+ {
+  "confidence": 0.9203,
+  "text": "POS XXXXXXXXXXXX0230 BHARATI VIDYAPEETH DEN MUM",
+  "teacher": "health.dental",
+  "model": "education.school"
+ },
+ {
+  "confidence": 0.9188,
+  "text": "TO TRANSFER-UPI/DR/XXXX/INDORE MUNIC/INDB/indoremunici/",
+  "teacher": "utilities.water",
+  "model": "taxes.government_fees"
+ },
+ {
+  "confidence": 0.9159,
+  "text": "EXTRAVELMONEY",
+  "teacher": "finance.remittance",
+  "model": "travel.booking"
+ },
+ {
+  "confidence": 0.9112,
+  "text": "UPI/XXXX/TRAVEL VISA PRO/travelvisapro.payu@hdfcbank/ICICI BANK/Collect request",
+  "teacher": "travel.forex_visa",
+  "model": "travel.booking"
+ },
+ {
+  "confidence": 0.9082,
+  "text": "BHARATI VIDYAPEETH DENT NEW DELHI IN",
+  "teacher": "health.dental",
+  "model": "education.school"
+ },
+ {
+  "confidence": 0.9072,
+  "text": "CF*HOTEL POLO TOWERS",
+  "teacher": "food.restaurant",
+  "model": "travel.hotels"
+ },
+ {
+  "confidence": 0.8946,
+  "text": "ST JOHNS MEDICAL COLLEG HYD",
+  "teacher": "health.hospital",
+  "model": "health.pharmacy"
+ },
+ {
+  "confidence": 0.8924,
+  "text": "IMPS/P2M/XXXX/DRISHTI EYE INSTITUTE/UPI Txn",
+  "teacher": "health.eye_care",
+  "model": "education.coaching"
+ },
+ {
+  "confidence": 0.8899,
+  "text": "UPI/P2M/XXXX/DRISHTI EYE INSTITUTE/Order/AXIS BANK",
+  "teacher": "health.eye_care",
+  "model": "education.coaching"
+ },
+ {
+  "confidence": 0.8864,
+  "text": "UPI/P2M/XXXX/UTS ON MOBILE/Bill/PNB",
+  "teacher": "utilities.mobile",
+  "model": "shopping.electronics"
+ },
+ {
+  "confidence": 0.8842,
+  "text": "TO TRANSFER-UPI/DR/XXXX/TRAVEL VISA /PUNB/travelvisapr/Payment from PhonePe",
+  "teacher": "travel.forex_visa",
+  "model": "travel.booking"
+ },
+ {
+  "confidence": 0.8833,
+  "text": "CCAV*PONNUSAMY HOTEL",
+  "teacher": "food.restaurant",
+  "model": "travel.hotels"
+ },
+ {
+  "confidence": 0.8762,
+  "text": "IMPS/P2M/XXXX/DRISHTI EYE INSTITUTE/Payment",
+  "teacher": "health.eye_care",
+  "model": "education.coaching"
+ },
+ {
+  "confidence": 0.8759,
+  "text": "Travel Visa Pro",
+  "teacher": "travel.forex_visa",
+  "model": "travel.booking"
+ },
+ {
+  "confidence": 0.8759,
+  "text": "NEFT-MIOAMORECAKES-Order-NXXXX",
+  "teacher": "shopping.fashion",
+  "model": "food.bakery_sweets"
+ },
+ {
+  "confidence": 0.8747,
+  "text": "POS/ST JOHNS MEDICAL C/NAGPUR/383541",
+  "teacher": "health.hospital",
+  "model": "health.pharmacy"
+ },
+ {
+  "confidence": 0.8741,
+  "text": "TO TRANSFER-UPI/DR/XXXX/MUMBAI TIFFI/PUNB/mumbaitiffin/Paid via app",
+  "teacher": "food.delivery",
+  "model": "food.canteen"
+ },
+ {
+  "confidence": 0.8727,
+  "text": "IMPS/P2M/XXXX/PONNUSAMY HOTEL/Bill",
+  "teacher": "food.restaurant",
+  "model": "travel.hotels"
+ },
+ {
+  "confidence": 0.8687,
+  "text": "RIA MONEY TRANSFER NAGPUR IN",
+  "teacher": "finance.remittance",
+  "model": "finance.payment_app"
+ },
+ {
+  "confidence": 0.868,
+  "text": "IMPS/P2M/XXXX/PONNUSAMY HOTEL/Payment",
+  "teacher": "food.restaurant",
+  "model": "travel.hotels"
+ },
+ {
+  "confidence": 0.8618,
+  "text": "UPI/P2M/XXXX/BHARATI VIDYAPEE/Sent using Paytm/STATE BANK OF INDIA",
+  "teacher": "health.dental",
+  "model": "education.school"
+ },
+ {
+  "confidence": 0.8556,
+  "text": "UPI/PONNUSAMYHOTEL/XXXX/Order",
+  "teacher": "food.restaurant",
+  "model": "travel.hotels"
+ }
+]

@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OCR assets copied from node_modules by scripts/copy-ocr-assets.mjs
+public/ocr/
+dist-e2e
+test-results
+playwright-report
+firebase-debug.log
+e2e/_*.mjs
+.vercel

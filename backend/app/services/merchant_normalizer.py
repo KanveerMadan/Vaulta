@@ -30,6 +30,7 @@ class NormalizedMerchant:
     merchant_clean: str
     category: str
     confidence: float  # 0.0 – 1.0
+    subcategory: Optional[str] = None  # taxonomy id (services/taxonomy.py), from SUBCATEGORIES below
 
 
 # ─────────────────────────────────────────────
@@ -162,7 +163,7 @@ _PATTERNS: List[Tuple[str, str, str, float]] = [
     (r"icici\s?prudential|icicipru", "ICICI Prudential", "Insurance", 0.92),
     (r"sbi\s?life", "SBI Life", "Insurance", 0.91),
     (r"bajaj\s?allianz", "Bajaj Allianz", "Insurance", 0.91),
-    (r"policy\s?bazar|policybazaar", "Policybazaar", "Finance", 0.92),
+    (r"policy\s?bazar|policybazaar", "Policybazaar", "Insurance", 0.92),
     (r"groww\b", "Groww", "Investments", 0.94),
     (r"zerodha|kite\b", "Zerodha", "Investments", 0.94),
     (r"upstox", "Upstox", "Investments", 0.93),
@@ -209,9 +210,89 @@ _PATTERNS: List[Tuple[str, str, str, float]] = [
     (r"figma\b", "Figma", "Software & Cloud", 0.91),
 ]
 
+# Each pattern merchant's subcategory in the taxonomy (tests/test_taxonomy.py: every merchant has one, in its group)
+SUBCATEGORIES: dict[str, str] = {
+    "Swiggy": "food.delivery", "Zomato": "food.delivery",
+    "Domino's": "food.fast_food", "Pizza Hut": "food.fast_food", "KFC": "food.fast_food", "McDonald's": "food.fast_food", "Subway": "food.fast_food", "Burger King": "food.fast_food",
+    "Starbucks": "food.cafe", "Cafe Coffee Day": "food.cafe",
+    "Haldirams": "food.bakery_sweets", "Naturals": "food.bakery_sweets",
+    "Barbeque Nation": "food.restaurant",
+    "Social": "food.bar",
+    "Blinkit": "groceries.quick_commerce", "Zepto": "groceries.quick_commerce", "Dunzo": "groceries.quick_commerce", "Swiggy Instamart": "groceries.quick_commerce",
+    "BigBasket": "groceries.online", "JioMart": "groceries.online",
+    "DMart": "groceries.supermarket", "Reliance Fresh": "groceries.supermarket", "More Retail": "groceries.supermarket",
+    "Nature's Basket": "groceries.specialty",
+    "Licious": "groceries.meat_fish",
+    "Uber": "transport.ride_hailing", "Ola": "transport.ride_hailing", "BluSmart": "transport.ride_hailing", "Meru Cabs": "transport.ride_hailing",
+    "Rapido": "transport.bike_auto", "Namma Yatri": "transport.bike_auto",
+    "Petrol/Fuel": "transport.fuel",
+    "FASTag": "transport.tolls",
+    "IRCTC": "travel.trains",
+    "IndiGo": "travel.flights", "Air India": "travel.flights", "SpiceJet": "travel.flights", "Go First": "travel.flights", "Akasa Air": "travel.flights", "Vistara": "travel.flights",
+    "MakeMyTrip": "travel.booking", "Goibibo": "travel.booking", "Yatra": "travel.booking", "Cleartrip": "travel.booking", "Paytm Travel": "travel.booking",
+    "OYO": "travel.hotels",
+    "redBus": "travel.bus", "AbhiBus": "travel.bus",
+    "Amazon": "shopping.marketplace", "Flipkart": "shopping.marketplace", "Meesho": "shopping.marketplace", "Snapdeal": "shopping.marketplace", "Shopsy": "shopping.marketplace", "Tata CLiQ": "shopping.marketplace",
+    "Myntra": "shopping.fashion", "Ajio": "shopping.fashion", "Bewakoof": "shopping.fashion",
+    "Nykaa": "shopping.beauty",
+    "Croma": "shopping.electronics", "Vijay Sales": "shopping.electronics", "Reliance Digital": "shopping.electronics",
+    "Lenskart": "shopping.eyewear",
+    "Pepperfry": "shopping.home_furniture", "Urban Ladder": "shopping.home_furniture", "IKEA": "shopping.home_furniture",
+    "FirstCry": "shopping.kids",
+    "Netflix": "entertainment.video_streaming", "Amazon Prime": "entertainment.video_streaming", "Disney+ Hotstar": "entertainment.video_streaming", "SonyLIV": "entertainment.video_streaming", "ZEE5": "entertainment.video_streaming", "JioCinema": "entertainment.video_streaming", "MX Player": "entertainment.video_streaming", "Voot": "entertainment.video_streaming", "YouTube Premium": "entertainment.video_streaming",
+    "Spotify": "entertainment.music_streaming", "Gaana": "entertainment.music_streaming", "JioSaavn": "entertainment.music_streaming", "Wynk Music": "entertainment.music_streaming",
+    "BookMyShow": "entertainment.movies", "PVR Cinemas": "entertainment.movies", "INOX": "entertainment.movies", "Cinepolis": "entertainment.movies",
+    "Airtel": "utilities.mobile", "Jio": "utilities.mobile", "BSNL": "utilities.mobile", "Vodafone Idea": "utilities.mobile",
+    "Tata Play": "utilities.dth_cable", "Dish TV": "utilities.dth_cable", "Videocon D2H": "utilities.dth_cable",
+    "Electricity Bill": "utilities.electricity",
+    "Gas Bill": "utilities.piped_gas",
+    "Water Bill": "utilities.water",
+    "Broadband": "utilities.broadband",
+    "Apollo Pharmacy": "health.pharmacy", "MedPlus": "health.pharmacy", "Netmeds": "health.pharmacy", "1mg": "health.pharmacy", "PharmEasy": "health.pharmacy",
+    "Practo": "health.doctor", "Lybrate": "health.doctor",
+    "Cult.fit": "health.fitness", "HealthifyMe": "health.fitness",
+    "Portea": "health.home_care",
+    "LIC": "insurance.life", "HDFC Life": "insurance.life", "ICICI Prudential": "insurance.life", "SBI Life": "insurance.life",
+    "Bajaj Allianz": "insurance.general",
+    "Policybazaar": "insurance.platform",
+    "Groww": "investments.mutual_funds", "Zerodha Coin": "investments.mutual_funds",
+    "Zerodha": "investments.stocks", "Upstox": "investments.stocks", "Angel One": "investments.stocks",
+    "CRED": "finance.payment_app", "Paytm": "finance.payment_app", "PhonePe": "finance.payment_app", "Google Pay": "finance.payment_app",
+    "EMI Payment": "finance.loan_emi",
+    "BYJU'S": "education.coaching", "Vedantu": "education.coaching",
+    "Unacademy": "education.online_learning", "Coursera": "education.online_learning", "Udemy": "education.online_learning", "Simplilearn": "education.online_learning", "WhiteHat Jr": "education.online_learning",
+    "Income Tax": "taxes.income_tax",
+    "GST Payment": "taxes.gst",
+    "Traffic Challan": "taxes.fines",
+    "MCA": "taxes.government_fees",
+    "NoBroker": "housing.rent", "Rent": "housing.rent",
+    "Maintenance": "housing.society_maintenance",
+    "Magicbricks": "housing.property", "99acres": "housing.property",
+    "AWS": "software.cloud", "Google Cloud": "software.cloud", "Microsoft Azure": "software.cloud", "DigitalOcean": "software.cloud",
+    "GitHub": "software.dev_tools", "Atlassian": "software.dev_tools",
+    "Notion": "software.productivity", "Slack": "software.productivity", "Zoom": "software.productivity", "Figma": "software.productivity",
+}
+
+def _anchor_short_alternatives(pattern: str) -> str:
+    """
+    Short alternatives (<= 4 letters, e.g. "vi", "ola", "lic", "rent") must
+    start at a word boundary, or they match inside names and words: RAVI →
+    Vodafone Idea, MOTOROLA → Ola, PUBLIC → LIC, CURRENT → Rent. Longer
+    brand names keep substring matching, which Google Pay's space-stripped
+    counterparties ("ZEPTOMARKETPLACEPRIVATELIMITED") rely on. Alternatives
+    with groups are left as written.
+    """
+    def anchor(alt: str) -> str:
+        core = re.sub(r"\\b|\\s\?|\.\?|\?", "", alt)
+        if alt.startswith("\\b") or "(" in alt or ")" in alt or len(core) > 4:
+            return alt
+        return "\\b" + alt
+    return "|".join(anchor(a) for a in pattern.split("|"))
+
+
 # Compile all patterns once at module load — not on every call
 _COMPILED_PATTERNS: List[Tuple[re.Pattern, str, str, float]] = [
-    (re.compile(pattern, re.IGNORECASE), merchant, category, confidence)
+    (re.compile(_anchor_short_alternatives(pattern), re.IGNORECASE), merchant, category, confidence)
     for pattern, merchant, category, confidence in _PATTERNS
 ]
 
@@ -263,6 +344,7 @@ def normalize(merchant_raw: str) -> NormalizedMerchant:
                 merchant_clean=merchant_clean,
                 category=category,
                 confidence=confidence,
+                subcategory=SUBCATEGORIES[merchant_clean],
             )
 
     # No match — return cleaned string as best-effort, flagged for user review

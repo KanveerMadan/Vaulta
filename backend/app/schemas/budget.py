@@ -5,13 +5,15 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List
 
-from pydantic import BaseModel, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class BudgetCreate(BaseModel):
     # NULL category = total monthly budget cap
     # Specific string = per-category limit (must match category names from transactions)
     category: Optional[str] = None
+    # A subcategory of `category` (taxonomy id or custom:<uuid>) for a budget on just that part of the group
+    subcategory: Optional[str] = Field(default=None, pattern=r"^([a-z_]+\.[a-z_]+|custom:[0-9a-f-]{36})$")
     monthly_limit: Decimal
 
     @field_validator("monthly_limit")
@@ -39,8 +41,9 @@ class BudgetResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
     category: Optional[str] = None  # None = overall monthly budget
+    subcategory: Optional[str] = None
     monthly_limit: Decimal
-    is_active: str
+    is_active: bool
     created_at: datetime
     updated_at: datetime
 

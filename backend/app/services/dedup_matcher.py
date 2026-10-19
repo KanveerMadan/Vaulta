@@ -6,19 +6,10 @@ source) into either:
   (a) new evidence merged into an EXISTING canonical Transaction, or
   (b) a brand new canonical Transaction.
 
-Callers (csv ingestion, UPI statement ingestion, manual entry — once each is
-wired up) are responsible for merchant normalization (merchant_normalizer.py)
-and transaction_nature classification (Section 5) BEFORE calling in here.
-This module only matches, merges, and persists — it doesn't know how to read
-a CSV row or a UPI PDF line.
-
-NOT YET WIRED UP ANYWHERE. ingest_csv (transaction_service.py) still inserts
-Transaction rows directly and does not call this. Until it's retrofitted,
-cross-source matching only has UPI-side evidence to work with once
-ingest_upi_statement exists and calls this — CSV-origin transactions remain
-invisible to the matcher. Retrofitting ingest_csv needs csv_parser.py's
-RawTransaction fields verified first (does it expose a UTR buried in
-narration? a debit/credit sign?) rather than guessed at here.
+Callers (transaction_service.import_rows for browser-parsed statement rows,
+and manual entry) are responsible for merchant normalization
+(merchant_normalizer.py) and transaction_nature classification (Section 5)
+BEFORE calling in here. This module only matches, merges, and persists.
 """
 
 from __future__ import annotations
@@ -34,13 +25,14 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from app.models.transaction import Transaction, TransactionSource, TransactionNature
+from app.models.transaction import Transaction, TransactionKind, TransactionSource, TransactionNature
 from app.models.transaction_source import (
     TransactionSourceRecord,
     StatementSourceType,
     TransactionDirection,
 )
 from app.models.user import User
+from app.core.logs import user_ref
 
 logger = logging.getLogger(__name__)
 
@@ -54,27 +46,8 @@ TIER3_TIME_WINDOW = timedelta(minutes=10)
 
 _MIN_TOKEN_LEN = 3
 
-# transaction_nature values that represent money leaving the user's hand vs
-# arriving in it. Used to infer an existing Transaction's direction, since
-# Transaction itself has no explicit direction column. self_transfer is
-# treated as debit by convention (it represents the sending leg, per how UPI
-# statements phrase "Self transfer to X") — an assumption, not a verified
-# rule; revisit if self-transfers start appearing from both sides.
-_DEBIT_NATURES = {
-    TransactionNature.expense,
-    TransactionNature.peer_payment_sent,
-    TransactionNature.self_transfer,
-}
-_CREDIT_NATURES = {
-    TransactionNature.income,
-    TransactionNature.peer_payment_received,
-}
-
-
 def _infer_transaction_direction(txn: Transaction) -> TransactionDirection:
-    if txn.transaction_nature in _CREDIT_NATURES:
-        return TransactionDirection.credit
-    return TransactionDirection.debit
+    return txn.direction
 
 
 def _normalize_for_overlap(text: Optional[str]) -> set:
@@ -165,6 +138,7 @@ def _try_tier3_time_and_merchant(
     amount: Decimal,
     raw_timestamp: Optional[datetime],
     counterparty_raw: Optional[str],
+    source: Optional[StatementSourceType] = None,
 ) -> Optional[Transaction]:
     if raw_timestamp is None:
         return None
@@ -177,17 +151,29 @@ def _try_tier3_time_and_merchant(
         .filter(
             Transaction.user_id == user_id,
             Transaction.amount == amount,
+            Transaction.split_parent_id.is_(None),
             Transaction.transaction_date >= window_start,
             Transaction.transaction_date <= window_end,
         )
         .all()
     )
     for txn in candidates:
-        if _infer_transaction_direction(txn) != direction:
+        if _infer_transaction_direction(txn) != direction or _has_evidence_from(txn, source):
             continue
         if _merchant_overlap(counterparty_raw, txn.merchant_clean or txn.merchant_raw):
             return txn
     return None
+
+
+def _has_evidence_from(txn: Transaction, source: Optional[StatementSourceType]) -> bool:
+    """
+    A statement never lists the same transaction twice, so a canonical
+    transaction that already has evidence from this source type is a
+    different transaction (two ₹20 chais on one day), not a cross-source
+    duplicate. Exact re-imports are caught earlier by idempotency key.
+    Fuzzy tiers (3, 4) only; UTR/VPA tiers are exact.
+    """
+    return source is not None and any(r.source == source for r in txn.source_records)
 
 
 def _try_tier4_date_and_merchant(
@@ -197,6 +183,7 @@ def _try_tier4_date_and_merchant(
     amount: Decimal,
     raw_date: Optional[date_type],
     counterparty_raw: Optional[str],
+    source: Optional[StatementSourceType] = None,
 ) -> Optional[Transaction]:
     if raw_date is None:
         return None
@@ -206,12 +193,13 @@ def _try_tier4_date_and_merchant(
         .filter(
             Transaction.user_id == user_id,
             Transaction.amount == amount,
+            Transaction.split_parent_id.is_(None),
             func.date(Transaction.transaction_date) == raw_date,
         )
         .all()
     )
     for txn in candidates:
-        if _infer_transaction_direction(txn) != direction:
+        if _infer_transaction_direction(txn) != direction or _has_evidence_from(txn, source):
             continue
         if _merchant_overlap(counterparty_raw, txn.merchant_clean or txn.merchant_raw):
             return txn
@@ -229,6 +217,7 @@ def find_match(
     raw_timestamp: Optional[datetime],
     raw_date: Optional[date_type],
     counterparty_raw: Optional[str],
+    source: Optional[StatementSourceType] = None,
 ) -> Tuple[Optional[Transaction], Optional[int]]:
     """
     Runs the Section 4 tier hierarchy in order, strongest signal first.
@@ -247,13 +236,13 @@ def find_match(
             return txn, 2
 
     if raw_timestamp:
-        txn = _try_tier3_time_and_merchant(db, user_id, direction, amount, raw_timestamp, counterparty_raw)
+        txn = _try_tier3_time_and_merchant(db, user_id, direction, amount, raw_timestamp, counterparty_raw, source)
         if txn:
             return txn, 3
 
     effective_date = raw_date or (raw_timestamp.date() if raw_timestamp else None)
     if effective_date:
-        txn = _try_tier4_date_and_merchant(db, user_id, direction, amount, effective_date, counterparty_raw)
+        txn = _try_tier4_date_and_merchant(db, user_id, direction, amount, effective_date, counterparty_raw, source)
         if txn:
             return txn, 4
 
@@ -265,6 +254,8 @@ def _enrich_canonical_transaction(
     merchant_raw: str,
     merchant_clean: Optional[str],
     category: Optional[str],
+    subcategory: Optional[str] = None,
+    explanation: Optional[dict] = None,
 ) -> None:
     """
     Section 4: "fields with better data quality from the new source UPDATE the
@@ -274,8 +265,10 @@ def _enrich_canonical_transaction(
     """
     if not txn.merchant_clean and merchant_clean:
         txn.merchant_clean = merchant_clean
+    if not txn.auto_category and category:
+        txn.auto_category, txn.auto_subcategory, txn.category_explanation = category, subcategory, explanation
     if not txn.category and category:
-        txn.category = category
+        txn.category, txn.subcategory = category, subcategory
 
 
 def ingest_or_match_transaction(
@@ -290,7 +283,11 @@ def ingest_or_match_transaction(
     merchant_raw: str,
     merchant_clean: Optional[str] = None,
     category: Optional[str] = None,
+    subcategory: Optional[str] = None,
+    explanation: Optional[dict] = None,
+    simulation_id: Optional[uuid.UUID] = None,
     transaction_nature: TransactionNature = TransactionNature.expense,
+    kind: Optional[TransactionKind] = None,
     legacy_source_enum: TransactionSource = TransactionSource.csv,
     utr: Optional[str] = None,
     vpa: Optional[str] = None,
@@ -299,6 +296,8 @@ def ingest_or_match_transaction(
     counterparty_raw: Optional[str] = None,
     currency: str = "INR",
     raw_row: Optional[dict] = None,
+    source_label: Optional[str] = None,
+    import_id: Optional[uuid.UUID] = None,
 ) -> Tuple[Transaction, TransactionSourceRecord, bool]:
     """
     Find-or-create entry point for the dedup pipeline. One call per parsed
@@ -313,15 +312,16 @@ def ingest_or_match_transaction(
 
     Returns (transaction, source_record, was_matched).
     Raises nothing on duplicate re-ingestion — returns the existing
-    (transaction, source_record, True) instead, mirroring ingest_csv's
-    existing duplicate-handling convention.
+    (transaction, source_record, True) instead, the long-standing
+    duplicate-handling convention.
     """
     existing = _existing_source_record_for_idempotency_key(db, user.id, idempotency_key)
     if existing is not None:
         logger.debug(f"Duplicate source record skipped: {idempotency_key}")
         return existing.transaction, existing, True
 
-    matched_txn, tier = find_match(
+    # a sample (simulation) never merges into a real transaction: it is always a row of its own
+    matched_txn, tier = (None, None) if simulation_id is not None else find_match(
         db,
         user.id,
         direction=direction,
@@ -331,12 +331,13 @@ def ingest_or_match_transaction(
         raw_timestamp=raw_timestamp,
         raw_date=raw_date,
         counterparty_raw=counterparty_raw,
+        source=source,
     )
 
     now = datetime.now(timezone.utc)
 
     if matched_txn is not None:
-        _enrich_canonical_transaction(matched_txn, merchant_raw, merchant_clean, category)
+        _enrich_canonical_transaction(matched_txn, merchant_raw, merchant_clean, category, subcategory, explanation)
         db.add(matched_txn)
 
         source_record = TransactionSourceRecord(
@@ -344,6 +345,7 @@ def ingest_or_match_transaction(
             user_id=user.id,
             transaction_id=matched_txn.id,
             source=source,
+            source_label=source_label,
             direction=direction,
             utr=utr,
             vpa=vpa,
@@ -355,6 +357,7 @@ def ingest_or_match_transaction(
             idempotency_key=idempotency_key,
             match_tier=tier,
             matched_at=now,
+            import_id=import_id,
         )
         db.add(source_record)
 
@@ -367,7 +370,7 @@ def ingest_or_match_transaction(
                 return existing.transaction, existing, True
             raise
 
-        logger.info(f"Matched new evidence to existing transaction: user={user.id}, tier={tier}, txn={matched_txn.id}")
+        logger.info(f"Matched new evidence to existing transaction: user={user_ref(user.id)}, tier={tier}, txn={matched_txn.id}")
         return matched_txn, source_record, True
 
     # No match — this becomes a new canonical transaction.
@@ -386,7 +389,15 @@ def ingest_or_match_transaction(
         merchant_raw=merchant_raw,
         merchant_clean=merchant_clean,
         category=category,
+        auto_category=category,
+        subcategory=subcategory,
+        auto_subcategory=subcategory,
+        category_explanation=explanation,
+        is_sample=simulation_id is not None,
+        simulation_id=simulation_id,
         transaction_nature=transaction_nature,
+        direction=direction,
+        kind=kind or (TransactionKind.spend if direction == TransactionDirection.debit else TransactionKind.income),
         amount=amount,
         currency=currency,
         transaction_date=resolved_date,
@@ -401,6 +412,7 @@ def ingest_or_match_transaction(
         user_id=user.id,
         transaction_id=new_txn.id,
         source=source,
+        source_label=source_label,
         direction=direction,
         utr=utr,
         vpa=vpa,
@@ -412,6 +424,8 @@ def ingest_or_match_transaction(
         idempotency_key=idempotency_key,
         match_tier=None,
         matched_at=None,
+        is_sample=simulation_id is not None,
+        import_id=import_id,
     )
     db.add(source_record)
 
@@ -424,5 +438,5 @@ def ingest_or_match_transaction(
             return existing.transaction, existing, True
         raise
 
-    logger.info(f"New canonical transaction created: user={user.id}, txn={new_txn.id}")
+    logger.info(f"New canonical transaction created: user={user_ref(user.id)}, txn={new_txn.id}")
     return new_txn, source_record, False

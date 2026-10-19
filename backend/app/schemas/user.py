@@ -9,7 +9,9 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     firebase_uid: str
 
-class UserResponse(UserBase):
+class UserResponse(BaseModel):
+    email: str          # whatever Firebase verified; not re-validated on the way out
+    full_name: str | None = None
     id: UUID
     firebase_uid: str
     gmail_connected: bool

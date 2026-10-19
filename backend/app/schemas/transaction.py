@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List
 
-from pydantic import BaseModel, field_validator, ConfigDict
+from typing import Literal
 
-from app.models.transaction import TransactionSource, TransactionNature
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
+
+from app.models.transaction import TransactionKind, TransactionSource, TransactionNature
+from app.services import taxonomy
+
+# Every category (taxonomy group, services/taxonomy.py). frontend/src/lib/categories.js reads the same taxonomy.
+CATEGORIES = taxonomy.GROUP_NAMES
+SUBCATEGORY_PATTERN = r"^([a-z_]+\.[a-z_]+|custom:[0-9a-f-]{36})$"
 
 
 class TransactionBase(BaseModel):
@@ -40,6 +48,14 @@ class TransactionCreate(TransactionBase):
     raw_source_data: Optional[dict] = None
 
 
+class SplitPart(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    amount: Decimal
+    category: Optional[str] = None
+
+
 class TransactionResponse(TransactionBase):
     model_config = ConfigDict(from_attributes=True)
 
@@ -47,8 +63,110 @@ class TransactionResponse(TransactionBase):
     user_id: uuid.UUID
     idempotency_key: str
     user_corrected: Optional[str] = None
+    notes: Optional[str] = None
+    direction: Literal["debit", "credit"]
+    kind: TransactionKind
+    transfer_group_id: Optional[uuid.UUID] = None
+    refund_of_id: Optional[uuid.UUID] = None
+    person_id: Optional[uuid.UUID] = None
+    cash_flow: Optional[str] = None
+    is_split: bool = False
+    split_parent_id: Optional[uuid.UUID] = None
+    splits: List[SplitPart] = []
+    subcategory: Optional[str] = None
+    tags: List[str] = []
+    is_sample: bool = False             # a simulation's row: shown as "Sample", never counted (core/samples.py)
     created_at: datetime
     updated_at: datetime
+
+
+class RuleApplied(BaseModel):
+    rule_id: uuid.UUID
+    merchant: str
+    field: str
+    value: str
+    applied_count: int
+
+
+class TransactionPatchResponse(TransactionResponse):
+    """PATCH result: the transaction, plus the rule it taught us (for the "Applied to N … Undo" toast)."""
+    rule_applied: Optional[RuleApplied] = None
+
+
+def _known_category(v: Optional[str]) -> Optional[str]:
+    if v is not None and v not in CATEGORIES:
+        raise ValueError(f"Unknown category. Use one of: {', '.join(sorted(CATEGORIES))}")
+    return v
+
+
+class ManualTransactionCreate(BaseModel):
+    """Manual entry. client_id makes retries of the same submit idempotent."""
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    client_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    amount: str = Field(pattern=r"^\d{1,10}(\.\d{1,2})?$")
+    direction: Literal["debit", "credit"] = "debit"
+    merchant: str = Field(min_length=1, max_length=100)
+    category: Optional[str] = None
+    subcategory: Optional[str] = Field(default=None, pattern=SUBCATEGORY_PATTERN)
+    payment_method: Literal["cash", "online"] = "cash"
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("category")
+    @classmethod
+    def known_category(cls, v: Optional[str]) -> Optional[str]:
+        return _known_category(v)
+
+    @field_validator("date")
+    @classmethod
+    def real_date(cls, v: str) -> str:
+        datetime.fromisoformat(v)
+        return v
+
+    @field_validator("amount")
+    @classmethod
+    def positive(cls, v: str) -> str:
+        if Decimal(v) <= 0:
+            raise ValueError("amount must be positive")
+        return v
+
+    @field_validator("merchant", "notes")
+    @classmethod
+    def no_account_numbers(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and re.search(r"\d{9,}", v):
+            raise ValueError("contains a 9+ digit number (possible account number)")
+        return v.strip() if v is not None else v
+
+
+Kind = Literal["spend", "income", "transfer", "refund", "reversal", "lent", "borrowed", "repayment"]
+
+
+class TransactionUpdate(BaseModel):
+    """PATCH body. Send only the fields to change; category null clears it."""
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    category: Optional[str] = None
+    # A taxonomy id or "custom:<uuid>"; sets the category to its group. null clears it (the group stays).
+    subcategory: Optional[str] = Field(default=None, pattern=SUBCATEGORY_PATTERN)
+    kind: Optional[Kind] = None
+    notes: Optional[str] = Field(default=None, max_length=500)
+    tags: Optional[List[str]] = Field(default=None, max_length=10)
+
+    @field_validator("category")
+    @classmethod
+    def known_category(cls, v: Optional[str]) -> Optional[str]:
+        return _known_category(v)
+
+    @model_validator(mode="after")
+    def something_to_change(self) -> "TransactionUpdate":
+        if not self.model_fields_set:
+            raise ValueError("Nothing to update")
+        if "kind" in self.model_fields_set and self.kind is None:
+            raise ValueError("kind can't be cleared")
+        if "tags" in self.model_fields_set and self.tags is None:
+            raise ValueError("send tags: [] to remove them all")
+        return self
 
 
 class TransactionListResponse(BaseModel):
@@ -91,36 +209,26 @@ class MonthlySummary(BaseModel):
     mom_total_delta_pct: Optional[Decimal] = None
 
 
-class BudgetCreate(BaseModel):
-    category: Optional[str] = None
-    monthly_limit: Decimal
+class SplitPartIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
 
-    @field_validator("monthly_limit")
+    amount: str = Field(pattern=r"^\d{1,10}(\.\d{1,2})?$")
+    category: Optional[str] = None
+
+    @field_validator("category")
     @classmethod
-    def limit_must_be_positive(cls, v: Decimal) -> Decimal:
-        if v <= 0:
-            raise ValueError("Budget limit must be positive")
+    def known_category(cls, v: Optional[str]) -> Optional[str]:
+        return _known_category(v)
+
+    @field_validator("amount")
+    @classmethod
+    def positive(cls, v: str) -> str:
+        if Decimal(v) <= 0:
+            raise ValueError("each part must be more than zero")
         return v
 
 
-class BudgetUpdate(BaseModel):
-    monthly_limit: Decimal
+class SplitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
 
-    @field_validator("monthly_limit")
-    @classmethod
-    def limit_must_be_positive(cls, v: Decimal) -> Decimal:
-        if v <= 0:
-            raise ValueError("Budget limit must be positive")
-        return v
-
-
-class BudgetResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    user_id: uuid.UUID
-    category: Optional[str] = None
-    monthly_limit: Decimal
-    is_active: str
-    created_at: datetime
-    updated_at: datetime
+    parts: List[SplitPartIn] = Field(min_length=2, max_length=20)

@@ -1,6 +1,8 @@
+import { Link, useSearchParams } from "react-router-dom";
 import { useState } from "react";
-import { useAuthStore } from "../store/authStore";
 import StatementUpload from "../components/StatementUpload";
+import ManualEntryModal from "../components/ManualEntryModal";
+import InboundCard from "../components/InboundCard";
 
 // ─────────────────────────────────────────────
 // Data source definitions
@@ -15,42 +17,40 @@ import StatementUpload from "../components/StatementUpload";
 // CSV/PDF statement upload (any bank, any UPI app, auto-detected) is the
 // permanent, primary, fully public data path going forward.
 
-function useDataSources(user) {
-  return [
-    {
-      id: "statement",
-      label: "Bank or UPI Statement",
-      description: "Upload a statement from your bank's net banking portal, or from Google Pay, PhonePe, or Paytm. We detect the source automatically — no need to tell us which.",
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
-      available: true,
-      action: "import",
-      badge: "Instant",
-      badgeColor: "safe",
-      supportedFormats: "CSV or PDF",
-      supportedSources: ["HDFC", "ICICI", "SBI", "Axis", "Kotak", "Google Pay"],
-    },
-    {
-      id: "manual",
-      label: "Manual Entry",
-      description: "Log cash spending or anything that doesn't show up in a statement — a quick add, no file needed.",
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M12 4v16m8-8H4" />
-        </svg>
-      ),
-      available: false,  // Not yet built
-      action: "add",
-      badge: "Coming soon",
-      badgeColor: "neutral",
-    },
-  ];
-}
+const SOURCES = [
+  {
+    id: "statement",
+    label: "Bank or UPI Statement",
+    description: "Import a statement from your bank (CSV, Excel or PDF), your credit card, or Google Pay, PhonePe or Paytm. It is read on your device; you choose which rows are sent.",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+    available: true,
+    action: "import",
+    badge: "Instant",
+    badgeColor: "safe",
+    supportedFormats: "CSV, Excel or PDF",
+    supportedSources: ["HDFC", "ICICI", "SBI", "Axis", "Kotak", "Google Pay", "PhonePe", "Paytm", "credit cards"],
+  },
+  {
+    id: "manual",
+    label: "Manual Entry",
+    description: "Log cash spending or anything that doesn't show up in a statement. A quick add, no file needed.",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M12 4v16m8-8H4" />
+      </svg>
+    ),
+    available: true,
+    action: "add",
+    badge: "Quick",
+    badgeColor: "safe",
+  },
+];
 
 // ─────────────────────────────────────────────
 // Source card
@@ -105,9 +105,9 @@ function SourceCard({ source, onAction }) {
 
 const PRIVACY_ROWS = [
   { can: "Read transaction amounts and merchant names", cannot: "Access your bank login or UPI PIN" },
-  { can: "Categorize your spending automatically", cannot: "Share your data with advertisers" },
-  { can: "Show you patterns in your spending", cannot: "Sell your data or profit from your behaviour" },
-  { can: "Process the file you upload, then discard it", cannot: "Read anything you don't explicitly upload" },
+  { can: "Categorize your spending automatically", cannot: "Store your account number or balance" },
+  { can: "Show you patterns in your spending", cannot: "Show raw bank narrations or UPI IDs to the AI" },
+  { can: "Receive only the rows you confirm after previewing them", cannot: "See your statement file: it is read on your device" },
 ];
 
 function PrivacyTable() {
@@ -143,16 +143,15 @@ function PrivacyTable() {
 // ─────────────────────────────────────────────
 
 export default function Connect() {
-  const { user } = useAuthStore();
-  const [showUpload, setShowUpload] = useState(false);
+  const [params] = useSearchParams();
+  const [showUpload, setShowUpload] = useState(params.get("do") === "import");   // deep link from the checklist
+  const [showManual, setShowManual] = useState(false);
 
-  const sources = useDataSources(user);
+  const sources = SOURCES;
 
   const handleSourceAction = (sourceId) => {
-    if (sourceId === "statement") {
-      setShowUpload(true);
-    }
-    // "manual" and "aa" are not yet available — no action wired
+    if (sourceId === "statement") setShowUpload(true);
+    if (sourceId === "manual") setShowManual(true);
   };
 
   return (
@@ -160,9 +159,10 @@ export default function Connect() {
 
       {/* Page header */}
       <div>
-        <h1 className="font-display text-2xl font-semibold text-ink-900">Connect your accounts</h1>
+        <h1 className="font-display text-display-s text-ink">Connect your accounts</h1>
         <p className="text-ink-500 mt-1 text-sm">
-          Upload a bank or UPI statement to get started — it takes 30 seconds, and we detect the source automatically.
+          Upload a bank or UPI statement to get started. It takes 30 seconds, and we detect the source automatically.
+          Not ready? <Link to="/try" className="font-medium text-accent-text underline underline-offset-2">Try it with samples first</Link>.
         </p>
       </div>
 
@@ -173,15 +173,8 @@ export default function Connect() {
             d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
         <p className="text-sm text-forest-800">
-          Vaulta's revenue is your subscription — not your data.{" "}
-          <a
-            href="https://github.com/vaulta-finance"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium underline underline-offset-2"
-          >
-            The code is publicly auditable.
-          </a>
+          Statements are read on this device and never uploaded.{" "}
+          <Link to="/security" className="font-medium underline underline-offset-2">What happens to your data</Link>
         </p>
       </div>
 
@@ -192,12 +185,17 @@ export default function Connect() {
         ))}
       </div>
 
+      <div id="forwarding" className="scroll-mt-20"><InboundCard /></div>
+
       {/* Privacy table */}
       <PrivacyTable />
 
       {/* Statement upload modal */}
       {showUpload && (
         <StatementUpload onClose={() => setShowUpload(false)} />
+      )}
+      {showManual && (
+        <ManualEntryModal onClose={() => setShowManual(false)} />
       )}
     </div>
   );

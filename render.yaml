@@ -1,52 +1,77 @@
-# render.yaml — Phase 2 additions
-#
-# This file documents the TWO additional services needed for Gmail background sync.
-# If you're using Render's dashboard (not Blueprints), create these manually:
-#
-# ── Service 1: Celery Worker (Background Worker) ────────────────────────────
-#   Type: Background Worker
-#   Root Directory: backend
-#   Build Command: pip install -r requirements.txt
-#   Start Command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
-#   Environment: same env vars as the web service (DATABASE_URL, ENCRYPTION_KEY,
-#                FIREBASE_SERVICE_ACCOUNT_JSON, REDIS_URL, GOOGLE_*, etc.)
-#   Plan: Free tier works for low volume; upgrade if sync queue backs up.
-#
-# ── Service 2: Celery Beat (Cron-like scheduler) ────────────────────────────
-#   Type: Background Worker (separate from the worker above — Beat must run
-#         as a single instance to avoid duplicate scheduling)
-#   Root Directory: backend
-#   Build Command: pip install -r requirements.txt
-#   Start Command: celery -A app.workers.celery_app beat --loglevel=info
-#   Environment: same as above (only needs REDIS_URL + DATABASE_URL really,
-#                but sharing the full env is simpler)
-#
-# IMPORTANT: Both services need PYTHON_VERSION=3.12.7 set (same fix as the web service).
-#
-# ── Blueprint version (if using Render Blueprints / render.yaml) ───────────
+# Render Blueprint: the API web service, on Render's free plan, in Singapore (Render's region nearest India). The
+# hourly run is a GitHub Actions schedule (.github/workflows/hourly-run.yml): Render's cron jobs aren't free.
+# Values are never in this file: every variable marked `sync: false` is entered in the Render dashboard (or asked
+# for when the Blueprint is first applied). docs/deploy.md lists each one, where it's set and how to generate it.
+# Migrations are not run here: they need the database owner's URL, which the API never gets (docs/go-live.md).
 services:
-  - type: worker
-    name: vaulta-celery-worker
+  - type: web
+    name: vaulta-api
     runtime: python
+    region: singapore
+    plan: free                          # 512 MB; sleeps after 15 idle minutes, and every caller waits for it
+                                        # to start (docs/deploy.md, Cold starts)
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    # One worker: a 12-month import peaks near 390 MB in one process (docs/ml/evaluation.md, an upper bound), so
+    # two could pass the free plan's 512 MB. --proxy-headers so rate limits see the client's IP behind Render's proxy;
+    # no access log (it would carry query strings; app/core/logs.py logs each request instead).
+    startCommand: >-
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-1}
+      --proxy-headers --forwarded-allow-ips='*' --no-access-log
+    healthCheckPath: /health/ready      # database up, migrations at head, row-level security enforced
+    autoDeploy: false                   # off until cutover (go-live stage 11), then on, from main
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
-      - fromGroup: vaulta-shared-env  # Create this env var group in Render dashboard
-                                        # containing DATABASE_URL, ENCRYPTION_KEY,
-                                        # FIREBASE_SERVICE_ACCOUNT_JSON, REDIS_URL,
-                                        # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
-                                        # GOOGLE_REDIRECT_URI, RAZORPAY_*, SECRET_KEY
-
-  - type: worker
-    name: vaulta-celery-beat
-    runtime: python
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: celery -A app.workers.celery_app beat --loglevel=info
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.7
-      - fromGroup: vaulta-shared-env
+      - key: ENVIRONMENT
+        value: production
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: DATABASE_URL               # the vaulta_app role (not the owner), pooled host
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: INTERNAL_SECRET
+        sync: false
+      - key: MASTER_KEY
+        sync: false
+      - key: BLIND_INDEX_KEY
+        sync: false
+      - key: MASTER_KEY_PREVIOUS        # only while a MASTER_KEY rotation runs; otherwise leave unset
+        sync: false
+      - key: BACKEND_CORS_ORIGINS
+        sync: false
+      - key: BACKEND_CORS_ORIGIN_REGEX
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+      - key: API_BASE_URL
+        sync: false
+      - key: SECURITY_CONTACT_EMAIL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: INBOUND_DOMAIN
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: RAZORPAY_PLAN_ID
+        sync: false

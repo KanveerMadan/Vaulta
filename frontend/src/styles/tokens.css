@@ -1,0 +1,100 @@
+/*
+ * Vaulta design tokens ("Ledger", docs/design/directions.md).
+ * Colours are RGB channel triplets so Tailwind can apply alpha: rgb(var(--ink) / .5).
+ * Theme: follows the system unless the user picked one (html[data-theme="light|dark"]).
+ * Every text pair below meets WCAG 2.2 AA (4.5:1) in both themes; --faint is for
+ * non-text decoration only (≥ 3:1). Checked by src/styles/tokens.test.js.
+ */
+:root {
+  --canvas: 244 246 243;        /* #F4F6F3 cool paper */
+  --surface: 255 255 255;       /* #FFFFFF */
+  --sunken: 235 238 234;        /* #EBEEEA */
+  --line: 217 223 218;          /* #D9DFDA */
+  --line-strong: 188 197 190;   /* #BCC5BE */
+  --ink: 16 21 17;              /* #101511 */
+  --ink-2: 60 70 63;            /* #3C463F */
+  --muted: 86 97 90;            /* #56615A */
+  --faint: 123 133 126;         /* #7B857E decoration only */
+  --accent: 23 100 63;          /* #17643F Vaulta green */
+  --accent-text: 23 100 63;
+  --accent-strong: 15 74 46;    /* #0F4A2E */
+  --on-accent: 255 255 255;
+  --accent-tint: 227 240 232;   /* #E3F0E8 */
+  --accent-line: 178 212 191;   /* #B2D4BF */
+  --warn: 138 90 0;             /* #8A5A00 */
+  --warn-tint: 250 240 214;
+  --danger: 179 38 30;          /* #B3261E */
+  --danger-tint: 251 230 228;
+  --inverse: 16 21 17;
+  --on-inverse: 244 246 243;
+
+  --shadow-color: 16 32 22;
+  --elev-1: 0 1px 2px rgb(var(--shadow-color) / .06), 0 1px 1px rgb(var(--shadow-color) / .04);
+  --elev-2: 0 2px 6px rgb(var(--shadow-color) / .07), 0 8px 24px rgb(var(--shadow-color) / .06);
+  --elev-3: 0 12px 40px rgb(var(--shadow-color) / .16), 0 2px 8px rgb(var(--shadow-color) / .08);
+
+  --r-sm: 8px;      /* inputs, buttons, chips */
+  --r-md: 12px;     /* cards, rows groups */
+  --r-lg: 18px;     /* sheets, modals */
+
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 260ms;
+
+  --font-display: "Bricolage Grotesque Variable", "Geist Variable", system-ui, sans-serif;
+  --font-ui: "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --canvas: 11 14 12;           /* #0B0E0C */
+  --surface: 19 24 21;          /* #131815 */
+  --sunken: 26 32 28;           /* #1A201C */
+  --line: 39 48 42;             /* #27302A */
+  --line-strong: 58 70 62;      /* #3A463E */
+  --ink: 233 238 234;           /* #E9EEEA */
+  --ink-2: 195 204 197;         /* #C3CCC5 */
+  --muted: 155 166 158;         /* #9BA69E */
+  --faint: 120 130 121;         /* #788279 */
+  --accent: 92 203 147;         /* #5CCB93 */
+  --accent-text: 111 214 161;   /* #6FD6A1 */
+  --accent-strong: 140 225 180;
+  --on-accent: 6 20 13;         /* #06140D */
+  --accent-tint: 22 41 31;      /* #16291F */
+  --accent-line: 40 84 60;
+  --warn: 232 176 75;           /* #E8B04B */
+  --warn-tint: 46 35 14;
+  --danger: 242 134 125;        /* #F2867D */
+  --danger-tint: 52 24 22;
+  --inverse: 233 238 234;
+  --on-inverse: 11 14 12;
+  --shadow-color: 0 0 0;
+  --elev-1: 0 1px 2px rgb(0 0 0 / .4);
+  --elev-2: 0 2px 6px rgb(0 0 0 / .35), 0 8px 24px rgb(0 0 0 / .3);
+  --elev-3: 0 12px 40px rgb(0 0 0 / .55), 0 2px 8px rgb(0 0 0 / .4);
+  color-scheme: dark;
+}
+
+/* System dark, unless the user chose light */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: 11 14 12; --surface: 19 24 21; --sunken: 26 32 28; --line: 39 48 42; --line-strong: 58 70 62;
+    --ink: 233 238 234; --ink-2: 195 204 197; --muted: 155 166 158; --faint: 120 130 121;
+    --accent: 92 203 147; --accent-text: 111 214 161; --accent-strong: 140 225 180; --on-accent: 6 20 13;
+    --accent-tint: 22 41 31; --accent-line: 40 84 60; --warn: 232 176 75; --warn-tint: 46 35 14;
+    --danger: 242 134 125; --danger-tint: 52 24 22; --inverse: 233 238 234; --on-inverse: 11 14 12;
+    --shadow-color: 0 0 0;
+    --elev-1: 0 1px 2px rgb(0 0 0 / .4);
+    --elev-2: 0 2px 6px rgb(0 0 0 / .35), 0 8px 24px rgb(0 0 0 / .3);
+    --elev-3: 0 12px 40px rgb(0 0 0 / .55), 0 2px 8px rgb(0 0 0 / .4);
+    color-scheme: dark;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur: 0ms; --dur-slow: 0ms; }
+}
