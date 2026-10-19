@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import PostalMime from "postal-mime";
-import { buildPayload, MAX_BYTES } from "../src/payload.js";
+import { buildPayload, forInboundHost, MAX_BYTES } from "../src/payload.js";
 
 const MIME = [
   "From: HDFC Bank InstaAlerts <alerts@hdfcbank.net>",
@@ -39,4 +39,13 @@ test("stays under the size limit by trimming html, then text", () => {
   const payload = buildPayload({ to: "a@b", from: "c@d", subject: "s", text: "Rs 1 debited", html: big, authResults: "" });
   assert.ok(new TextEncoder().encode(JSON.stringify(payload)).length <= MAX_BYTES);
   assert.equal(payload.text, "Rs 1 debited");
+});
+
+test("takes mail only for the inbound host", () => {
+  assert.equal(forInboundHost("abcde12345@in.vaulta.in", "in.vaulta.in"), true);
+  assert.equal(forInboundHost("ABCDE12345@IN.VAULTA.IN", "in.vaulta.in"), true);
+  for (const to of ["privacy@vaulta.in", "x@in.vaulta.in.evil.example", "x@vaulta.in", "", "in.vaulta.in"]) {
+    assert.equal(forInboundHost(to, "in.vaulta.in"), false, to);
+  }
+  assert.equal(forInboundHost("x@in.vaulta.in", ""), false);
 });

@@ -3,11 +3,15 @@
 // {to, from, subject, text, html, auth_results} to Vaulta's
 // /internal/inbound-email. Nothing is stored or forwarded anywhere else.
 import PostalMime from "postal-mime";
-import { buildPayload, MAX_BYTES } from "./payload.js";
+import { buildPayload, forInboundHost, MAX_BYTES } from "./payload.js";
 import { deliver } from "./deliver.js";
 
 export default {
   async email(message, env) {
+    if (!forInboundHost(message.to, env.INBOUND_HOST)) {
+      message.setReject("No such address");
+      return;
+    }
     // Bank alerts are small; anything far bigger isn't one (and isn't read).
     if (message.rawSize > MAX_BYTES * 4) {
       message.setReject("Message too large");

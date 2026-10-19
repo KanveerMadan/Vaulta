@@ -6,7 +6,9 @@ compatibility_date = "2025-06-01"
 
 [vars]
 # Vaulta API base URL (no trailing slash)
-API_URL = "https://api.example.in"
+API_URL = "https://api.vaulta.in"
+# the only host this worker takes mail for (the catch-all covers the whole zone; everything else bounces)
+INBOUND_HOST = "in.vaulta.in"
 
 # INTERNAL_SECRET is a secret, not a var:
 #   wrangler secret put INTERNAL_SECRET

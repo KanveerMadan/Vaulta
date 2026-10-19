@@ -23,3 +23,9 @@ export function buildPayload({ to, from, subject, text, html, authResults }) {
   }
   return size(payload) > MAX_BYTES ? null : payload;
 }
+
+/** Only <token>@<host>: Email Routing's catch-all covers the whole zone, so anything else is bounced, not swallowed. */
+export function forInboundHost(to, host) {
+  const at = (to || "").lastIndexOf("@");
+  return Boolean(host) && at > 0 && to.slice(at + 1).toLowerCase() === host.toLowerCase();
+}
