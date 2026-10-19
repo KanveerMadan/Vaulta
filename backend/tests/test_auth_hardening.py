@@ -62,7 +62,7 @@ def test_verifying_unlocks_the_account(client, monkeypatch):
 
 # ── Recent login (step 8) ─────────────────────────────────────────────────────
 
-RECENT_ONLY = [("GET", "/api/export"), ("DELETE", "/auth/me"), ("POST", "/api/inbound/regenerate"), ("DELETE", "/api/telegram")]
+RECENT_ONLY = [("GET", "/api/export"), ("DELETE", "/auth/me"), ("POST", "/auth/me/reset-data"), ("POST", "/api/inbound/regenerate"), ("DELETE", "/api/telegram")]
 
 
 def test_sensitive_routes_need_a_sign_in_from_the_last_five_minutes(client, monkeypatch):

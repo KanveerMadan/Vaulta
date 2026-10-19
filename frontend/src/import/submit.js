@@ -9,12 +9,13 @@ const TOTAL_KEYS = ["imported", "duplicates_merged", "transfers_flagged", "rows_
 /**
  * Re-sending after a failure is safe: the server derives an idempotency key
  * per row, so rows that already landed come back as duplicates_merged.
+ * `importId` names this upload (one per file, the same on a retry) so it can be deleted on its own later.
  */
-export async function sendRows(api, rows, { onProgress } = {}) {
+export async function sendRows(api, rows, { onProgress, importId = crypto.randomUUID() } = {}) {
   const totals = Object.fromEntries(TOTAL_KEYS.map((k) => [k, 0]));
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
-    const { data } = await api.post("/api/import/batch", { rows: batch });
+    const { data } = await api.post("/api/import/batch", { rows: batch, import_id: importId });
     for (const k of TOTAL_KEYS) totals[k] += data[k] ?? 0;
     onProgress?.(i + batch.length, rows.length);
   }

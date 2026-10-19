@@ -43,7 +43,10 @@ describe("import flow sends only JSON rows", () => {
       for (const call of api.calls) {
         expect(call).toMatchObject({ method: "POST", url: "/api/import/batch" });
         assertPlainJson(call.body);
-        expect(Object.keys(call.body)).toEqual(["rows"]);
+        // rows, and a random id naming this upload (the same in every batch of the file) so it can be deleted later
+        expect(Object.keys(call.body)).toEqual(["rows", "import_id"]);
+        expect(call.body.import_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+        expect(call.body.import_id).toBe(api.calls[0].body.import_id);
         for (const r of call.body.rows) expect(Object.keys(r).sort()).toEqual(ROW_KEYS);
         // the body round-trips through JSON unchanged: nothing non-serializable
         expect(JSON.parse(JSON.stringify(call.body))).toEqual(call.body);

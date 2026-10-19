@@ -121,6 +121,9 @@ class TransactionSourceRecord(Base):
     matched_at = Column(DateTime(timezone=True), nullable=True)
 
     is_sample = Column(Boolean, nullable=False, default=False, server_default=text("false"))   # core/samples.py
+    # the statement upload this row came from (models/import_template.py Import); None for rows from before uploads
+    # were recorded, and for alerts, Telegram and manual entries
+    import_id = Column(UUID(as_uuid=True), ForeignKey("imports.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
 
     transaction = relationship("Transaction", back_populates="source_records")
@@ -130,6 +133,7 @@ class TransactionSourceRecord(Base):
         Index("ix_txn_sources_user_utr", "user_id", "utr"),
         Index("ix_txn_sources_user_vpa", "user_id", "vpa"),
         Index("ix_txn_sources_user_transaction", "user_id", "transaction_id"),
+        Index("ix_txn_sources_user_import", "user_id", "import_id"),
     )
 
     def __repr__(self) -> str:

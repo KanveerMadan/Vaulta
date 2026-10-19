@@ -120,6 +120,8 @@ class ImportBatch(BaseModel):
     model_config = _STRICT
 
     rows: List[ImportRow] = Field(min_length=1, max_length=MAX_BATCH_ROWS)
+    # one id per uploaded file, made by the browser and sent with each of its batches, so the upload can be deleted
+    import_id: Optional[str] = Field(default=None, pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 
 class ImportBatchResult(BaseModel):
@@ -128,3 +130,22 @@ class ImportBatchResult(BaseModel):
     transfers_flagged: int = 0
     rows_needing_review: int = 0
     failed: int = 0
+
+
+UUID4 = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+
+
+class ImportScope(BaseModel):
+    """One upload (import_id), or everything from one source (source_type + source_label, label may be null)."""
+    model_config = _STRICT
+
+    import_id: Optional[str] = Field(default=None, pattern=UUID4)
+    source_type: Optional[Literal["bank_csv", "bank_pdf", "credit_card", "upi_google_pay", "upi_phonepe", "upi_paytm",
+                                  "email_alert", "telegram", "manual"]] = None
+    source_label: Optional[str] = Field(default=None, max_length=60)
+
+    @model_validator(mode="after")
+    def one_scope(self):
+        if (self.import_id is None) == (self.source_type is None):
+            raise ValueError("give either import_id, or source_type (with source_label)")
+        return self

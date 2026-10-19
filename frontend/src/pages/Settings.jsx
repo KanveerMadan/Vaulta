@@ -5,6 +5,7 @@ import { useApi } from "../lib/format";
 import TelegramLink from "../components/TelegramLink";
 import SecuritySettings from "../components/SecuritySettings";
 import CustomSubcategories from "../components/CustomSubcategories";
+import ImportsSettings from "../components/ImportsSettings";
 
 const REPORTS = [
   ["weekly", "Weekly", "Monday to Sunday, sent Sunday at 7 pm"],
@@ -94,6 +95,8 @@ const ACTIVITY = {
   method_linked: (d) => `Added ${METHOD[d?.method] || "a sign-in method"}`,
   method_unlinked: (d) => `Removed ${METHOD[d?.method] || "a sign-in method"}`,
   signed_out_everywhere: "Signed out of all devices",
+  import_deleted: (d) => `Deleted an import (${d?.transactions_deleted ?? 0} transactions)`,
+  data_reset: "Reset your data",
   export: "Exported your data",
   deleted: (d) => `Deleted ${d?.what || "an item"}`,
   telegram_linked: "Linked Telegram",
@@ -170,6 +173,39 @@ function YourData() {
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+function ResetData() {
+  const [typed, setTyped] = useState("");
+  const [state, setState] = useState(null);     // null | "busy" | "done" | error message
+  const reset = async () => {
+    setState("busy");
+    try {
+      await api.post("/auth/me/reset-data", { confirm: typed }, { recent: true });
+      setTyped("");
+      setState("done");
+    } catch (err) {
+      setState(err?.response?.data?.detail || "Couldn't reset your data. Nothing was changed; try again.");
+    }
+  };
+  return (
+    <section className="card p-5 space-y-2">
+      <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Reset my data</h2>
+      <p className="text-sm text-ink-600">
+        Deletes all your financial data (transactions, imports, budgets, goals, people, rules, categories and tags,
+        reports, alerts and chat history) and keeps your account: your sign-in, settings, activity log, forwarding
+        address and Telegram link stay. You'll be asked to sign in again first. This can't be undone.
+      </p>
+      <label className="text-sm text-ink-600 block">Type RESET to confirm
+        <input className="input mt-1" value={typed} onChange={(e) => setTyped(e.target.value)} aria-label="Type RESET to confirm" />
+      </label>
+      {state === "done" && <p className="text-sm text-ink-600" role="status">Your data is reset. Your account is ready for a fresh start.</p>}
+      {state && state !== "busy" && state !== "done" && <p className="text-sm text-danger" role="alert">{state}</p>}
+      <button onClick={reset} disabled={typed !== "RESET" || state === "busy"} className="btn-ghost text-danger disabled:opacity-40">
+        {state === "busy" ? "Resetting…" : "Reset my data"}
+      </button>
     </section>
   );
 }
@@ -278,6 +314,10 @@ export default function Settings() {
       <SecuritySettings />
 
       <YourData />
+
+      <ImportsSettings />
+
+      <ResetData />
 
       <DeleteEverything />
     </div>

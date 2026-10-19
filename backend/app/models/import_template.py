@@ -30,3 +30,14 @@ class ImportTemplate(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "fingerprint", name="uq_import_template_user_fingerprint"),
     )
+
+
+class Import(Base):
+    """One statement upload (all its batches), so it can be deleted on its own (services/imports.py)."""
+    __tablename__ = "imports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True)           # made by the browser, once per file
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_type = Column(String(30), nullable=False)
+    source_label = Column(String(60), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)

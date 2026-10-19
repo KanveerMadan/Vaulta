@@ -6,6 +6,9 @@ never receives the file.
                                            the merchant normalizer and dedup matcher
   GET /api/import/templates/{fingerprint}  saved column mapping for a header layout
   PUT /api/import/templates/{fingerprint}  save/replace it
+  GET /api/import/uploads                  uploads, and row counts per source (Settings → Imports)
+  POST /api/import/delete-preview          what deleting an upload or a source would remove
+  POST /api/import/delete                  delete it, then recompute (services/imports.py)
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
@@ -18,8 +21,8 @@ from app.core.ratelimit import per_user
 from app.core.subscription import require_active_subscription
 from app.models.import_template import ImportTemplate
 from app.models.user import User
-from app.schemas.imports import ImportBatch, ImportBatchResult, ImportTemplateResponse, ImportTemplateUpsert
-from app.services import transaction_service
+from app.schemas.imports import ImportBatch, ImportBatchResult, ImportScope, ImportTemplateResponse, ImportTemplateUpsert
+from app.services import imports, transaction_service
 
 router = APIRouter(prefix="/api/import", tags=["import"])
 
@@ -33,7 +36,7 @@ def import_batch(
     _subscription: None = Depends(require_active_subscription),
     db: Session = Depends(get_db),
 ):
-    return transaction_service.import_rows(db, current_user, payload.rows)
+    return transaction_service.import_rows(db, current_user, payload.rows, import_id=payload.import_id)
 
 
 def _template(db: Session, user: User, fingerprint: str):
@@ -73,3 +76,18 @@ def put_template(
     db.commit()
     db.refresh(template)
     return template
+
+
+@router.get("/uploads")
+def list_uploads(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return imports.list_imports(db, current_user)
+
+
+@router.post("/delete-preview")
+def delete_preview(scope: ImportScope, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return imports.preview(db, current_user, **scope.model_dump())
+
+
+@router.post("/delete", dependencies=[Depends(per_user("import-delete", 30, 3600))])
+def delete_import(scope: ImportScope, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return imports.delete(db, current_user, **scope.model_dump())

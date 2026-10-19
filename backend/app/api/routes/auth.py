@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from app.core.auth import get_current_user, get_recent_user, get_sensitive_user
@@ -56,6 +56,26 @@ def delete_me(
     """
     from app.services import deletion
     deletion.delete_account(db, current_user)
+
+
+class DataResetRequest(BaseModel):
+    confirm: str = Field(max_length=10)
+
+
+@router.post("/me/reset-data", dependencies=[Depends(per_user("reset-data", 5, 3600, get_recent_user))])
+def reset_my_data(
+    payload: DataResetRequest,
+    current_user: User = Depends(get_recent_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Reset my data: delete every financial row, keeping the account, its sign-in, settings, activity log and links
+    (services/imports.py). Needs a recent sign-in and the typed confirmation, like Delete everything.
+    """
+    if payload.confirm != "RESET":
+        raise HTTPException(status_code=400, detail="Type RESET to confirm.")
+    from app.services import imports
+    return {"deleted": imports.reset_data(db, current_user)}
 
 
 class ResetRequest(BaseModel):

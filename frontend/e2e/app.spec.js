@@ -407,3 +407,41 @@ test('the app is served with the strict Content-Security-Policy', async ({ page 
   expect(res.headers()['x-content-type-options']).toBe('nosniff')
   expect(res.headers()['x-frame-options']).toBe('DENY')
 })
+
+test('delete an import, then reset my data: the account stays', async ({ page, request }, testInfo) => {
+  const account = await newAccount(request)
+  await callApi(request, account, 'GET', '/auth/me')
+  await finishSetup(request, account)
+  await signIn(page, account)
+  await menu(page, testInfo, 'Connect')
+  await page.getByRole('button', { name: /upload/i }).first().click()
+  await page.locator('input[type=file]').setInputFiles(STATEMENT)
+  await page.getByRole('button', { name: /^Import \d+ transactions$/ }).click()
+  await expect(page.getByText('Added', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Close' }).click()
+
+  // Settings → Imports: the upload is listed; deleting it shows what goes first
+  await page.goto('/settings')
+  const imports = page.getByRole('region', { name: 'Imports' })
+  await expect(imports.getByRole('list', { name: 'Uploads' }).getByText('HDFC Bank')).toBeVisible()
+  await imports.getByRole('button', { name: /^Delete HDFC Bank/ }).click()
+  const confirm = page.getByRole('alertdialog')
+  await expect(confirm).toContainText(/\d+ transactions? will be deleted/)
+  await checkLayout(page, testInfo)
+  await confirm.getByRole('button', { name: /^Delete \d+ transactions?$/ }).click()
+  await expect(imports.getByRole('status')).toContainText(/Deleted \d+ transactions?/)
+  await expect(imports.getByText('Nothing imported yet.')).toBeVisible()
+  expect((await callApi(request, account, 'GET', '/api/transactions')).total).toBe(0)
+
+  // Reset my data: type-to-confirm, recent sign-in; the account and sign-in stay
+  await callApi(request, account, 'POST', '/api/transactions', { date: '2026-07-01', amount: '120.00', merchant: 'Chai Point', direction: 'debit', client_id: crypto.randomUUID() })
+  const reset = page.locator('section', { has: page.getByRole('heading', { name: 'Reset my data' }) })
+  await expect(reset.getByRole('button', { name: 'Reset my data' })).toBeDisabled()
+  await reset.getByLabel('Type RESET to confirm').fill('RESET')
+  await reset.getByRole('button', { name: 'Reset my data' }).click()
+  await expect(reset.getByRole('status')).toContainText('Your data is reset')
+  expect((await callApi(request, account, 'GET', '/api/transactions')).total).toBe(0)
+  expect((await callApi(request, account, 'GET', '/auth/me')).email).toBe(account.email)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Reset my data' })).toBeVisible()     // still signed in
+})

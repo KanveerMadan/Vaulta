@@ -51,6 +51,7 @@ PLAINTEXT_OK = {
     "model_metrics": {"source"},                                   # no user at all: daily counts per categoriser step
     "corrections": {"field", "old_value", "new_value"},   # kind / category names only
     "import_templates": {"fingerprint", "source_type", "mapping"},                   # column indices, no header text
+    "imports": {"source_type", "source_label"},                                      # the kind of upload and its account label, as on transaction_sources
     "inbound_events": {"bank_key", "bank_name", "outcome"},
     "gmail_confirmations": {"link", "code"},                                         # Gmail's confirmation link
     "cash_declarations": {"reason"}, "telegram_link_codes": {"code_hash"}, "telegram_entries": {"status"},

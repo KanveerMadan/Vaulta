@@ -297,6 +297,7 @@ def ingest_or_match_transaction(
     currency: str = "INR",
     raw_row: Optional[dict] = None,
     source_label: Optional[str] = None,
+    import_id: Optional[uuid.UUID] = None,
 ) -> Tuple[Transaction, TransactionSourceRecord, bool]:
     """
     Find-or-create entry point for the dedup pipeline. One call per parsed
@@ -356,6 +357,7 @@ def ingest_or_match_transaction(
             idempotency_key=idempotency_key,
             match_tier=tier,
             matched_at=now,
+            import_id=import_id,
         )
         db.add(source_record)
 
@@ -423,6 +425,7 @@ def ingest_or_match_transaction(
         match_tier=None,
         matched_at=None,
         is_sample=simulation_id is not None,
+        import_id=import_id,
     )
     db.add(source_record)
 

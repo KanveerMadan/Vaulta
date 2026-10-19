@@ -37,6 +37,7 @@ from app.services.merchant_normalizer import normalize
 from app.core import clock
 from app.services import analytics
 from app.services.dedup_matcher import ingest_or_match_transaction
+from app.services import imports
 from app.services.detection import run_detection
 from app.services.keys import merchant_key, merchants_containing
 from app.services.rules import learn_from
@@ -113,8 +114,13 @@ def _row_nature(row: ImportRow, merchant_clean: Optional[str]) -> TransactionNat
     return TransactionNature.expense if row.direction == "debit" else TransactionNature.income
 
 
-def import_rows(db: Session, user: User, rows: List[ImportRow], simulation_id: Optional[uuid.UUID] = None) -> ImportBatchResult:
-    """Rows the browser parsed (or an alert email found). With `simulation_id` they become sample rows (core/samples.py)."""
+def import_rows(db: Session, user: User, rows: List[ImportRow], simulation_id: Optional[uuid.UUID] = None,
+                import_id: Optional[str] = None) -> ImportBatchResult:
+    """
+    Rows the browser parsed (or an alert email found). With `simulation_id` they become sample rows (core/samples.py).
+    With `import_id` (one per uploaded file) the rows are recorded as that upload, which can then be deleted on its own.
+    """
+    upload = imports.record(db, user, import_id, rows[0]) if import_id and simulation_id is None else None
     result = ImportBatchResult()
     seen: dict[tuple, int] = {}
     batch_txn_ids: set = set()
@@ -174,6 +180,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow], simulation_id: O
                 currency="INR",
                 raw_row=row.model_dump(),
                 source_label=row.source_label,
+                import_id=upload,
             )
         except Exception as e:
             db.rollback()

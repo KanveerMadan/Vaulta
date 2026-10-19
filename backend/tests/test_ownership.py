@@ -27,6 +27,8 @@ COVERED = {
     ("POST", "/api/import/batch"),
     ("GET", "/api/import/templates/{fingerprint}"),
     ("PUT", "/api/import/templates/{fingerprint}"),
+    # tests/test_imports_delete.py::test_another_users_upload_is_out_of_reach
+    ("GET", "/api/import/uploads"), ("POST", "/api/import/delete-preview"), ("POST", "/api/import/delete"),
     ("GET", "/api/recurring"),
     ("PATCH", "/api/recurring/{series_id}"),
     ("POST", "/api/recurring/refresh"),
@@ -116,6 +118,7 @@ COVERED = {
 # or on no user at all. Listed so the guard still notices new routes.
 EXEMPT = {
     ("GET", "/auth/me"), ("PATCH", "/auth/me"), ("DELETE", "/auth/me"),
+    ("POST", "/auth/me/reset-data"),   # the caller's own rows (tests/test_imports_delete.py: the other user is untouched)
     ("POST", "/auth/demo"),        # no user: issues a demo session token (tests/test_demo.py)
     ("POST", "/api/payments/create-subscription"), ("GET", "/api/payments/status"),
     ("POST", "/api/payments/webhook"),    # no user; Razorpay HMAC signature instead

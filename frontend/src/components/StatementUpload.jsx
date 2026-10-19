@@ -242,6 +242,7 @@ export default function StatementUpload({ onSuccess, onClose, sample = null }) {
   const [result, setResult] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef(null);
+  const importId = useRef(null);   // one per file, kept on a retry (import/submit.js)
 
   const preview = useMemo(() => {
     if (!rawResult) return null;
@@ -266,6 +267,7 @@ export default function StatementUpload({ onSuccess, onClose, sample = null }) {
   };
 
   const run = async (f, pw) => {
+    importId.current = crypto.randomUUID();
     setBusy(true);
     setError(null);
     try {
@@ -327,7 +329,7 @@ export default function StatementUpload({ onSuccess, onClose, sample = null }) {
     setBusy(true);
     setError(null);
     try {
-      const totals = await sendRows(api, rows, { onProgress: (done, total) => setProgress([done, total]) });
+      const totals = await sendRows(api, rows, { importId: importId.current ?? undefined, onProgress: (done, total) => setProgress([done, total]) });
       setResult(totals);
       setStep("done");
       onSuccess?.();
