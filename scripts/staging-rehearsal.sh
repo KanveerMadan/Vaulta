@@ -93,7 +93,8 @@ case "$READY" in *'"status":"ready"'*'"rls":"enforced"'*) echo "PASS readiness";
 echo "== 6. browser smoke tests against this API (Firebase emulator, fake LLM)"
 cd frontend
 E2E_REUSE=1 npx playwright test e2e/public.spec.js e2e/app.spec.js --project=desktop --reporter=line \
-  --grep "landing|demo|import|chat|settings|your data|security|privacy" > "$STATE/smoke.log" 2>&1 || true
+  --grep "landing|demo|import|chat|settings|your data|security|privacy" > "$STATE/smoke.log" 2>&1 && SMOKE=0 || SMOKE=$?
 sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$STATE/smoke.log" | grep -vE "WebServer" \
   | grep -E "^\s+[0-9]+ (passed|failed|skipped)|^\s+\[desktop\] ›|Expected|Received|Error:" | head -20
 echo "== done. Delete the branch when finished: npx neonctl@7.0.4 branches delete staging --project-id \$NEON_PROJECT"
+[ "$SMOKE" -eq 0 ] || { echo "FAIL browser smoke tests"; exit 1; }
