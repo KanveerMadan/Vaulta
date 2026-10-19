@@ -43,6 +43,9 @@ def test_production_starts_with_real_secrets():
     ({"BACKEND_CORS_ORIGIN_REGEX": ".*"}, "BACKEND_CORS_ORIGIN_REGEX"),
     ({"APP_BASE_URL": "http://localhost:5173"}, "APP_BASE_URL"),
     ({"API_BASE_URL": "http://vaulta.example"}, "API_BASE_URL"),
+    ({"APP_BASE_URL": "https://vaulta-henna.vercel.app"}, "APP_BASE_URL"),          # no default hosts users can see
+    ({"API_BASE_URL": "https://vaulta-f6t8.onrender.com"}, "API_BASE_URL"),
+    ({"EMAIL_FROM": "Vaulta <noreply@vaulta-a3d7a.firebaseapp.com>"}, "EMAIL_FROM"),
     ({"SECURITY_CONTACT_EMAIL": ""}, "SECURITY_CONTACT_EMAIL"),
     ({"TELEGRAM_BOT_TOKEN": "123:abc", "TELEGRAM_WEBHOOK_SECRET": "short"}, "TELEGRAM_WEBHOOK_SECRET"),
     ({"MASTER_KEY": "x" * 40, "BLIND_INDEX_KEY": "y" * 40, "MASTER_KEY_PREVIOUS": "x" * 40}, "MASTER_KEY_PREVIOUS"),

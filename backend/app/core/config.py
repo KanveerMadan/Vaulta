@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings
@@ -19,6 +20,9 @@ PLACEHOLDER_SECRETS = {
     "your-secret-key", "your_secret_key", "secret-key", "password", "test", "dev", "development", "placeholder",
 }
 MIN_SECRET_LENGTH = 32
+
+
+DEFAULT_HOSTS = r"vercel\.app|onrender\.com|firebaseapp\.com"
 
 
 class Settings(BaseSettings):
@@ -156,6 +160,10 @@ class Settings(BaseSettings):
             url = getattr(self, name)
             if not url.startswith("https://") or "localhost" in url or "127.0.0.1" in url:
                 problems.append(f"{name} must be the public https URL in production")
+        # what people see (links in emails and Telegram, the sender) is on the real domain, never a host's default one
+        for name in ("APP_BASE_URL", "API_BASE_URL", "EMAIL_FROM"):
+            if re.search(DEFAULT_HOSTS, getattr(self, name), re.I):
+                problems.append(f"{name} must use the app's own domain, not a vercel.app / onrender.com / firebaseapp.com one")
         if "@" not in self.SECURITY_CONTACT_EMAIL:
             problems.append("SECURITY_CONTACT_EMAIL must be set (it is published in /.well-known/security.txt)")
         if self.TELEGRAM_BOT_TOKEN and len(self.TELEGRAM_WEBHOOK_SECRET) < MIN_SECRET_LENGTH:

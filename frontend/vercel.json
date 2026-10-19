@@ -1,33 +1,110 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "vaulta-henna.vercel.app"
+        }
+      ],
+      "destination": "https://vaulta.in/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.vaulta.in"
+        }
+      ],
+      "destination": "https://vaulta.in/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
-    { "source": "/((?!assets/|ocr/|.*\\.[a-z0-9]+$).*)", "destination": "/index.html" }
+    {
+      "source": "/__/auth/:path*",
+      "destination": "https://vaulta-a3d7a.firebaseapp.com/__/auth/:path*"
+    },
+    {
+      "source": "/__/firebase/:path*",
+      "destination": "https://vaulta-a3d7a.firebaseapp.com/__/firebase/:path*"
+    },
+    {
+      "source": "/((?!assets/|ocr/|.*\\.[a-z0-9]+$).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://apis.google.com https://checkout.razorpay.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://vaulta-f6t8.onrender.com https://o4512271410397184.ingest.de.sentry.io https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://content-firebaseappcheck.googleapis.com; worker-src 'self' blob:; frame-src https://vaulta-a3d7a.firebaseapp.com https://api.razorpay.com https://checkout.razorpay.com https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(self), microphone=(), geolocation=(), payment=(self \"https://api.razorpay.com\"), usb=(), interest-cohort=()" },
-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://apis.google.com https://checkout.razorpay.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://api.vaulta.in https://o4512271410397184.ingest.de.sentry.io https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://content-firebaseappcheck.googleapis.com; worker-src 'self' blob:; frame-src https://vaulta.in https://api.razorpay.com https://checkout.razorpay.com https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(), geolocation=(), payment=(self \"https://api.razorpay.com\"), usb=(), interest-cohort=()"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
       ]
     },
     {
       "source": "/assets/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/(index\\.html|sw\\.js|registerSW\\.js|manifest\\.webmanifest|workbox-[^/]+\\.js)",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
     },
     {
       "source": "/((?!assets/).*)",
-      "has": [{ "type": "header", "key": "accept", "value": "(.*)text/html(.*)" }],
-      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      "has": [
+        {
+          "type": "header",
+          "key": "accept",
+          "value": "(.*)text/html(.*)"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
     }
   ]
 }

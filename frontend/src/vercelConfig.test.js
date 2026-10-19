@@ -30,4 +30,20 @@ describe('vercel.json', () => {
     }
     expect(headersFor('/transactions')['Content-Security-Policy']).toMatch(/frame-ancestors 'none'/)
   })
+
+  it('sends the default and www hosts to vaulta.in for good (308), keeping the path', () => {
+    for (const host of ['vaulta-henna.vercel.app', 'www.vaulta.in']) {
+      const r = routes.find((x) => x.status === 308 && x.has?.[0]?.value === host)
+      expect(r, host).toBeTruthy()
+      expect(matches(r, '/security')).toBe(true)
+      expect(r.headers.Location).toMatch(/^https:\/\/vaulta\.in\//)
+    }
+  })
+
+  it('serves Firebase sign-in from vaulta.in, before the app shell', () => {
+    const auth = routes.findIndex((r) => r.dest?.startsWith('https://vaulta-a3d7a.firebaseapp.com/__/auth/'))
+    expect(auth).toBeGreaterThan(-1)
+    expect(matches(routes[auth], '/__/auth/handler')).toBe(true)
+    expect(auth).toBeLessThan(routes.findIndex((r) => r.dest === '/index.html'))
+  })
 })

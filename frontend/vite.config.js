@@ -18,7 +18,7 @@ function localHeaders(env) {
     .replace(PROD_API, new URL(env.VITE_API_BASE_URL).origin)
     .replace('https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://content-firebaseappcheck.googleapis.com', new URL(env.VITE_FIREBASE_AUTH_EMULATOR).origin)
     // Firebase frames the auth domain; against the emulator it frames the emulator itself
-    .replace('https://vaulta-a3d7a.firebaseapp.com', `http://${env.VITE_FIREBASE_AUTH_DOMAIN} ${new URL(env.VITE_FIREBASE_AUTH_EMULATOR).origin}`)
+    .replace('frame-src https://vaulta.in', `frame-src http://${env.VITE_FIREBASE_AUTH_DOMAIN} ${new URL(env.VITE_FIREBASE_AUTH_EMULATOR).origin}`)
     .replace('; upgrade-insecure-requests', '')
   const { 'Strict-Transport-Security': _hsts, ...rest } = headers   // eslint-disable-line no-unused-vars
   return { ...rest, 'Content-Security-Policy': csp }
