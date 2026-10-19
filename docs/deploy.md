@@ -4,6 +4,7 @@
 |---|---|---|
 | API (FastAPI) | Render web service `vaulta-api`, free plan, Singapore | `render.yaml` and the settings below |
 | Hourly run | GitHub Actions schedule (Render's cron jobs aren't free) | `.github/workflows/hourly-run.yml` |
+| Weekly backup | GitHub Actions: `pg_dump` encrypted with age, 35-day artifact | `.github/workflows/weekly-backup.yml` |
 | Cold starts | none kept awake: the API sleeps when idle and every caller waits for it (below) | — |
 | Outage alerts (optional) | UptimeRobot, `GET /health` every 60 minutes | UptimeRobot dashboard |
 | Web app (React, PWA) | Vercel, root directory `frontend` | `frontend/vercel.json` |
@@ -158,6 +159,37 @@ cd backend && python scripts/recategorise.py --apply
   - hashed `/assets/*`: one year, immutable;
   - `index.html`, the service worker, `registerSW.js`, the manifest and HTML navigations: `no-cache`.
 - **Routing:** unknown paths without a file extension fall back to `index.html` (SPA). A missing asset is a real 404.
+
+## Backups
+
+**Weekly, encrypted** (`.github/workflows/weekly-backup.yml`, Sunday 20:23 UTC, or Actions → Weekly backup → Run
+workflow): `pg_dump` as the read-only `vaulta_backup` role, piped straight into `age` with your **public** key, kept
+as a workflow artifact for 35 days. Only ciphertext is uploaded; the private key never goes near GitHub. Sensitive
+columns are encrypted inside the database as well, so a backup also needs `MASTER_KEY` to be read.
+Neon's own restore window (point-in-time restore) covers the last hours on top of this.
+
+**Set up once:**
+1. Make your key pair, on your Mac, and keep the private key offline (a password manager, plus a printed copy):
+   ```sh
+   brew install age
+   age-keygen -o ~/vaulta-backup-key.txt        # prints "Public key: age1…"
+   ```
+2. GitHub → Settings → Secrets and variables → Actions: variable `BACKUP_AGE_RECIPIENT` = the `age1…` public key.
+3. The backup role, on the production database as the owner (stage 6, with the other role):
+   ```sql
+   CREATE ROLE vaulta_backup WITH LOGIN PASSWORD '<32+ random characters>' NOSUPERUSER BYPASSRLS NOCREATEDB NOCREATEROLE;
+   GRANT pg_read_all_data TO vaulta_backup;      -- read everything, write nothing
+   ```
+   `BYPASSRLS` because row-level security would otherwise hide every row from a role that isn't a user.
+4. Secret `BACKUP_DATABASE_URL` = `vaulta_backup`'s **direct** (not pooled) connection string with `?sslmode=require`.
+5. Run it once by hand and check the artifact appears.
+
+**Restore** (into a new Neon branch first, never straight over production):
+```sh
+gh run download <run-id> -n vaulta-YYYY-MM-DD.dump.age
+age -d -i ~/vaulta-backup-key.txt vaulta-YYYY-MM-DD.dump.age | pg_restore --no-owner --no-privileges -d "$BRANCH_OWNER_URL"
+```
+The round trip (dump → age → decrypt → restore, all 32 tables) was tested locally on 2026-10-19.
 
 ## Health
 
