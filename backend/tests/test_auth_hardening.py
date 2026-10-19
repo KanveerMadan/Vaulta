@@ -304,43 +304,84 @@ def test_a_login_already_gone_counts_as_deleted(client, monkeypatch):
     assert client.delete("/auth/me", headers=USER).status_code == 204 and _pending() == []
 
 
-# ── App Check (step 5) ────────────────────────────────────────────────────────
+# ── reCAPTCHA v3, verified server-side (app/core/recaptcha.py) ─────────────────
 
-APP_CHECKED = [("POST", "/auth/demo", None), ("POST", "/auth/password-reset-requested", {"email": "a@test.local"}),
-               ("POST", "/api/import/batch", {"rows": []}), ("POST", "/api/chat", {"message": "hi"})]
+CHECKED = [("POST", "/auth/demo", None), ("POST", "/auth/password-reset-requested", {"email": "a@test.local"}),
+           ("POST", "/api/import/batch", {"rows": []}), ("POST", "/api/chat", {"message": "hi"})]
+TOKEN = {"X-Recaptcha-Token": "a-real-looking-token"}
+
+
+def google_says(monkeypatch, **answer):
+    """Stand in for Google's siteverify; records what was sent."""
+    import httpx
+    sent = []
+
+    class Res:
+        def raise_for_status(self): pass
+        def json(self): return {"success": True, "hostname": "vaulta.example", **answer}
+    monkeypatch.setattr(httpx, "post", lambda url, data, timeout: sent.append(data) or Res())
+    return sent
 
 
 @pytest.fixture
 def enforcing(monkeypatch):
     from app.core.config import settings
-    monkeypatch.setattr(settings, "APP_CHECK_ENFORCE", True)
-    monkeypatch.setattr(settings, "APP_CHECK_DEBUG_TOKEN", "debug-token-for-tests")
+    monkeypatch.setattr(settings, "RECAPTCHA_ENFORCE", True)
+    monkeypatch.setattr(settings, "RECAPTCHA_SECRET_KEY", "secret-for-tests")
+    monkeypatch.setattr(settings, "RECAPTCHA_DEBUG_TOKEN", "debug-token-for-tests")
 
 
-def test_app_check_is_enforced_on_bot_targets(client, monkeypatch, enforcing):
-    from firebase_admin import app_check
-    monkeypatch.setattr(app_check, "verify_token", lambda token: (_ for _ in ()).throw(ValueError("bad")))
-    for method, path, body in APP_CHECKED:
-        for headers in ({}, {"X-Firebase-AppCheck": "forged"}):
+def test_missing_or_forged_tokens_are_refused_when_enforcing(client, monkeypatch, enforcing):
+    google_says(monkeypatch, success=False)
+    for method, path, body in CHECKED:
+        for headers in ({}, TOKEN):
             res = client.request(method, path, json=body, headers={**USER, **headers})
-            assert res.status_code == 401 and res.json()["code"] == "app_check_failed", (path, headers)
-    ok = {"X-Firebase-AppCheck": "debug-token-for-tests"}
+            assert res.status_code == 401 and res.json()["code"] == "recaptcha_failed", (path, headers)
+    ok = {"X-Recaptcha-Token": "debug-token-for-tests"}
     assert client.post("/auth/demo", headers=ok).status_code == 200
     assert client.get("/api/transactions", headers=USER).status_code == 401                  # creating the account needs it too
     assert client.get("/api/transactions", headers={**USER, **ok}).status_code == 200
     assert client.get("/api/transactions", headers=USER).status_code == 200                  # existing accounts: ordinary reads don't
 
 
-def test_production_verifies_real_tokens_and_never_accepts_the_debug_one(client, monkeypatch, enforcing):
+def test_a_token_for_another_action_or_host_is_invalid(client, monkeypatch, enforcing):
     from app.core.config import settings
-    from firebase_admin import app_check
-    calls = []
-    monkeypatch.setattr(app_check, "verify_token", lambda token: calls.append(token) or {"sub": "app"})
+    google_says(monkeypatch, action="chat", score=0.9)                    # a chat token replayed on the demo
+    assert client.post("/auth/demo", headers=TOKEN).json()["code"] == "recaptcha_failed"
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
-    assert client.post("/auth/demo", headers={"X-Firebase-AppCheck": "debug-token-for-tests"}).status_code == 200
-    assert calls == ["debug-token-for-tests"]                     # verified with Firebase like any token, not trusted
+    monkeypatch.setattr(settings, "APP_BASE_URL", "https://vaulta.example")
+    google_says(monkeypatch, action="demo", score=0.9, hostname="evil.example")
+    assert client.post("/auth/demo", headers=TOKEN).json()["code"] == "recaptcha_failed"
+    sent = google_says(monkeypatch, action="demo", score=0.9, hostname="www.vaulta.example")
+    assert client.post("/auth/demo", headers=TOKEN).status_code == 200
+    assert sent[0]["secret"] == "secret-for-tests" and sent[0]["response"] == "a-real-looking-token"
+
+
+def test_a_low_score_is_slowed_down_never_refused_outright(client, monkeypatch, enforcing):
+    from app.core import recaptcha
+    google_says(monkeypatch, action="demo", score=0.1)
+    codes = [client.post("/auth/demo", headers=TOKEN).status_code for _ in range(recaptcha.LOW_SCORE_LIMIT + 1)]
+    assert codes[:recaptcha.LOW_SCORE_LIMIT] == [200] * recaptcha.LOW_SCORE_LIMIT
+    assert codes[-1] == 429                                               # slowed, with Retry-After
+    google_says(monkeypatch, action="demo", score=0.9)
+    assert client.post("/auth/demo", headers=TOKEN).status_code == 200    # a good score isn't slowed
+
+
+def test_production_never_trusts_the_debug_token(client, monkeypatch, enforcing):
+    from app.core.config import settings
+    sent = google_says(monkeypatch, success=False)
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    assert client.post("/auth/demo", headers={"X-Recaptcha-Token": "debug-token-for-tests"}).status_code == 401
+    assert [d["response"] for d in sent] == ["debug-token-for-tests"]   # sent to Google like any token
+
+
+def test_google_unreachable_lets_requests_through(client, monkeypatch, enforcing, caplog):
+    import httpx
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: (_ for _ in ()).throw(httpx.ConnectTimeout("down")))
+    assert client.post("/auth/demo", headers=TOKEN).status_code == 200
+    assert "siteverify unreachable" in caplog.text
 
 
 def test_monitor_mode_logs_but_lets_requests_through(client, caplog):
     assert client.post("/auth/demo").status_code == 200
-    assert "missing or invalid token on /auth/demo (monitor mode)" in caplog.text
+    assert "recaptcha: missing (score -) on demo (monitor mode)" in caplog.text

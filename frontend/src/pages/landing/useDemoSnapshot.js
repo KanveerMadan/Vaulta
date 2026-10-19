@@ -7,9 +7,9 @@ const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 let pending = null
 
 async function load() {
-  const { appCheckToken } = await import('../../lib/appcheck')   // demo sessions need App Check (lib/appcheck.js)
-  const appCheck = await appCheckToken()
-  const res = await fetch(`${API}/auth/demo`, { method: 'POST', headers: appCheck ? { 'X-Firebase-AppCheck': appCheck } : {} })
+  const { HEADER, recaptchaToken } = await import('../../lib/recaptcha')   // demo sessions need reCAPTCHA (lib/recaptcha.js)
+  const human = await recaptchaToken('demo')
+  const res = await fetch(`${API}/auth/demo`, { method: 'POST', headers: human ? { [HEADER]: human } : {} })
   if (!res.ok) throw new Error('demo unavailable')
   const { token } = await res.json()
   const get = (path) => fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => (r.ok ? r.json() : null))

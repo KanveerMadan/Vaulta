@@ -6,6 +6,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Wordmark from '../ui/Wordmark'
 import { MIN_PASSWORD, noteVerificationSent } from '../lib/verification'
 import api from '../lib/api'
+import RecaptchaNotice from '../ui/RecaptchaNotice'
 
 const RESET_SENT = "If there's an account for that email, we've sent it a link to reset the password. It can take a minute; check spam too."
 
@@ -184,6 +185,7 @@ export default function Login() {
           <p className="text-xs mt-8 text-muted">
             By continuing you agree to our terms of service. <Link to="/security" className="underline">What happens to your data</Link>
           </p>
+          <RecaptchaNotice className="mt-2" />
         </div>
       </section>
     </div>

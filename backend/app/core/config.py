@@ -22,6 +22,7 @@ PLACEHOLDER_SECRETS = {
 MIN_SECRET_LENGTH = 32
 
 
+_SECRETISH = re.compile(r"KEY|SECRET|TOKEN|PASSWORD|DSN|DATABASE_URL|SERVICE_ACCOUNT", re.I)
 DEFAULT_HOSTS = r"vercel\.app|onrender\.com|firebaseapp\.com"
 
 
@@ -69,9 +70,11 @@ class Settings(BaseSettings):
     # Sensitive actions need a real sign-in this recent (seconds). Browser tests shorten it to test the prompt.
     RECENT_LOGIN_SECONDS: int = 300
 
-    # Firebase App Check (app/core/appcheck.py): enforce once the console is set up (docs/go-live.md)
-    APP_CHECK_ENFORCE: bool = False
-    APP_CHECK_DEBUG_TOKEN: str = ""      # never in production
+    # reCAPTCHA v3, verified server-side (app/core/recaptcha.py): monitor first, then enforce (docs/go-live.md)
+    RECAPTCHA_SECRET_KEY: str = ""
+    RECAPTCHA_ENFORCE: bool = False
+    RECAPTCHA_MIN_SCORE: float = 0.5     # below it: slowed down, never refused for the score alone
+    RECAPTCHA_DEBUG_TOKEN: str = ""      # never in production
 
     # Merchant model (services/categorizer.py, docs/ml/model-card.md). false = the rule-based categories only.
     MERCHANT_MODEL_ENABLED: bool = True
@@ -168,8 +171,12 @@ class Settings(BaseSettings):
             problems.append("SECURITY_CONTACT_EMAIL must be set (it is published in /.well-known/security.txt)")
         if self.TELEGRAM_BOT_TOKEN and len(self.TELEGRAM_WEBHOOK_SECRET) < MIN_SECRET_LENGTH:
             problems.append(f"TELEGRAM_WEBHOOK_SECRET must be at least {MIN_SECRET_LENGTH} characters when the bot is configured")
-        if self.APP_CHECK_DEBUG_TOKEN:
-            problems.append("APP_CHECK_DEBUG_TOKEN must not be set in production")
+        if self.RECAPTCHA_DEBUG_TOKEN:
+            problems.append("RECAPTCHA_DEBUG_TOKEN must not be set in production")
+        if self.RECAPTCHA_ENFORCE and not self.RECAPTCHA_SECRET_KEY:
+            problems.append("RECAPTCHA_ENFORCE needs RECAPTCHA_SECRET_KEY")
+        if not 0.0 <= self.RECAPTCHA_MIN_SCORE <= 1.0:
+            problems.append("RECAPTCHA_MIN_SCORE must be between 0.0 and 1.0")
         if not 60 <= self.RECENT_LOGIN_SECONDS <= 600:
             problems.append("RECENT_LOGIN_SECONDS must be between 60 and 600 in production (default 300)")
         if self.MASTER_KEY_PREVIOUS and self.MASTER_KEY_PREVIOUS == self.MASTER_KEY:
@@ -189,6 +196,12 @@ class Settings(BaseSettings):
                 f"Missing required configuration: {', '.join(missing)}. "
                 f"Set these in your .env (local) or Render environment variables (production)."
             )
+
+    def __repr_args__(self):
+        # Never print a secret: a failing test, a log line or a traceback that shows the settings shows names only
+        # for anything that could be a credential (a test failure printed a whole API key once, 2026-10-19).
+        for name, value in super().__repr_args__():
+            yield name, ("***" if value and _SECRETISH.search(name or "") else value)
 
     class Config:
         env_file = str(_ENV_FILE_PATH)

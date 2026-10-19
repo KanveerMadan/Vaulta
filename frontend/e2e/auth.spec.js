@@ -1,6 +1,6 @@
 // Phase 6.5 sign-in flows against the Firebase Auth emulator: email verification, password reset, linking Google
 // and a password to one account, re-authentication for sensitive actions, signing out everywhere, deleting the login.
-import { test, expect, API, APP_CHECK, checkLayout, newAccount, signIn, signInToken, signedInWithData, emulatorEmails, callApi, finishSetup } from './fixtures'
+import { test, expect, API, RECAPTCHA, checkLayout, newAccount, signIn, signInToken, signedInWithData, emulatorEmails, callApi, finishSetup } from './fixtures'
 
 const uniqueEmail = (tag) => `${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@vaulta.test`
 const STRONG = 'correct-horse-battery'
@@ -18,7 +18,7 @@ test('sign-up needs a confirmed email before importing', async ({ page, request 
 
   // the server refuses data until the address is confirmed, whatever the UI shows
   const token = await signInToken(request, email, STRONG)
-  const refused = await request.post(`${API}/api/budgets`, { data: { category: 'Travel', monthly_limit: '100' }, headers: { Authorization: `Bearer ${token}`, ...APP_CHECK } })
+  const refused = await request.post(`${API}/api/budgets`, { data: { category: 'Travel', monthly_limit: '100' }, headers: { Authorization: `Bearer ${token}`, ...RECAPTCHA } })
   expect(refused.status()).toBe(403)
   expect((await refused.json()).code).toBe('email_unverified')
   await page.goto('/transactions')
@@ -196,7 +196,7 @@ test('App Check: the API refuses bot-target routes without a token from the app'
     source_type: 'bank_csv', source_label: 'HDFC Bank' }] }
   const bare = await request.post(`${API}/api/import/batch`, { data: body, headers: { Authorization: `Bearer ${account.token}` } })
   expect(bare.status()).toBe(401)
-  expect((await bare.json()).code).toBe('app_check_failed')
+  expect((await bare.json()).code).toBe('recaptcha_failed')
   expect((await request.post(`${API}/auth/demo`)).status()).toBe(401)
   await callApi(request, account, 'POST', '/api/import/batch', body)               // the app's token: accepted
 })

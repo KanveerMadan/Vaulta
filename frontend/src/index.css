@@ -236,3 +236,6 @@ html { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-ins
 dialog.sheet > div { padding-bottom: env(safe-area-inset-bottom); }                               /* phone bottom sheets */
 /* Installed app (standalone): no browser bar above, so the sticky header clears the status bar itself */
 @media (display-mode: standalone) { .standalone-safe-top { padding-top: env(safe-area-inset-top); } }
+
+/* reCAPTCHA v3: the badge is hidden; RecaptchaNotice shows Google's notice where it applies (lib/recaptcha.js) */
+.grecaptcha-badge { visibility: hidden; }

@@ -30,3 +30,4 @@ test-results
 playwright-report
 firebase-debug.log
 e2e/_*.mjs
+.vercel

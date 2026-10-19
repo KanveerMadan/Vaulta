@@ -20,11 +20,12 @@ api.interceptors.request.use(async (config) => {
   const demo = useAuthStore.getState().demoToken
   const user = demo ? null : (await import('./firebase')).auth.currentUser
   if (user && config.recent) await (await import('./reauth')).ensureRecentLogin(user)   // sensitive: see lib/reauth.js
-  const { APP_CHECKED, appCheckToken } = await import('./appcheck')
-  // A signed-in user's request may be the one that creates their Vaulta account, which needs App Check
-  if (user || APP_CHECKED.some((re) => re.test(config.url.split('?')[0]))) {
-    const token = await appCheckToken()
-    if (token) config.headers['X-Firebase-AppCheck'] = token
+  // reCAPTCHA on the routes bots would abuse, and while a signed-in user's account may still be created (lib/recaptcha.js)
+  const { HEADER, actionFor, accountKnown, recaptchaToken } = await import('./recaptcha')
+  const action = actionFor(config.url.split('?')[0], { signedIn: !!user, accountKnown: !!user && accountKnown(user.uid) })
+  if (action) {
+    const token = await recaptchaToken(action)
+    if (token) config.headers[HEADER] = token
   }
   if (user) config.headers.Authorization = `Bearer ${await user.getIdToken()}`
   else if (demo) config.headers.Authorization = `Bearer ${demo}`
@@ -32,7 +33,13 @@ api.interceptors.request.use(async (config) => {
 })
 
 api.interceptors.response.use(
-  (res) => res,
+  async (res) => {
+    // the API answered a signed-in request: the account exists, so no more 'signup' tokens for it
+    const uid = res.config.headers?.Authorization && !useAuthStore.getState().demoToken
+      ? (await import('./firebase')).auth.currentUser?.uid : null
+    if (uid) (await import('./recaptcha')).rememberAccount(uid)
+    return res
+  },
   async (err) => {
     // a sleeping API (lib/wake.js): wait for it, then send again where that's safe
     if (err.config && !err.config._woke && isColdError(err)) {

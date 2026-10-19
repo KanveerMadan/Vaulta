@@ -75,6 +75,12 @@ export const TRUST = [
     checked: "A test sends a real server error with a narration, a UPI ID, an email, amounts, a session token and a search term in every part of the request and finds none of them in what reaches Sentry; a unit test does the same for the web app's scrubber.",
   },
   {
+    id: "bots",
+    claim: "Bot checks only where bots do harm.",
+    how: "Vaulta uses Google reCAPTCHA v3 when you start the demo, create your account, ask for a password reset, import transactions or use chat, and nowhere else: Google's script isn't loaded for someone just reading a page. When it runs, Google receives what reCAPTCHA uses to tell people from scripts (your IP address, browser details and how the page is being used) under Google's own privacy policy. Vaulta's server checks the result with Google. A low score never locks you out: it only slows down repeated attempts, and anything that saves data already needs a confirmed email address.",
+    checked: "Tests check that a missing or forged token is refused when checks are on, that a token made for another action or another website is refused, that a low score is slowed down and not refused, that Vaulta keeps working if Google can't be reached, and which requests carry a token.",
+  },
+  {
     id: "checks",
     claim: "Every change is tested and security-scanned.",
     how: "Each change to Vaulta's code runs the full test suite, including the encryption and isolation checks above, plus automated security checks: a search of the code's entire history for leaked secrets, known-vulnerability audits of every dependency (pip-audit, npm audit), static analysis (Bandit, Semgrep) and an OWASP ZAP scan of the running app and API.",

@@ -13,7 +13,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.core.appcheck import require_app_check
+from app.core import recaptcha
 from app.core.auth import get_current_user
 from app.core.database import get_db
 from app.models.chat import ChatMessage
@@ -31,7 +31,7 @@ def chat_enabled(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
-@router.post("", response_model=ChatResponse, dependencies=[Depends(require_app_check)])
+@router.post("", response_model=ChatResponse, dependencies=[Depends(recaptcha.require("chat"))])
 def send(payload: ChatRequest, user: User = Depends(chat_enabled), db: Session = Depends(get_db)):
     try:
         return chat.handle_message(db, user, payload.message.strip(), payload.session_id)

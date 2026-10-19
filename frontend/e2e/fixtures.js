@@ -4,6 +4,7 @@ import { test as base, expect } from '@playwright/test'
 
 export const API = 'http://127.0.0.1:8001'
 const EMULATOR = 'http://127.0.0.1:9099'
+const RECAPTCHA_PATHS = ['https://www.google.com/recaptcha/', 'https://www.gstatic.com/recaptcha/']
 const ALLOWED_ORIGINS = new Set(['http://localhost:4173', API, EMULATOR])
 
 export const test = base.extend({
@@ -27,6 +28,8 @@ export const test = base.extend({
     page.on('request', (req) => {
       const url = new URL(req.url())
       if (['data:', 'blob:'].includes(url.protocol)) return
+      // reCAPTCHA (lib/recaptcha.js) may load Google's script and frame, under these paths only
+      if (RECAPTCHA_PATHS.some((p) => req.url().startsWith(p))) return
       if (!origins.has(url.origin)) problems.push(`off-origin request: ${req.method()} ${req.url()}`)
       const type = req.headers()['content-type'] || ''
       const body = req.postDataBuffer()
@@ -82,11 +85,11 @@ export async function accountExists(request, email) {
   return ((await res.json()).users || []).length > 0
 }
 
-// App Check's debug token, as the e2e build sends it (the browser-test API enforces App Check)
-export const APP_CHECK = { 'X-Firebase-AppCheck': 'e2e-app-check-debug-token' }
+// reCAPTCHA's debug token, as the e2e build sends it (the browser-test API enforces reCAPTCHA)
+export const RECAPTCHA = { 'X-Recaptcha-Token': 'e2e-recaptcha-debug-token' }
 
 export async function callApi(request, account, method, path, data) {
-  const send = () => request.fetch(`${API}${path}`, { method, data, headers: { Authorization: `Bearer ${account.token}`, ...APP_CHECK } })
+  const send = () => request.fetch(`${API}${path}`, { method, data, headers: { Authorization: `Bearer ${account.token}`, ...RECAPTCHA } })
   // a kept-alive connection the API server has just closed fails with "socket hang up" before any response; the
   // setup calls made here are idempotent (imports dedupe), so one retry is safe
   const res = await send().catch((e) => { if (/socket hang up|ECONNRESET/.test(e.message)) return send(); throw e })

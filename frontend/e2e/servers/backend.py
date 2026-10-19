@@ -66,8 +66,8 @@ env = {
     "INBOUND_DOMAIN": "vaulta.test",
     "DEMO_SESSIONS_PER_IP": "100000",
     "RECENT_LOGIN_SECONDS": "30",
-    "APP_CHECK_ENFORCE": "true",        # enforced in browser tests, with the debug token the e2e build sends
-    "APP_CHECK_DEBUG_TOKEN": "e2e-app-check-debug-token",       # so the "sign in again" prompt can be tested without waiting 5 minutes   # every browser test starts its demo from 127.0.0.1
+    "RECAPTCHA_ENFORCE": "true",        # enforced in browser tests, with the debug token the e2e build sends
+    "RECAPTCHA_DEBUG_TOKEN": "e2e-recaptcha-debug-token",       # so the "sign in again" prompt can be tested without waiting 5 minutes   # every browser test starts its demo from 127.0.0.1
     "TELEGRAM_BOT_TOKEN": "0:e2e", "TELEGRAM_BOT_USERNAME": "VaultaTestBot", "TELEGRAM_WEBHOOK_SECRET": "e2e",
     "RESEND_API_KEY": "", "EMAIL_FROM": "", "RAZORPAY_KEY_ID": "", "RAZORPAY_KEY_SECRET": "",
 }

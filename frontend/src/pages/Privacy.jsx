@@ -27,6 +27,7 @@ const NOT_COLLECTED = [
 
 const PROCESSORS = [
   ['Google Firebase', 'sign-in'],
+  ['Google reCAPTCHA', 'telling people from bots when you start the demo, create your account, reset a password, import or chat: Google receives your IP address and browser details for this, under Google\'s privacy policy'],
   ['Neon', 'the database (your data, encrypted as /security describes)'],
   ['Render', 'the servers that run Vaulta'],
   ['Vercel', 'serving the web app'],

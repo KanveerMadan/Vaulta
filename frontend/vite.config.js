@@ -10,13 +10,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 const vercel = JSON.parse(readFileSync(new URL('./vercel.json', import.meta.url), 'utf8'))
 const headers = Object.fromEntries(vercel.headers[0].headers.map((h) => [h.key, h.value]))
 const connectSrc = headers['Content-Security-Policy'].split(';').find((d) => d.trim().startsWith('connect-src')).trim().split(/\s+/)
-// The API's origin: the one https connect-src entry that isn't Firebase Auth
-export const PROD_API = connectSrc.find((o) => o.startsWith('https://') && !o.endsWith('.googleapis.com'))
+// The API's origin: the https connect-src entry that isn't Firebase Auth, Sentry or reCAPTCHA
+export const PROD_API = connectSrc.find((o) => o.startsWith('https://') && !/\.googleapis\.com$|sentry\.io$|\/recaptcha\/$/.test(o))
 
 function localHeaders(env) {
   const csp = headers['Content-Security-Policy']
     .replace(PROD_API, new URL(env.VITE_API_BASE_URL).origin)
-    .replace('https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://content-firebaseappcheck.googleapis.com', new URL(env.VITE_FIREBASE_AUTH_EMULATOR).origin)
+    .replace('https://identitytoolkit.googleapis.com https://securetoken.googleapis.com', new URL(env.VITE_FIREBASE_AUTH_EMULATOR).origin)
     // Firebase frames the auth domain; against the emulator it frames the emulator itself
     .replace('frame-src https://vaulta.in', `frame-src http://${env.VITE_FIREBASE_AUTH_DOMAIN} ${new URL(env.VITE_FIREBASE_AUTH_EMULATOR).origin}`)
     .replace('; upgrade-insecure-requests', '')

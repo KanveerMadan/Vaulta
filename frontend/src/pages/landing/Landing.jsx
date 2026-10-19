@@ -11,6 +11,7 @@ import { useMedia } from '../../lib/useMedia'
 const StageDriver = lazy(() => import('./StageDriver'))
 const Scenes = lazy(() => import('./Scenes'))
 import { CAPTIONS } from './story'
+import RecaptchaNotice from '../../ui/RecaptchaNotice'
 
 function Ctas({ busy, onDemo, onGoogle, error }) {
   return (
@@ -24,6 +25,7 @@ function Ctas({ busy, onDemo, onGoogle, error }) {
         </button>
       </div>
       {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
+      <RecaptchaNotice className="mt-3" />
     </div>
   )
 }

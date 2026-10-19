@@ -55,6 +55,9 @@ os.environ.update({
     "BACKEND_CORS_ORIGIN_REGEX": r"^https://vaulta-[a-z0-9-]+-preview\.example$",
     "RAZORPAY_KEY_ID": "",
     "RAZORPAY_KEY_SECRET": "",
+    # real third-party keys in backend/.env are never used (or printed) by tests
+    **{k: "" for k in ("GROQ_API_KEY", "RESEND_API_KEY", "SENTRY_DSN", "TELEGRAM_BOT_TOKEN", "RECAPTCHA_SECRET_KEY",
+                       "RAZORPAY_WEBHOOK_SECRET")},
 })
 
 from fastapi.testclient import TestClient  # noqa: E402

@@ -7,7 +7,7 @@ import lighthouse from 'lighthouse'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { APP_CHECK, newAccount, seedData } from './fixtures.js'
+import { RECAPTCHA, newAccount, seedData } from './fixtures.js'
 
 const APP = 'http://localhost:4173'
 const PORT = 9333
@@ -17,7 +17,7 @@ const out = process.argv[2]
 const r = await request.newContext()
 const account = await newAccount(r)
 const { email, password } = account
-await r.get('http://127.0.0.1:8001/auth/me', { headers: { Authorization: `Bearer ${account.token}`, ...APP_CHECK } })
+await r.get('http://127.0.0.1:8001/auth/me', { headers: { Authorization: `Bearer ${account.token}`, ...RECAPTCHA } })
 await seedData(r, account)
 
 const ctx = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), 'lh-')), { args: [`--remote-debugging-port=${PORT}`] })

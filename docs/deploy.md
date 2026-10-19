@@ -70,8 +70,10 @@ The service was created in the dashboard, so these are entered there (`render.ya
 | `SECURITY_CONTACT_EMAIL` | yes | the address published at the API's `/.well-known/security.txt` |
 | `DEMO_SESSIONS_PER_IP` | optional | default 30 per 10 minutes |
 | `RECENT_LOGIN_SECONDS` | optional | how recent a sign-in sensitive actions need; default 300, production accepts 60–600 |
-| `APP_CHECK_ENFORCE` | after go-live step 3a | `true` refuses requests without a valid App Check token; unset = monitor mode (logs only) |
-| `APP_CHECK_DEBUG_TOKEN` | never in production | local runs and browser tests only; production refuses to start with it |
+| `RECAPTCHA_SECRET_KEY` | for bot checks | the reCAPTCHA v3 **secret** key (reCAPTCHA admin console). Without it the API can't verify tokens and lets requests through (logged) |
+| `RECAPTCHA_ENFORCE` | after a day of monitoring | `true`: missing or forged tokens are refused (401 `recaptcha_failed`) and low scores slowed; unset = monitor mode (logs only). Needs `RECAPTCHA_SECRET_KEY` |
+| `RECAPTCHA_MIN_SCORE` | optional | default `0.5`; below it a request is slowed, never refused for the score alone |
+| `RECAPTCHA_DEBUG_TOKEN` | never in production | local runs and browser tests only; production refuses to start with it |
 | `GROQ_API_KEY` | for chat and report summaries | console.groq.com → API keys |
 | `GROQ_MODEL` | optional | default `openai/gpt-oss-120b` (Groq retired `llama-3.3-70b-versatile`; unset it if it is still set to that) |
 | `SENTRY_DSN` | optional | the API project's DSN (Sentry → Project settings → Client Keys). Unset = no error monitoring. Reports are scrubbed (`app/core/monitoring.py`) |
@@ -120,7 +122,7 @@ All `VITE_*` values are compiled into the public JavaScript, so none of them is 
 | `VITE_SECURITY_CONTACT` | security contact email; becomes `/.well-known/security.txt` and is shown on `/security`. Required: the build fails without it. |
 | `VITE_PRIVACY_CONTACT` | privacy and grievance contact email shown on `/privacy`. Required. |
 | `VITE_SENTRY_DSN` | the web app project's DSN; Production only. Its host must be in `connect-src` in `vercel.json` (the build fails otherwise). Unset = no error monitoring |
-| `VITE_RECAPTCHA_SITE_KEY` | the reCAPTCHA v3 **site** key for App Check (go-live step 3a; the secret key goes in the Firebase console, never here). Without it the app sends no App Check token, so leave `APP_CHECK_ENFORCE` off. |
+| `VITE_RECAPTCHA_SITE_KEY` | the reCAPTCHA v3 **site** key (public; go-live step 3a). The **secret** key goes only on Render as `RECAPTCHA_SECRET_KEY`. Without it the app sends no token, so leave `RECAPTCHA_ENFORCE` off. |
 
 ### Cloudflare: email worker (`infra/email-worker`)
 

@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from app.core.auth import get_current_user, get_recent_user, get_sensitive_user
 from app.core.ratelimit import per_ip, per_user
-from app.core.appcheck import require_app_check
+from app.core import recaptcha
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
@@ -13,7 +13,7 @@ from app.services import account, activity, demo
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/demo", dependencies=[Depends(require_app_check), Depends(per_ip("demo", settings.DEMO_SESSIONS_PER_IP, 600))])
+@router.post("/demo", dependencies=[Depends(recaptcha.require("demo")), Depends(per_ip("demo", settings.DEMO_SESSIONS_PER_IP, 600))])
 def start_demo(db: Session = Depends(get_db)):
     """A short-lived session token for the shared read-only demo user (no sign-in). Seeds the demo if needed."""
     demo.ensure_fresh(db, create=True)
@@ -83,7 +83,7 @@ class ResetRequest(BaseModel):
 
 
 @router.post("/password-reset-requested", status_code=204,
-             dependencies=[Depends(require_app_check), Depends(per_ip("password-reset", 10, 3600))])
+             dependencies=[Depends(recaptcha.require("password_reset")), Depends(per_ip("password-reset", 10, 3600))])
 def password_reset_requested(payload: ResetRequest, db: Session = Depends(get_db)):
     """
     The web app reports that a reset email was asked for (Firebase sends it). For the account's activity log only;

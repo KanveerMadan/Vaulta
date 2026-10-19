@@ -76,9 +76,13 @@ def test_app_exits_at_startup_in_production_without_secrets(tmp_path):
     assert "Config failed to load" in res.stderr and "SECRET_KEY" in res.stderr
 
 
-def test_production_refuses_an_app_check_debug_token():
-    with pytest.raises(ValidationError, match="APP_CHECK_DEBUG_TOKEN"):
-        make(**{**PROD, "APP_CHECK_DEBUG_TOKEN": "x"})
+def test_production_refuses_a_recaptcha_debug_token_and_enforcing_without_a_secret():
+    with pytest.raises(ValidationError, match="RECAPTCHA_DEBUG_TOKEN"):
+        make(**{**PROD, "RECAPTCHA_DEBUG_TOKEN": "x"})
+    with pytest.raises(ValidationError, match="RECAPTCHA_ENFORCE needs RECAPTCHA_SECRET_KEY"):
+        make(**{**PROD, "RECAPTCHA_ENFORCE": True})
+    with pytest.raises(ValidationError, match="RECAPTCHA_MIN_SCORE"):
+        make(**{**PROD, "RECAPTCHA_MIN_SCORE": 1.5})
 
 
 def test_the_launch_origins_are_accepted_and_only_they_are_allowed():
@@ -86,3 +90,11 @@ def test_the_launch_origins_are_accepted_and_only_they_are_allowed():
     launch = "https://vaulta.in,https://www.vaulta.in,https://vaulta-henna.vercel.app"
     s = make(**{**PROD, "BACKEND_CORS_ORIGINS": launch})
     assert s.cors_origins() == ["https://vaulta.in", "https://www.vaulta.in", "https://vaulta-henna.vercel.app"]
+
+
+def test_printing_the_settings_never_shows_a_secret():
+    s = make(GROQ_API_KEY="gsk_" + "x" * 40, SENTRY_DSN="https://abc@o1.ingest.sentry.io/1", RESEND_API_KEY="re_" + "y" * 30)
+    shown = repr(s) + str(s)
+    for secret in ("gsk_" + "x" * 40, "https://abc@o1", "re_" + "y" * 30, s.MASTER_KEY, s.BLIND_INDEX_KEY, "postgresql://x@"):
+        assert secret not in shown, secret
+    assert "APP_BASE_URL='http://localhost:5173'" in shown           # ordinary settings still readable
