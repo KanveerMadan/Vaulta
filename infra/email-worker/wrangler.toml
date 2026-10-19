@@ -3,6 +3,8 @@
 name = "vaulta-inbound-email"
 main = "src/worker.js"
 compatibility_date = "2025-06-01"
+# email only: no public workers.dev web address
+workers_dev = false
 
 [vars]
 # Vaulta API base URL (no trailing slash)
