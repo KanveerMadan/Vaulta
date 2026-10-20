@@ -79,6 +79,21 @@ test('landing security tiles open their claim on /security, and the code on GitH
   await expect(page.locator(`${hrefs[0].replace('/security', '')} h2`)).toHaveText(/encrypted/)
 })
 
+test('hero: the answer line, the no-login line and Sign in all fit the first screen at 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/welcome')
+  const sub = page.locator('[data-hero-sub]')
+  await expect(sub).toHaveText('The question every month ends with. You never quite know the answer. vaulta.in does.')
+  await expect(page.locator('[data-hero-note]')).toHaveText('Without your bank login, your SMS, or a single typed entry.')
+  const answer = sub.getByText('vaulta.in does.')
+  expect(Number(await answer.evaluate((e) => getComputedStyle(e).fontWeight))).toBeGreaterThanOrEqual(600)
+  const color = (l) => l.evaluate((e) => getComputedStyle(e).color)
+  expect(await color(answer)).toBe(await color(page.locator('#hero span')))      // the same green as "paise?"
+  for (const l of [page.locator('#hero'), sub, page.locator('[data-hero-note]'), page.locator('[data-cta=primary]').first()]) {
+    await expect(l).toBeInViewport({ ratio: 1 })
+  }
+})
+
 test('sign in with Google is the big, filled action, in the hero and at the end; the demo is a quiet link', async ({ page }) => {
   await page.goto('/welcome')
   const primary = page.locator('[data-cta=primary]')

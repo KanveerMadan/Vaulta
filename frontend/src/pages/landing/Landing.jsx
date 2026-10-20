@@ -57,10 +57,14 @@ function Hero({ ctas }) {
         <h1 id="hero" className="font-display text-[clamp(3.1rem,13vw,6.5rem)] leading-[0.92] tracking-[-0.045em] text-ink">
           Kahan gaye <span className="text-accent-text">paise?</span>
         </h1>
-        <p className="mt-6 text-[clamp(1.125rem,4.4vw,1.4rem)] leading-snug text-ink-2 max-w-[30ch]">
-          vaulta.in knows. Without your bank login, your SMS, or a single typed entry.
+        <p data-hero-sub className="mt-5 text-[clamp(1.125rem,4.4vw,1.4rem)] leading-snug text-ink-2 max-w-[34ch]">
+          The question every month ends with. You never quite know the answer.{' '}
+          <span className="font-semibold text-accent-text">vaulta.in does.</span>
         </p>
-        <div className="mt-8">{ctas}</div>
+        <p data-hero-note className="mt-2 text-sm sm:text-base text-muted">
+          Without your bank login, your SMS, or a single typed entry.
+        </p>
+        <div className="mt-6">{ctas}</div>
         <ul aria-label="At a glance" className="mt-8 flex flex-wrap gap-2">
           {CHIPS.map((c) => (
             <li key={c} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] text-ink-2">
