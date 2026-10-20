@@ -70,7 +70,8 @@ DATA_FILE = re.compile(r"\.(pdf|csv|xlsx?|png|jpe?g|webp|heic)$", re.I)
 # snapshots (screenshots of seeded synthetic accounts, frontend/e2e/visual.spec.js and devices.spec.js), and the
 # merchant model's evaluation charts (aggregate metrics on synthetic data, written by ml/train.py), and the made-up
 # statement the "try it" page opens (frontend/public/samples/)
-DATA_OK = re.compile(r"^(fixtures/statements/|frontend/public/icon-|frontend/src/assets/|frontend/e2e/(visual|devices)\.spec\.js-snapshots/|docs/ml/[a-z0-9-]+\.png$|frontend/public/samples/[a-z0-9-]+\.csv$|frontend/public/og\.png$)")
+# demo-account screenshots only (landing page, PR media): scripts/landing-shots
+DATA_OK = re.compile(r"^(fixtures/statements/|frontend/public/icon-|frontend/src/assets/|frontend/e2e/(visual|devices)\.spec\.js-snapshots/|docs/ml/[a-z0-9-]+\.png$|frontend/public/samples/[a-z0-9-]+\.csv$|frontend/public/og\.png$|frontend/public/landing/[a-z0-9-]+(@2x)?\.webp$|docs/pr-media/[a-z0-9-]+/[a-z0-9-]+\.png$)")
 
 findings = []
 for line in open(blobs_file):
