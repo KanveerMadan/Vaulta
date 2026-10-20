@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { ArrowUp, Check, Lock, Sparkle, Trash, X } from '@phosphor-icons/react'
 import { useFinanceStore } from '../store/financeStore'
 import api from '../lib/api'
+import { plain, withBold } from '../lib/chatText'
 
 const STARTERS = [
   "How's my budget this month?",
@@ -35,8 +36,8 @@ function Typed({ text, animate }) {
   }, [count, words.length])
   return (
     <>
-      <p className="whitespace-pre-wrap" aria-hidden="true">{words.slice(0, count).join('')}</p>
-      <p className="sr-only">{text}</p>
+      <p className="whitespace-pre-wrap" aria-hidden="true">{withBold(words.slice(0, count).join(''))}</p>
+      <p className="sr-only">{plain(text)}</p>
     </>
   )
 }

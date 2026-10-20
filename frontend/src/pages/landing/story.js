@@ -21,11 +21,3 @@ export const REMOVED = [
   'Card numbers in descriptions',
   'Personal UPI IDs (masked)',
 ]
-
-export const CAPTIONS = [
-  { title: 'Your statement opens on your phone.', body: 'The file is read right here, in the browser. It is never uploaded.' },
-  { title: 'Personal details are removed first.', body: 'Your name, account number, balance and card numbers are stripped on the device.' },
-  { title: 'Only clean rows leave.', body: 'Date, description, amount. You see every row before it is sent.' },
-  { title: 'vaulta.in sorts them for you.', body: 'Categories, people, transfers and recurring payments, worked out automatically.' },
-  { title: 'And tells you where the month is going.', body: 'Safe to spend today, budgets, and a forecast for the month.' },
-]

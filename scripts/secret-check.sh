@@ -57,7 +57,7 @@ SECRET = [
 ]
 # made-up addresses used by tests and fixtures (incl. reserved TLDs: .test .example .invalid .localhost),
 # and the bank/UPI senders the app trusts
-SAFE_EMAIL = re.compile(rb"@(([a-z0-9-]+\.)*(example\.(com|org|in)|test\.local|[a-z0-9-]+\.(test|example|invalid|localhost)|yourdomain\.in|anthropic\.com|"
+SAFE_EMAIL = re.compile(rb"@([0-9]x\.(webp|png|avif|jpe?g)\b|([a-z0-9-]+\.)*(example\.(com|org|in)|test\.local|[a-z0-9-]+\.(test|example|invalid|localhost)|yourdomain\.in|anthropic\.com|"
                         rb"[a-z0-9-]+\.iam\.gserviceaccount\.com|vaulta\.in|[a-z0-9-]+\.firebaseapp\.com|gmail\.com|evil\.example|elsewhere\.example|shop\.example)|"
                         rb"([a-z0-9-]+\.)*(hdfcbank|icicibank|sbi|sbicard|axisbank|kotak|yesbank|indusind|idfcfirstbank|bankofbaroda|pnb|"
                         rb"canarabank|unionbankofindia|federalbank|aubank|rblbank|americanexpress|aexp|paytm|paytmbank|phonepe|google)\.(com|net|in|co\.in|bank\.in))$", re.I)
