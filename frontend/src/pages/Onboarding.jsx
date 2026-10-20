@@ -22,7 +22,7 @@ const STATEMENTS = {
   kotak: ["Account statement: CSV or Excel"],
 };
 const UPI_STATEMENTS = { "Google Pay": "Google Pay: the PDF statement", PhonePe: "PhonePe: the PDF statement", Paytm: "Paytm: the PDF statement" };
-const OTHER = "Account statement as CSV or Excel. You'll match the columns once and Vaulta remembers them.";
+const OTHER = "Account statement as CSV or Excel. You'll match the columns once and vaulta.in remembers them.";
 
 function Chips({ choices, selected, onChange, label }) {
   const toggle = (v) => onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
@@ -126,7 +126,7 @@ function ImportHistory({ state, save }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-ink-600">
-        Import the last 3 to 6 months so Vaulta can spot your recurring payments, the people you pay and what's normal for you.
+        Import the last 3 to 6 months so vaulta.in can spot your recurring payments, the people you pay and what's normal for you.
         Statements are read on this device; only the rows you confirm are sent.
       </p>
       {lines.length > 0 && (
@@ -162,7 +162,7 @@ function Finish({ state, done }) {
     ["Every morning", "a fresh safe-to-spend figure and the month's forecast."],
     ["When something needs you", "an alert: a budget at 80%, a duplicate charge, a failed payment, a renewal tomorrow."],
     ["Every week and month", "a short report, by email if you want it."],
-    ["When Vaulta isn't sure", "one quick question, answered in a tap."],
+    ["When vaulta.in isn't sure", "one quick question, answered in a tap."],
   ].filter(Boolean);
   return (
     <div className="space-y-8">
@@ -175,7 +175,7 @@ function Finish({ state, done }) {
         )}
       </div>
       <section aria-labelledby="automatic">
-        <h2 id="automatic" className="font-display text-2xl text-ink">What Vaulta does from here</h2>
+        <h2 id="automatic" className="font-display text-2xl text-ink">What vaulta.in does from here</h2>
         <ol className="mt-4 border-t border-line">
           {automatic.map(([when, what], i) => (
             <li key={when} className="finish-row border-b border-line py-4 grid sm:grid-cols-[13rem_1fr] gap-1 sm:gap-4" style={{ "--i": i }}>
@@ -234,7 +234,7 @@ export default function Onboarding() {
             <div className="lg:hidden"><Ring percent={pct} size={84} stroke={7} /></div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-ink" aria-live="polite">Tracking coverage {pct}%</p>
-              <p className="text-micro text-muted mt-0.5 mb-3 hidden lg:block">How much of your money Vaulta can see. Each source you add fills it in.</p>
+              <p className="text-micro text-muted mt-0.5 mb-3 hidden lg:block">How much of your money vaulta.in can see. Each source you add fills it in.</p>
               <div className="hidden lg:block"><CoverageParts parts={state.coverage.parts} max={state.coverage.max} /></div>
             </div>
           </div>

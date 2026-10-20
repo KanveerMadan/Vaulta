@@ -32,7 +32,7 @@ export async function drawShareCard({ year, rows, colors }) {
   // wordmark with the ledger rule under the V
   ctx.fillStyle = colors.ink
   ctx.font = '600 52px "Bricolage Grotesque Variable", sans-serif'
-  ctx.fillText('Vaulta', 90, 140)
+  ctx.fillText('vaulta.in', 90, 140)
   ctx.fillStyle = colors.accent
   ctx.fillRect(90, 152, 32, 5)
 
@@ -58,7 +58,7 @@ export async function drawShareCard({ year, rows, colors }) {
   }
   ctx.fillStyle = colors.muted
   ctx.font = '500 30px "Geist Variable", sans-serif'
-  ctx.fillText('Made with Vaulta', 90, H - 90)
+  ctx.fillText('Made with vaulta.in', 90, H - 90)
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
 }
 

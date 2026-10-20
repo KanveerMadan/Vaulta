@@ -57,7 +57,7 @@ export default function VerifyEmail() {
         <Wordmark to="/welcome" size="text-2xl" />
         <h1 className="mt-10 font-display text-display-s text-ink">Check your inbox</h1>
         <p className="mt-3 text-ink-2">
-          If <span className="font-medium text-ink break-all">{email || 'this address'}</span> is new to Vaulta, we've sent it
+          If <span className="font-medium text-ink break-all">{email || 'this address'}</span> is new to vaulta.in, we've sent it
           a link to confirm it's yours. Open it, then come back here. If you already have an account with it, log in instead.
         </p>
         <p className="mt-3 text-sm text-muted">Until it's confirmed you can finish setting up, but not import or connect anything.</p>

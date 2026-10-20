@@ -2,7 +2,7 @@ import { test, expect, checkLayout, openMenu, openChatPanel, reopen, API } from 
 
 test('landing → demo → home renders every card', async ({ page }, testInfo) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Vaulta tracks every rupee you spend, automatically. Set it up once, then just ask.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'vaulta.in tracks every rupee you spend, automatically. Set it up once, then just ask.' })).toBeVisible()
   for (const point of ['Automatic tracking', 'Reports that come to you', 'Ask anything']) await expect(page.getByRole('heading', { name: point })).toBeVisible()
   await expect(page.getByText('Raw alert emails are never stored.')).toBeVisible()
   await checkLayout(page, testInfo)
@@ -85,7 +85,7 @@ test('privacy policy and security.txt', async ({ page, request }, testInfo) => {
   await page.getByRole('navigation', { name: 'Footer' }).getByRole('link', { name: 'Privacy' }).click()
   await expect(page.getByRole('heading', { name: 'Privacy policy' })).toBeVisible()
   await expect(page.getByRole('note')).toContainText('Draft for review')
-  for (const h of ['What Vaulta collects and why', 'What Vaulta never collects', 'Who else handles it', "How long it's kept", 'Your rights', 'Grievances and questions']) {
+  for (const h of ['What vaulta.in collects and why', 'What vaulta.in never collects', 'Who else handles it', "How long it's kept", 'Your rights', 'Grievances and questions']) {
     await expect(page.getByRole('heading', { name: h })).toBeVisible()
   }
   await expect(page.getByText('Chat history: 30 days')).toBeVisible()
@@ -130,13 +130,13 @@ test('demo chat: actions show a read-only card', async ({ page }, testInfo) => {
 test('reduced motion gets the designed still story', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'reduced-motion', 'reduced-motion project only')
   await page.goto('/welcome')
-  const story = page.getByRole('region', { name: 'How Vaulta handles your statement' })
+  const story = page.getByRole('region', { name: 'How vaulta.in handles your statement' })
   await expect(story.getByRole('figure')).toHaveCount(4)
   await expect(story.getByText('Account number and IFSC')).toBeVisible()
 })
 
 test('public pages have their own title, description and canonical on vaulta.in; the app has none', async ({ page }) => {
-  for (const [path, title] of [['/welcome', 'Vaulta: every rupee, tracked'], ['/security', 'Security and privacy · Vaulta'], ['/privacy', 'Privacy policy · Vaulta'], ['/terms', 'Terms of service · Vaulta']]) {
+  for (const [path, title] of [['/welcome', 'vaulta.in: Private Expense Tracker for India'], ['/security', 'Security and privacy · vaulta.in'], ['/privacy', 'Privacy policy · vaulta.in'], ['/terms', 'Terms of service · vaulta.in']]) {
     await page.goto(path)
     await expect(page).toHaveTitle(title)
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://vaulta.in${path}`)
@@ -147,7 +147,7 @@ test('public pages have their own title, description and canonical on vaulta.in;
   for (const file of ['/robots.txt', '/sitemap.xml', '/og.png']) expect((await page.request.get(file)).status(), file).toBe(200)
 })
 
-test('a sleeping API: "Waking up Vaulta…", then the demo opens on its own', async ({ page, guard }) => {
+test('a sleeping API: "Waking up vaulta.in…", then the demo opens on its own', async ({ page, guard }) => {
   guard.allow(/Failed to load resource|ERR_FAILED|ERR_CONNECTION_REFUSED|NetworkError|Load failed|network connection was lost|Could not connect|CORS request did not succeed/i)   // a refused connection, as each browser logs it
   await page.goto('/welcome')
   await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
@@ -155,7 +155,7 @@ test('a sleeping API: "Waking up Vaulta…", then the demo opens on its own', as
   const asleepUntil = Date.now() + 5000
   await page.route(`${API}/**`, (route) => (Date.now() < asleepUntil ? route.abort('connectionrefused') : route.continue()))
   await page.getByRole('button', { name: 'Try the demo' }).first().click()
-  await expect(page.getByText('Waking up Vaulta…')).toBeVisible()
+  await expect(page.getByText('Waking up vaulta.in…')).toBeVisible()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 60_000 })
-  await expect(page.getByText('Waking up Vaulta…')).toHaveCount(0)
+  await expect(page.getByText('Waking up vaulta.in…')).toHaveCount(0)
 })

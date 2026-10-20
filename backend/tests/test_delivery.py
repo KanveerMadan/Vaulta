@@ -84,7 +84,7 @@ def test_monthly_run_builds_emails_once(client, monkeypatch, outbox):
         report = db.query(Report).one()
         assert (report.period_type, report.period_start.isoformat(), report.emailed_at is not None) == ("monthly", "2024-06-01", True)
     assert mail["to"] == "rahul@test.local"
-    assert mail["subject"] == "Your monthly Vaulta report: June 2024"
+    assert mail["subject"] == "Your monthly vaulta.in report: June 2024"
     assert f"{settings.APP_BASE_URL}/reports/{report.id}" in mail["html"]
     assert f"Full report: {settings.APP_BASE_URL}/reports/{report.id}" in mail["text"]
     assert "₹25,599" in mail["html"] and "₹25,599" in mail["text"]
@@ -111,7 +111,7 @@ def test_failed_email_is_retried_next_hour(client, monkeypatch, outbox):
     monkeypatch.setattr(email, "send", lambda to, subject, html, text, headers=None: outbox.append(subject) or "id")
     second = run_at(client, monkeypatch, utc(2024, 7, 1, 4, 30))
     assert (second["generated"], second["emailed"], second["errors"]) == (0, 1, 0)
-    assert outbox == ["Your monthly Vaulta report: June 2024"]
+    assert outbox == ["Your monthly vaulta.in report: June 2024"]
 
 
 def test_preferences(client, monkeypatch, outbox):

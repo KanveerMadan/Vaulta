@@ -71,7 +71,7 @@ export default function CommandPalette() {
     for (const [label, to] of PAGES) {
       if (!term || label.toLowerCase().includes(term.toLowerCase())) out.push({ id: `p-${to}`, icon: ArrowRight, label: `Go to ${label}`, run: () => navigate(to) })
     }
-    if (term) out.push({ id: 'ask', icon: Sparkle, label: `Ask: “${term}”`, hint: 'Vaulta assistant', run: () => ask(term) })
+    if (term) out.push({ id: 'ask', icon: Sparkle, label: `Ask: “${term}”`, hint: 'vaulta.in assistant', run: () => ask(term) })
     return out
   })()
 

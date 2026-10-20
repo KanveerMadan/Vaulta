@@ -1,6 +1,6 @@
-# Go-live runbook — Vaulta v1.0
+# Go-live runbook — vaulta.in v1.0
 
-This runbook takes Vaulta from the old app (on `main`, old Render service, US Neon project) to the rebuild
+This runbook takes vaulta.in from the old app (on `main`, old Render service, US Neon project) to the rebuild
 (phases 1–9 + 6.5 + 8, consolidated on `release/v1`, PR #2). Run the steps **in order**. Every step ends with a
 **Check**: don't continue until it passes. Rollback for every step is in §12.
 
@@ -9,7 +9,7 @@ This runbook takes Vaulta from the old app (on `main`, old Render service, US Ne
 | Thing | Value |
 |---|---|
 | Local repo | `~/Desktop/vaulta` |
-| GitHub | `KanveerMadan/Vaulta`, release branch `release/v1`, PR #2 (`release/v1` → `main`, DO NOT MERGE until §9) |
+| GitHub | `KanveerMadan/vaulta.in`, release branch `release/v1`, PR #2 (`release/v1` → `main`, DO NOT MERGE until §9) |
 | Domain | `vaulta.in` (Cloudflare, Active). App `https://vaulta.in`, API `https://api.vaulta.in`, inbound mail `in.vaulta.in` |
 | Old database | Neon project `steep-smoke-31221922`, branch `production`, AWS US East. **Never migrated** — it stays as the rollback copy |
 | New database | New Neon project in **AWS Asia Pacific (Singapore)**, created in §1 |
@@ -23,7 +23,7 @@ This runbook takes Vaulta from the old app (on `main`, old Render service, US Ne
 **What to expect**
 - **Downtime:** from §1.2 (old API suspended) until §9 (merge) — plan 30–60 minutes. Pick a quiet hour.
 - **Cold starts:** the API runs on Render Free with no keep-awake. After ~15 minutes idle the first request takes
-  30–60 s; the app shows "Waking up Vaulta…" and retries. This is expected.
+  30–60 s; the app shows "Waking up vaulta.in…" and retries. This is expected.
 - **Your machine:** `psql`/`pg_dump`/`pg_restore` **version ≥ the Neon Postgres version** (check in Neon → project →
   Settings; it is **18**; `brew install postgresql@18` if needed), `backend/venv` (Python 3.12), Node 22, `gh`,
   `age`, `npx neonctl@7.0.4` (authenticated), `npx wrangler` (logged in).
@@ -40,7 +40,7 @@ git fetch && git checkout release/v1 && git pull
 export DOMAIN=vaulta.in
 export OLD_NEON_PROJECT=steep-smoke-31221922
 export OLD_NEON_BRANCH=production
-gh pr checks 2 --repo KanveerMadan/Vaulta      # every job green
+gh pr checks 2 --repo KanveerMadan/vaulta.in      # every job green
 backend/venv/bin/python -m alembic heads        # prints the head revision (c8d4e6f0a1b3 today)
 export HEAD_REV=$(backend/venv/bin/python -m alembic heads | awk '{print $1}')
 # a secret from the generated file, without showing it:  secret NAME
@@ -152,7 +152,7 @@ transaction and leaves nothing behind.
 
 **1.8 The API's connection string** — **pooled** host, as `vaulta_app`:
 `postgresql://vaulta_app:<password>@<new pooled host>/neondb?sslmode=require` → save it in the password manager as
-`Vaulta – DATABASE_URL (app)`.
+`vaulta.in – DATABASE_URL (app)`.
 
 **Check:** `psql "postgresql://vaulta_app:$APP_PASSWORD@<new pooled host>/neondb?sslmode=require" -Atc "select count(*) from transactions"` → `0` (no user bound → no rows: RLS works).
 
@@ -170,7 +170,7 @@ The backup can't be run yet: GitHub only runs (and offers "Run workflow" for) wo
 Render can't change a service's region or runtime, so a new Python service in Singapore replaces the old one. The old
 one stays suspended (rollback) until a week after go-live.
 
-**2.1 Create it.** Render → **+ New → Web Service** → Git provider → `KanveerMadan/Vaulta` → **Connect**:
+**2.1 Create it.** Render → **+ New → Web Service** → Git provider → `KanveerMadan/vaulta.in` → **Connect**:
 - **Name** `vaulta-api` · **Language** `Python 3` · **Branch** `release/v1` (switched to `main` in §9)
 - **Region** `Singapore (Southeast Asia)` · **Root Directory** `backend`
 - **Build Command** `pip install -r requirements.txt`
@@ -203,7 +203,7 @@ python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))), end
 | `GROQ_API_KEY` | the **new** (rotated) key |
 | `SENTRY_DSN` | the **backend** Sentry project DSN |
 | `RESEND_API_KEY` | Resend API key (§5) |
-| `EMAIL_FROM` | `Vaulta <noreply@vaulta.in>` |
+| `EMAIL_FROM` | `vaulta.in <noreply@vaulta.in>` |
 | `INBOUND_DOMAIN` | `vaulta.in` (the app adds `in.`: addresses are `<token>@in.vaulta.in`) |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` | §7 |
 | `TELEGRAM_WEBHOOK_SECRET` | from `~/vaulta-render-secrets.env` |
@@ -310,7 +310,7 @@ Never set `RECAPTCHA_DEBUG_TOKEN` on Render: production refuses to start with it
 **Check (after §9, enforcing):** `curl -s -X POST https://api.vaulta.in/auth/demo` (no token) answers `401` with
 `"code":"recaptcha_failed"`; the demo button on `https://vaulta.in` still works.
 
-**3a.6 Email templates:** Authentication → Templates → sender name "Vaulta" for verification and password reset.
+**3a.6 Email templates:** Authentication → Templates → sender name "vaulta.in" for verification and password reset (and the subject lines, which say "%APP_NAME%": set the public-facing project name to "vaulta.in" in Project settings → General).
 
 **Check (after §9):** Google sign-in works on `https://vaulta.in` and the popup shows `vaulta.in`.
 
@@ -361,12 +361,12 @@ Done: `vaulta.in` added in Resend (region Tokyo), records added by Resend's Clou
 `p=none` only reports. **Tighten after two weeks** of aggregate reports (they arrive at privacy@) showing only Resend
 and Google passing: change it to `v=DMARC1; p=quarantine; rua=mailto:privacy@vaulta.in`.
 
-On Render: `RESEND_API_KEY`, `EMAIL_FROM=Vaulta <noreply@vaulta.in>` (§2.2).
+On Render: `RESEND_API_KEY`, `EMAIL_FROM=vaulta.in <noreply@vaulta.in>` (§2.2).
 
 **Checks:**
 - Resend shows `vaulta.in` **Verified**; `dig +short TXT _dmarc.vaulta.in` prints the policy.
 - After §9: Render → `vaulta-api` → Shell →
-  `python -c "from app.services import email; email.send('<your Gmail>', 'Vaulta test', '<p>Test</p>', 'Test')"` →
+  `python -c "from app.services import email; email.send('<your Gmail>', 'vaulta.in test', '<p>Test</p>', 'Test')"` →
   arrives from `noreply@vaulta.in`; Gmail → Show original: SPF, DKIM, DMARC all PASS.
 
 ---
@@ -405,7 +405,7 @@ curl -s "https://api.telegram.org/bot$TG_TOKEN/setWebhook" \
 ```
 **Checks:**
 - `curl -s "https://api.telegram.org/bot$TG_TOKEN/getWebhookInfo"` shows the URL, `"pending_update_count":0`.
-- After §9: Settings → Link Telegram → send the code → bot replies "Linked to Vaulta".
+- After §9: Settings → Link Telegram → send the code → bot replies "Linked to vaulta.in".
 
 ---
 
@@ -423,8 +423,8 @@ python -m app.services.demo
 
 1. **Merge PR #2:**
    ```sh
-   gh pr checks 2 --repo KanveerMadan/Vaulta --watch     # all green
-   gh pr merge 2 --repo KanveerMadan/Vaulta --merge
+   gh pr checks 2 --repo KanveerMadan/vaulta.in --watch     # all green
+   gh pr merge 2 --repo KanveerMadan/vaulta.in --merge
    ```
    Vercel starts building production from `main`.
 2. **Render:** `vaulta-api` → Settings → Branch **`main`**, Auto-Deploy **On Commit** → Manual Deploy → latest

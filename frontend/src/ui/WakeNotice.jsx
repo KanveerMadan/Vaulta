@@ -9,7 +9,7 @@ export default function WakeNotice() {
   return (
     <div role="status" aria-live="polite" className="fixed top-3 left-1/2 -translate-x-1/2 z-[80] w-[min(26rem,calc(100vw-2rem))]
       rounded-md border border-line bg-surface shadow-3 px-4 py-3.5 animate-rise">
-      <p className="font-display text-base font-semibold text-ink">{slow ? 'Vaulta is taking longer than usual' : 'Waking up Vaulta…'}</p>
+      <p className="font-display text-base font-semibold text-ink">{slow ? 'vaulta.in is taking longer than usual' : 'Waking up vaulta.in…'}</p>
       <p className="mt-1 text-sm text-ink-2">
         {slow
           ? 'The server still isn’t answering. Check your connection, or try again in a minute.'

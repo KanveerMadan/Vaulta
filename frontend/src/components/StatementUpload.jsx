@@ -164,7 +164,7 @@ function Preview({ parsed, rawRows, onConfirm, onBack, sending, progress, onEdit
 
       {model && (
         <p className="text-xs text-ink-500">
-          Category guesses are worked out on this device. When you import, your own rules and the merchants Vaulta knows
+          Category guesses are worked out on this device. When you import, your own rules and the merchants vaulta.in knows
           come first, so a few may end up different; anything still unsure goes to your review queue.
         </p>
       )}

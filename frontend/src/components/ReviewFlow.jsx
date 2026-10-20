@@ -88,7 +88,7 @@ export default function ReviewFlow({ onDone, doneLabel = "Done" }) {
     return (
       <div className="text-center space-y-3 py-10 animate-rise">
         <p className="font-display text-2xl text-ink">{answered ? "All caught up." : "Nothing to review right now."}</p>
-        <p className="text-sm text-muted">{answered ? `You answered ${answered} question${answered === 1 ? "" : "s"}. Your numbers are updated.` : "Questions appear here when Vaulta isn't sure about something."}</p>
+        <p className="text-sm text-muted">{answered ? `You answered ${answered} question${answered === 1 ? "" : "s"}. Your numbers are updated.` : "Questions appear here when vaulta.in isn't sure about something."}</p>
         {onDone && <button onClick={onDone} className="btn-primary mt-2">{doneLabel}</button>}
       </div>
     );

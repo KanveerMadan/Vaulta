@@ -26,7 +26,7 @@ export default function SignInMethods() {
       await api.post('/api/account/sign-in-methods/linked', { method: 'google.com' }, { recent: true })
       await load()
     } catch (e) {
-      if (e.code === 'auth/credential-already-in-use') setError('That Google account already belongs to another Vaulta account.')
+      if (e.code === 'auth/credential-already-in-use') setError('That Google account already belongs to another vaulta.in account.')
       else if (e.code !== 'auth/popup-closed-by-user' && e.message !== 'reauth cancelled') setError("Couldn't link Google. Try again.")
     } finally { setBusy(false) }
   }

@@ -84,7 +84,7 @@ test('without data, the steps say what will appear', async ({ page, request }) =
   await callApi(request, a, 'PATCH', '/api/onboarding', { status: 'skipped' })
   await signIn(page, a)
   await expect(card(page)).toHaveAccessibleName('Safe to spend today')     // starts by itself after setup
-  await expect(card(page)).toContainText('Once Vaulta knows your income or a budget')
+  await expect(card(page)).toContainText('Once vaulta.in knows your income or a budget')
   for (let i = 1; i <= 3; i++) {
     // a key press, not a pointer click: the card follows the smooth scroll to the next element, and Firefox's clicks
     // could land beside a card still moving (the pointer click itself is tested once, in the first test)

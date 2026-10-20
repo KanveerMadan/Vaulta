@@ -37,10 +37,10 @@ function Story({ ctas }) {
   const [step, setStep] = useState(0)
 
   return (
-    <section ref={ref} className="relative grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-10 max-w-6xl mx-auto px-4 sm:px-6" aria-label="How Vaulta handles your statement">
+    <section ref={ref} className="relative grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-10 max-w-6xl mx-auto px-4 sm:px-6" aria-label="How vaulta.in handles your statement">
       <div className="lg:col-start-1 lg:row-start-1 min-h-[calc(100dvh-4rem)] lg:min-h-[100dvh] flex flex-col justify-center py-10 lg:py-0">
         <h1 className="font-display text-[clamp(2.25rem,3.9vw,3.5rem)] leading-[1.04] tracking-[-0.03em] text-ink">
-          Vaulta tracks every rupee you spend, automatically. Set it up once, then just ask.
+          vaulta.in tracks every rupee you spend, automatically. Set it up once, then just ask.
         </h1>
         <p className="mt-5 text-lg text-ink-2 max-w-[34ch]">Your statements are read on your phone. Only clean transaction rows ever reach us.</p>
         <div className="mt-8">{ctas}</div>
@@ -69,7 +69,7 @@ function ReducedHero({ ctas }) {
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 pb-16 lg:pt-20">
       <h1 className="font-display text-[clamp(2.4rem,5.2vw,4.1rem)] leading-[1.02] tracking-[-0.03em] text-ink max-w-[20ch]">
-        Vaulta tracks every rupee you spend, automatically. Set it up once, then just ask.
+        vaulta.in tracks every rupee you spend, automatically. Set it up once, then just ask.
       </h1>
       <p className="mt-5 text-lg text-ink-2 max-w-[44ch]">Your statements are read on your phone. Only clean transaction rows ever reach us.</p>
       <div className="mt-8">{ctas}</div>

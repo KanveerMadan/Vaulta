@@ -1,4 +1,4 @@
-# Vaulta: three visual directions
+# vaulta.in: three visual directions
 
 **Design read:** a personal-finance product for salaried Indians whose entire pitch is trust.
 - **Showpiece surfaces** (landing, onboarding, Money Wrapped, reports) carry the spectacle.
@@ -35,7 +35,7 @@ Starting point (what exists today):
 | ink | `#101511` | `#E9EEEA` |
 | ink-muted | `#56615A` (6.2:1 on canvas) | `#9BA69E` |
 | line | `#D9DFDA` | `#27302A` |
-| accent (Vaulta green) | `#17643F` (6.9:1 on white) | `#5CCB93` |
+| accent (vaulta.in green) | `#17643F` (6.9:1 on white) | `#5CCB93` |
 | warning | `#8A5A00` | `#E8B04B` |
 | danger | `#B3261E` | `#F2867D` |
 
@@ -54,7 +54,7 @@ Starting point (what exists today):
 **Key screen (home, 360 px).**
 ```
 ┌────────────────────────────────┐
-│ Vaulta            ⌘K   🔔  ≡   │
+│ vaulta.in            ⌘K   🔔  ≡   │
 ├────────────────────────────────┤
 │ Safe to spend today            │
 │ ₹1,284                         │  ← Bricolage 72/opsz 96, tnum
@@ -133,7 +133,7 @@ Starting point (what exists today):
 │   ~~~~ name ~~~~  ← folds away │
 │   ~~~~ a/c no ~~  ← folds away │
 │  [clean rows slide into an     │
-│   envelope labelled Vaulta]    │
+│   envelope labelled vaulta.in]    │
 └───────────────────────────────┘
 ```
 
@@ -151,4 +151,4 @@ Starting point (what exists today):
 2. **One idea spans both modes.** The ruled line is cinematic on the landing page (a statement being dismantled row by row) and quiet in the workspace (rows, tracks, columns). Showpieces and workspace feel like one product.
 3. **Both themes are first-class.** A cool paper/ink system inverts cleanly, and the green keeps its identity in both.
 4. **Performance.** The motif is lines, type and transforms: no WebGL, no heavy shadows. 60 fps on mid-range Android is realistic, and the no-WebGL fallback is the design itself.
-5. **Brand continuity.** Vaulta's green stays. Fraunces (an over-used display serif) is replaced by Bricolage Grotesque, which is more distinctive and fits the hand-set ledger feel.
+5. **Brand continuity.** vaulta.in's green stays. Fraunces (an over-used display serif) is replaced by Bricolage Grotesque, which is more distinctive and fits the hand-set ledger feel.

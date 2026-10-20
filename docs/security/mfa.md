@@ -1,6 +1,6 @@
 # Two-factor sign-in (TOTP): not enabled yet
 
-**Decision (Phase 6):** Vaulta doesn't offer TOTP two-factor sign-in yet. Sign-in stays with Google or email and
+**Decision (Phase 6):** vaulta.in doesn't offer TOTP two-factor sign-in yet. Sign-in stays with Google or email and
 password through Firebase Authentication.
 
 ## Why not now
@@ -14,7 +14,7 @@ password through Firebase Authentication.
    support TOTP enrolment. So TOTP sign-in would ship without a single automated test, and the rule for this phase is
    that what we claim is tested.
 3. **Google sign-in already has 2-step verification.** Most users sign in with Google, so their Google account's own
-   second factor applies. Vaulta's TOTP would only add protection for email-and-password accounts.
+   second factor applies. vaulta.in's TOTP would only add protection for email-and-password accounts.
 
 ## What protects accounts today
 

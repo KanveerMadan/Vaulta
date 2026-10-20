@@ -16,22 +16,22 @@ export function tourSteps(home, txnCount) {
       id: "safe", title: "Safe to spend today",
       body: safe?.amount != null
         ? `${formatINR(safe.amount)} is what you can spend today and still stay within this month's limit. It updates as you spend.`
-        : "Once Vaulta knows your income or a budget, this shows how much you can spend today and still stay within the month.",
+        : "Once vaulta.in knows your income or a budget, this shows how much you can spend today and still stay within the month.",
     },
     {
       id: "quick-add", title: "Add anything in one line",
-      body: "Type something like “150 auto cash” and Vaulta fills in the amount, merchant, category, date and how you paid.",
+      body: "Type something like “150 auto cash” and vaulta.in fills in the amount, merchant, category, date and how you paid.",
     },
     {
       id: "attention", title: "Questions that fix your numbers",
       body: attention
-        ? `${attention} question${attention === 1 ? "" : "s"} here. Each answer corrects your totals, and Vaulta remembers it for next time.`
-        : "When Vaulta isn't sure about a payment, it asks here, one tap per question.",
+        ? `${attention} question${attention === 1 ? "" : "s"} here. Each answer corrects your totals, and vaulta.in remembers it for next time.`
+        : "When vaulta.in isn't sure about a payment, it asks here, one tap per question.",
     },
     {
       id: "recent", title: "Your transactions",
       body: txnCount
-        ? "Tap a category to change it. Vaulta learns from two consistent changes, and “Why is it filed here?” explains any of them."
+        ? "Tap a category to change it. vaulta.in learns from two consistent changes, and “Why is it filed here?” explains any of them."
         : "Import a statement or forward a bank alert, and your transactions appear here, already sorted into categories.",
     },
     {

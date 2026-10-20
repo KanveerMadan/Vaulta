@@ -155,7 +155,7 @@ function YourData() {
     <section className="card p-5 space-y-3" aria-labelledby="your-data-title">
       <h2 id="your-data-title" className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Your data</h2>
       <p className="text-sm text-ink-600">
-        Download everything Vaulta holds about you as a zip: one JSON file and a CSV for each kind of record. It's built
+        Download everything vaulta.in holds about you as a zip: one JSON file and a CSV for each kind of record. It's built
         when you ask and isn't kept afterwards.
       </p>
       {error && <p className="text-sm text-danger" role="alert">{error}</p>}
@@ -231,7 +231,7 @@ function DeleteEverything() {
     <section className="card p-5 space-y-2">
       <h2 className="text-xs font-semibold text-ink-400 uppercase tracking-widest">Delete everything</h2>
       <p className="text-sm text-ink-600">
-        Permanently deletes all your data from Vaulta (transactions, budgets, goals, people, rules, reports, alerts, chat
+        Permanently deletes all your data from vaulta.in (transactions, budgets, goals, people, rules, reports, alerts, chat
         history, activity, the forwarding address and the Telegram link), then your sign-in itself, and emails you a
         confirmation. You'll be asked to sign in again first. This can't be undone.
       </p>
@@ -275,7 +275,7 @@ export default function Settings() {
         <Toggle checked={data.ai_chat_enabled} onChange={(v) => save({ ai_chat_enabled: v })} label="Let me ask questions in chat" />
         <p className="text-xs text-ink-500">
           When on, your question and the figures needed to answer it (merchant names, categories, amounts, dates) go to Groq,
-          the AI service Vaulta uses. Statement text, account details, UPI IDs and notes never do. Report summaries are
+          the AI service vaulta.in uses. Statement text, account details, UPI IDs and notes never do. Report summaries are
           written the same way, from the report's figures, whether or not chat is on.
         </p>
       </section>

@@ -63,7 +63,7 @@ test('sign up → onboarding, all four steps', async ({ page, request }, testInf
 
   // Finish
   await expect(page.getByRole('heading', { name: "You're set up." })).toBeVisible()
-  await expect(page.getByText('What Vaulta does from here')).toBeVisible()
+  await expect(page.getByText('What vaulta.in does from here')).toBeVisible()
   await page.getByRole('button', { name: 'Go to home' }).click()
   await expect(page.getByText('Safe to spend today').first()).toBeVisible()
   // the guided tour starts by itself once setup is finished (e2e/tour.spec.js walks through it)

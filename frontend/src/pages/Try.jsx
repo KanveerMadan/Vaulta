@@ -37,7 +37,7 @@ function AlertSimulation({ demo }) {
   return (
     <Card icon={EnvelopeSimple} title="A bank alert email">
       <p className="text-sm text-ink-2">
-        Vaulta reads the alert emails your bank already sends you. Send a sample one through the same steps a forwarded
+        vaulta.in reads the alert emails your bank already sends you. Send a sample one through the same steps a forwarded
         alert goes through: check the sender, find the transaction, mask personal details, categorise.
       </p>
       <div className="flex flex-wrap gap-2">
@@ -53,7 +53,7 @@ function AlertSimulation({ demo }) {
             <figcaption className="text-micro text-muted">From {r.email.from} · {r.email.subject}</figcaption>
             <p className="mt-1 text-ink-2">{r.email.text}</p>
           </figure>
-          <p className="text-sm text-ink">What Vaulta made of it:</p>
+          <p className="text-sm text-ink">What vaulta.in made of it:</p>
           <div className="rounded-md border border-line px-3"><TransactionRow txn={{ ...r.transaction, id: r.transaction.id || "preview", tags: [], splits: [], kind: r.transaction.kind || "spend", is_sample: true }} compact /></div>
           <p className="text-sm text-ink-2">{r.saved ? "Saved as a sample: it's in your transactions, labelled, and isn't counted." : "In the demo nothing is saved."}</p>
           {!demo && <Link to="/connect#forwarding" className="btn-secondary">Forward your real alerts</Link>}
@@ -129,7 +129,7 @@ export default function Try() {
       <div>
         <h1 className="font-display text-display-s text-ink">Try it with samples</h1>
         <p className="text-sm text-ink-2 mt-1">
-          See what Vaulta does with each kind of input before connecting anything real. Samples are labelled, never counted
+          See what vaulta.in does with each kind of input before connecting anything real. Samples are labelled, never counted
           in your numbers, and go by themselves within an hour.
         </p>
       </div>

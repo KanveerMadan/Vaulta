@@ -130,7 +130,7 @@ export default function Login() {
 
           {linking && (
             <p role="status" className="mt-6 text-sm text-ink bg-sunken rounded-sm px-3 py-2">
-              You already have a Vaulta account for {linking.email || 'this email'} with a password. Log in with it once and
+              You already have a vaulta.in account for {linking.email || 'this email'} with a password. Log in with it once and
               Google will be added to the same account.
             </p>
           )}

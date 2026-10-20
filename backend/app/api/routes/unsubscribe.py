@@ -40,7 +40,7 @@ def _unsubscribe(token: str, db: Session) -> HTMLResponse:
         except ValueError:
             user = None
     if user is None:
-        return _page("Link not valid", "This unsubscribe link isn't valid. You can change emails in Vaulta's Settings.", 400)
+        return _page("Link not valid", "This unsubscribe link isn't valid. You can change emails in vaulta.in's Settings.", 400)
     setattr(user, f"email_{parsed[1]}", False)
     db.commit()
     settings_url = f"{settings.APP_BASE_URL.rstrip('/')}/settings"

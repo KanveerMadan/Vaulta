@@ -79,8 +79,8 @@ def test_anomaly_alerts_and_default_email(client, outbox):
         "A failed payment of ₹350 to Zomato on 24 Jun hasn't been refunded yet.",
         "Possible duplicate charge: Swiggy ₹450, twice within 10 minutes.",
     ]
-    assert [s for _, s, _ in outbox["email"]] == ["Vaulta: Failed payment not refunded", "Vaulta: Possible duplicate charge"] or \
-        sorted(s for _, s, _ in outbox["email"]) == ["Vaulta: Failed payment not refunded", "Vaulta: Possible duplicate charge"]
+    assert [s for _, s, _ in outbox["email"]] == ["vaulta.in: Failed payment not refunded", "vaulta.in: Possible duplicate charge"] or \
+        sorted(s for _, s, _ in outbox["email"]) == ["vaulta.in: Failed payment not refunded", "vaulta.in: Possible duplicate charge"]
     assert {to for to, _, _ in outbox["email"]} == {"rahul@test.local"}
     assert outbox["telegram"] == []                                     # not linked
 
@@ -128,7 +128,7 @@ def test_telegram_quiet_hours_and_channel_settings(client, outbox, monkeypatch):
     assert s["alert_channels"]["duplicate_charge"] == {"telegram": True, "email": True}
     assert (s["quiet_start"], s["quiet_end"]) == (23, 6)
     load(client, r("2024-06-27", "SWIGGY", "200.00"))                   # → 100%
-    assert len(outbox["telegram"]) == 1 and outbox["email"][-1][1] == "Vaulta: Budget reaches 80% / 100%"
+    assert len(outbox["telegram"]) == 1 and outbox["email"][-1][1] == "vaulta.in: Budget reaches 80% / 100%"
     for bad in ({"alert_channels": {"nope": {"email": True}}}, {"alert_channels": {"price_change": {"sms": True}}},
                 {"quiet_start": 24}, {"quiet_end": -1}):
         assert client.patch("/api/settings", json=bad, headers=USER).status_code == 422, bad

@@ -114,7 +114,7 @@ function PrivacyTable() {
   return (
     <div className="card overflow-hidden">
       <div className="px-5 py-4 border-b border-sage-100">
-        <h3 className="font-medium text-ink-900">What Vaulta can and cannot see</h3>
+        <h3 className="font-medium text-ink-900">What vaulta.in can and cannot see</h3>
       </div>
       <div className="divide-y divide-sage-50">
         {PRIVACY_ROWS.map((row, i) => (

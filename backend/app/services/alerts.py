@@ -203,14 +203,14 @@ def _send_telegram(alert: Alert, user: User) -> None:
 def _send_email(alert: Alert, user: User, now: datetime) -> None:
     from app.core.config import settings
     link = f"{settings.APP_BASE_URL.rstrip('/')}/"
-    text = f"{alert.message}\n\nOpen Vaulta: {link}\n\nYou get this email because this alert type is on in your Vaulta settings."
+    text = f"{alert.message}\n\nOpen vaulta.in: {link}\n\nYou get this email because this alert type is on in your vaulta.in settings."
     from html import escape
     from app.services.report_email import button, shell
     html = shell("Alert", LABELS[alert.type],
-                 f'<p style="margin:0;font-size:16px;line-height:1.6">{escape(alert.message)}</p>{button(link, "Open Vaulta")}',
-                 "You get this email because this alert type is on in your Vaulta settings.")
+                 f'<p style="margin:0;font-size:16px;line-height:1.6">{escape(alert.message)}</p>{button(link, "Open vaulta.in")}',
+                 "You get this email because this alert type is on in your vaulta.in settings.")
     try:
-        email.send(user.email, f"Vaulta: {LABELS[alert.type]}", html, text)
+        email.send(user.email, f"vaulta.in: {LABELS[alert.type]}", html, text)
         alert.email_sent_at = now
     except email.EmailError as e:
         logger.warning(f"alerts: email failed user={user_ref(user.id)}: {e.__class__.__name__}")

@@ -102,7 +102,7 @@ function buildScenes(d) {
       <div className="h-full flex flex-col justify-center px-8">
         <Rise><p className="text-xl text-[#3C463F]">Subscriptions, all together</p></Rise>
         <Rise delay={0.15}><p className="num font-display text-[clamp(3.5rem,17vw,8rem)] leading-none mt-2">{formatINR(w.subscriptions_total)}</p></Rise>
-        <Rise delay={0.45}><p className="mt-6 text-xl max-w-[26ch]">The recurring payments Vaulta found in your statements this year.</p></Rise>
+        <Rise delay={0.45}><p className="mt-6 text-xl max-w-[26ch]">The recurring payments vaulta.in found in your statements this year.</p></Rise>
       </div>
     ),
   })
@@ -180,7 +180,7 @@ function ShareScene({ d }) {
     <div className="h-full overflow-y-auto px-6 pt-16 pb-28 flex flex-col items-center gap-6" onClick={(e) => e.stopPropagation()}>
       <p className="text-lg opacity-80">Your card to share</p>
       <figure aria-label="Share card preview" className="w-full max-w-[22rem] aspect-[4/5] rounded-md border border-[#27302A] bg-[#0B0E0C] p-6 flex flex-col">
-        <p className="font-display text-lg font-semibold">Vaulta</p>
+        <p className="font-display text-lg font-semibold">vaulta.in</p>
         <p className="mt-6 text-sm text-[#9BA69E]">Money Wrapped</p>
         <p className="font-display text-6xl leading-none">{year}</p>
         <dl className="mt-auto space-y-2.5">

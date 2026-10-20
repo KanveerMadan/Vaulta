@@ -45,12 +45,12 @@ RATE_LIMIT = 20             # messages per chat
 RATE_WINDOW_SECONDS = 60
 CATEGORY_CHOICES = sorted(c for c in CATEGORIES if c not in ("Sent to People", "Received from People", "Transfers"))
 
-LINK_FIRST = ("This chat isn't linked to a Vaulta account yet. In Vaulta, open Settings → Link Telegram, "
+LINK_FIRST = ("This chat isn't linked to a vaulta.in account yet. In vaulta.in, open Settings → Link Telegram, "
               "then send /start followed by the code shown there.")
 HELP = ("Send an expense like \"150 auto cash\" or \"1.2k groceries yesterday\" and tap ✓ Save.\n"
         "Ask anything, e.g. \"how much on food this month?\"\n"
         "/today · /week · /safe · /cash · /undo · /unlink")
-PHOTO = ("I don't read photos here, so your bill stays private. Use Scan bill on the Vaulta dashboard: "
+PHOTO = ("I don't read photos here, so your bill stays private. Use Scan bill on the vaulta.in dashboard: "
          "the photo is read on your phone and never uploaded.")
 
 def rate_limited(chat_id: int) -> bool:
@@ -134,7 +134,7 @@ def _week(db: Session, user: User) -> str:
 def _safe(db: Session, user: User) -> str:
     s = analytics.safe_to_spend_today(db, user.id)
     if s["amount"] is None:
-        return "Set a budget in Vaulta (or import this month's income) and I can tell you what's safe to spend."
+        return "Set a budget in vaulta.in (or import this month's income) and I can tell you what's safe to spend."
     return f"Safe to spend today: {inr(s['amount'])} (from your {s['basis']}, {s['days_left_including_today']} days left this month)."
 
 
@@ -181,7 +181,7 @@ def send_cash_reminder(db: Session, user: User) -> bool:
 
 def _ask_assistant(db: Session, user: User, chat_id: int, text: str) -> None:
     if not user.ai_chat_enabled:
-        telegram.send(chat_id, "AI chat is turned off in Vaulta's Settings, so I can only log expenses.")
+        telegram.send(chat_id, "AI chat is turned off in vaulta.in's Settings, so I can only log expenses.")
         return
     try:
         result = chat.handle_message(db, user, text, uuid.uuid5(uuid.NAMESPACE_URL, f"telegram:{user.id}"))
@@ -201,8 +201,8 @@ def _message(db: Session, chat_id: int, msg: dict) -> None:
     if text.startswith("/start"):
         code = text[len("/start"):].strip()
         user = redeem(db, code, chat_id) if code else None
-        telegram.send(chat_id, f"Linked to Vaulta. {HELP}" if user else (LINK_FIRST if code == "" else
-                      "That code is wrong or has expired. Get a new one in Vaulta → Settings → Link Telegram."))
+        telegram.send(chat_id, f"Linked to vaulta.in. {HELP}" if user else (LINK_FIRST if code == "" else
+                      "That code is wrong or has expired. Get a new one in vaulta.in → Settings → Link Telegram."))
         return
     user = find_user(db, "telegram_chat_id", chat_id)
     if user is None:
@@ -214,7 +214,7 @@ def _message(db: Session, chat_id: int, msg: dict) -> None:
     command = text.split()[0].split("@")[0].lower() if text.startswith("/") else None
     if command == "/unlink":
         unlink(db, user)
-        telegram.send(chat_id, "Unlinked. This chat no longer reaches your Vaulta account.")
+        telegram.send(chat_id, "Unlinked. This chat no longer reaches your vaulta.in account.")
     elif command == "/today":
         telegram.send(chat_id, _today(db, user))
     elif command == "/week":
@@ -258,7 +258,7 @@ def _callback(db: Session, cb: dict) -> None:
 
     if action in ("ok", "no"):
         if not user.ai_chat_enabled:
-            telegram.edit(chat_id, message_id, "AI chat is turned off in Vaulta's Settings.")
+            telegram.edit(chat_id, message_id, "AI chat is turned off in vaulta.in's Settings.")
             return
         try:
             result = chat.resolve_action(db, user, rest, confirm=action == "ok")

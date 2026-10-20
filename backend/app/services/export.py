@@ -24,13 +24,13 @@ from app.models.user import User
 EXCLUDED = {"data_key", "inbound_token_hash", "inbound_token_encrypted", "token_hash", "code_hash", "key_hash",
             "idempotency_key", "firebase_uid", "household_id"}
 
-README = """Vaulta data export ({when})
+README = """vaulta.in data export ({when})
 
 data.json      everything below in one file
 csv/*.csv      one file per kind of record (transactions, budgets, goals, people, rules, chat history, reports, …)
 
 Amounts are in rupees. Dates and times are ISO 8601 in UTC. This export was created when you asked for it and was
-not stored by Vaulta.
+not stored by vaulta.in.
 """
 
 

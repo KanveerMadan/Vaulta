@@ -64,8 +64,8 @@ export default function SubscriptionBanner() {
       const options = {
         key: data.razorpay_key_id,
         subscription_id: data.subscription_id,
-        name: "Vaulta",
-        description: "Vaulta Monthly, ₹99/month",
+        name: "vaulta.in",
+        description: "vaulta.in Monthly, ₹99/month",
         theme: { color: "#2d6a4f" },
         handler: function () {
           // Webhook updates subscription_status asynchronously;
@@ -133,7 +133,7 @@ export default function SubscriptionBanner() {
           </svg>
           <p className={`text-sm ${expired ? "text-danger" : "text-ink-700"}`}>
             {expired
-              ? "Your payment is overdue. Update your payment method to continue using Vaulta."
+              ? "Your payment is overdue. Update your payment method to continue using vaulta.in."
               : `Payment failed. You have ${remaining} left before access is restricted.`}
           </p>
         </div>
@@ -157,7 +157,7 @@ export default function SubscriptionBanner() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
           <p className="text-sm text-danger">
-            Your subscription was cancelled. Subscribe again to continue using Vaulta.
+            Your subscription was cancelled. Subscribe again to continue using vaulta.in.
           </p>
         </div>
         <button

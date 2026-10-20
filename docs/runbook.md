@@ -13,7 +13,7 @@ One page per symptom: what to check first, then what to do. Setup lives in `docs
 | UptimeRobot (optional) | HTTP monitor `https://api.vaulta.in/health`, every **60 minutes**, timeout at its maximum | The API won't start at all. At 60 minutes it doesn't keep the API awake |
 | Users | `privacy@vaulta.in`, `security@vaulta.in` (both to Gmail) | Everything else |
 
-## The app says "Vaulta is taking longer than usual"
+## The app says "vaulta.in is taking longer than usual"
 
 The free API sleeps after 15 idle minutes and takes up to a minute to start; the app waits two.
 1. `curl -s -m 90 https://api.vaulta.in/health` (allow for the start). `{"status":"ok"…}` → it was just slow; done.
@@ -57,7 +57,7 @@ A connection error → the `vaulta_backup` password or host changed (Neon). Run 
 ## Emails don't arrive (reports, alerts, deletion confirmations)
 
 1. Resend → **Logs**: was it sent, bounced, or never asked for?
-2. Never asked → Render: `RESEND_API_KEY` and `EMAIL_FROM=Vaulta <noreply@vaulta.in>` set; the user's settings allow it.
+2. Never asked → Render: `RESEND_API_KEY` and `EMAIL_FROM=vaulta.in <noreply@vaulta.in>` set; the user's settings allow it.
 3. Bounced or in spam → Resend → Domains → `vaulta.in` still **Verified**; `dig +short TXT _dmarc.vaulta.in`.
 
 ## Forwarded bank alerts don't arrive

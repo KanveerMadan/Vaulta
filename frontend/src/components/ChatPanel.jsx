@@ -153,7 +153,7 @@ export default function ChatPanel() {
         <div className="flex items-center gap-2">
           <Sparkle size={16} className="text-accent-text" aria-hidden />
           <div>
-            <p className="text-sm font-semibold text-ink leading-tight">Ask Vaulta</p>
+            <p className="text-sm font-semibold text-ink leading-tight">Ask vaulta.in</p>
             <p className="text-micro text-muted leading-tight">Answers from your own numbers</p>
           </div>
         </div>
@@ -197,7 +197,7 @@ export default function ChatPanel() {
           ))
         )}
         {chatLoading && (
-          <div className="flex gap-1 py-1" aria-label="Vaulta is answering">
+          <div className="flex gap-1 py-1" aria-label="vaulta.in is answering">
             {[0, 1, 2].map((i) => <span key={i} className="w-1.5 h-1.5 rounded-full bg-faint animate-pulse" style={{ animationDelay: `${i * 0.15}s` }} />)}
           </div>
         )}

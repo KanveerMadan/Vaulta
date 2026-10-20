@@ -26,8 +26,8 @@ from app.services import email
 logger = logging.getLogger(__name__)
 
 ATTEMPTS, BACKOFF_SECONDS = 3, 0.5
-SUBJECT = "Your Vaulta account has been deleted"
-TEXT = ("Your Vaulta account and everything in it have been deleted: transactions, budgets, goals, people, rules, "
+SUBJECT = "Your vaulta.in account has been deleted"
+TEXT = ("Your vaulta.in account and everything in it have been deleted: transactions, budgets, goals, people, rules, "
         "reports, alerts, chat history, the forwarding address and the Telegram link, and your sign-in itself.\n\n"
         "If you didn't ask for this, reply to this email.")
 HTML = "<p>" + TEXT.replace("\n\n", "</p><p>") + "</p>"

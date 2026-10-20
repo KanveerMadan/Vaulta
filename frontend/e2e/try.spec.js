@@ -45,7 +45,7 @@ test('bank alert, statement and quick add samples, labelled and cleared in one c
   // listed and labelled, never counted, cleared in one click
   await openMenu(page)
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Transactions', exact: true }).click()
-  await expect(page.getByText(/2 sample transactions from trying Vaulta out/)).toBeVisible()
+  await expect(page.getByText(/2 sample transactions from trying vaulta.in out/)).toBeVisible()
   await expect(page.getByRole('list', { name: 'Transactions' }).getByText('Sample', { exact: true })).toHaveCount(2)
   expect(await callApi(request, a, 'GET', '/api/transactions/summary?period=month')).toEqual(before)
   await page.getByRole('button', { name: 'Clear samples' }).click()

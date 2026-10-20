@@ -13,12 +13,12 @@ export default function Security() {
     <div className="min-h-dvh bg-canvas">
       <header className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Wordmark to="/welcome" />
-        <Link to="/welcome" className="text-sm text-ink-2 hover:text-ink">← Back to Vaulta</Link>
+        <Link to="/welcome" className="text-sm text-ink-2 hover:text-ink">← Back to vaulta.in</Link>
       </header>
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
         <h1 className="font-display text-display-m text-ink">Security and privacy</h1>
         <p className="mt-4 text-lg text-ink-2 max-w-[52ch]">
-          What Vaulta does with your financial data, and how. Each statement here is true of the code today, and each one
+          What vaulta.in does with your financial data, and how. Each statement here is true of the code today, and each one
           says how it is checked.
         </p>
 
@@ -54,7 +54,7 @@ export default function Security() {
         </div>
 
         <p className="mt-16 text-ink-2">
-          What Vaulta collects, why, how long it's kept and your rights: <Link to="/privacy" className="font-medium text-accent-text underline underline-offset-2">privacy policy</Link>.
+          What vaulta.in collects, why, how long it's kept and your rights: <Link to="/privacy" className="font-medium text-accent-text underline underline-offset-2">privacy policy</Link>.
         </p>
       </main>
     </div>
