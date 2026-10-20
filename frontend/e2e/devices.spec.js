@@ -62,7 +62,7 @@ test('landing, also without WebGL', async ({ page }, testInfo) => {
   await bare.goto(new URL('/welcome', page.url()).toString())
   await expect(bare.getByRole('heading', { level: 1 })).toBeVisible()
   await bare.evaluate(() => window.scrollBy(0, 3000))
-  await expect(bare.getByRole('heading', { name: 'What happens to your data' })).toBeVisible()
+  await expect(bare.getByRole('heading', { name: 'Many finance apps want everything. We want three columns.' })).toBeVisible()
   expect(errors).toEqual([])
   await ctx.close()
 })

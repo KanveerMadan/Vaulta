@@ -2,12 +2,13 @@ import { test, expect, checkLayout, openMenu, openChatPanel, reopen, API } from 
 
 test('landing → demo → home renders every card', async ({ page }, testInfo) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'vaulta.in tracks every rupee you spend, automatically. Set it up once, then just ask.' })).toBeVisible()
-  for (const point of ['Automatic tracking', 'Reports that come to you', 'Ask anything']) await expect(page.getByRole('heading', { name: point })).toBeVisible()
-  await expect(page.getByText('Raw alert emails are never stored.')).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Kahan gaye paise?' })).toBeVisible()
+  for (const h of ['Set it up once. Then just ask.', 'Many finance apps want everything. We want three columns.', "Built so there's little to lose.", 'Fair questions.', "Your money's been talking. Start listening."]) {
+    await expect(page.getByRole('heading', { name: h })).toBeAttached()
+  }
   await checkLayout(page, testInfo)
 
-  await page.getByRole('button', { name: 'Try the demo' }).first().click()
+  await page.getByRole('button', { name: /look around the demo|try the demo/i }).first().click()
   await expect(page.getByText("You're viewing a demo with sample data.")).toBeVisible()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 30_000 })
   await expect(page.getByTestId('outlook')).toContainText('On pace for')
@@ -23,7 +24,7 @@ test('landing → demo → home renders every card', async ({ page }, testInfo) 
 test('demo is read-only', async ({ page, guard }, testInfo) => {
   guard.allow(/status of 403/)
   await page.goto('/welcome')
-  await page.getByRole('button', { name: 'Try the demo' }).first().click()
+  await page.getByRole('button', { name: /look around the demo|try the demo/i }).first().click()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 30_000 })
   await page.getByLabel('Quick add a transaction').fill('150 auto cash')
   await page.getByRole('button', { name: 'Add', exact: true }).click()
@@ -44,7 +45,7 @@ test('demo is read-only', async ({ page, guard }, testInfo) => {
 
 test('security page states the claims and how each works', async ({ page }, testInfo) => {
   await page.goto('/welcome')
-  await page.getByRole('link', { name: 'How each of these works →' }).click()
+  await page.getByRole('link', { name: 'How each one works' }).click()
   await expect(page.getByRole('heading', { name: 'Security and privacy' })).toBeVisible()
   const claims = page.getByRole('list', { name: 'Claims' }).getByRole('listitem')
   const count = await claims.count()
@@ -66,18 +67,38 @@ test('security page states the claims and how each works', async ({ page }, test
   await checkLayout(page, testInfo)
 })
 
-test('landing claims each open their place on /security', async ({ page }) => {
+test('landing security tiles open their claim on /security, and the code on GitHub', async ({ page }) => {
   await page.goto('/welcome')
-  const items = page.getByRole('region', { name: 'What happens to your data' }).getByRole('listitem')
-  const n = await items.count()
-  expect(n).toBe(7)
-  for (let i = 0; i < n; i++) {
-    const href = await items.nth(i).getByRole('link').getAttribute('href')
-    expect(href).toMatch(/^\/security#claim-\d+$/)
+  const tiles = page.getByRole('region', { name: "Built so there's little to lose." }).getByRole('link')
+  await expect(tiles).toHaveCount(6)
+  const hrefs = await tiles.evaluateAll((as) => as.map((a) => a.getAttribute('href')))
+  expect(hrefs.slice(0, 5).every((h) => /^\/security#claim-\d+$/.test(h))).toBe(true)
+  expect(hrefs[5]).toBe('https://github.com/KanveerMadan/Vaulta')
+  await tiles.first().click()
+  await expect(page.locator(hrefs[0].replace('/security', ''))).toBeInViewport()
+  await expect(page.locator(`${hrefs[0].replace('/security', '')} h2`)).toHaveText(/encrypted/)
+})
+
+test('sign in with Google is the big, filled action, in the hero and at the end; the demo is a quiet link', async ({ page }) => {
+  await page.goto('/welcome')
+  const primary = page.locator('[data-cta=primary]')
+  await expect(primary.first()).toBeInViewport()                                 // above the fold
+  const demo = page.locator('[data-cta=demo]')
+  await expect(primary).toHaveCount(2)
+  await expect(demo).toHaveCount(2)
+  for (let i = 0; i < 2; i++) {
+    await primary.nth(i).scrollIntoViewIfNeeded()
+    await expect(primary.nth(i)).toHaveText(/Sign in with Google/)
+    await expect(demo.nth(i)).toHaveText(/demo/)
+    const [p, d] = [await primary.nth(i).boundingBox(), await demo.nth(i).boundingBox()]
+    expect(p.height).toBeGreaterThanOrEqual(1.25 * d.height)                        // dominant: taller,
+    expect(p.width * p.height).toBeGreaterThan(1.3 * d.width * d.height)            // bigger,
+    const weight = (l) => l.evaluate((e) => Number(getComputedStyle(e).fontWeight))
+    expect(await weight(primary.nth(i))).toBeGreaterThan(await weight(demo.nth(i))) // and bolder
+    const bg = await primary.nth(i).evaluate((e) => getComputedStyle(e).backgroundColor)
+    expect(bg).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)                       // filled
   }
-  await items.nth(2).getByRole('link').click()
-  await expect(page.locator('#claim-3')).toBeInViewport()
-  await expect(page.locator('#claim-3 h2')).toHaveText(/encrypted/)
+  for (const el of [primary.first(), demo.first()]) { await el.focus(); await expect(el).toBeFocused() }   // keyboard-focusable buttons
 })
 
 test('privacy policy and security.txt', async ({ page, request }, testInfo) => {
@@ -102,7 +123,7 @@ test('installable: manifest, icons, service worker caches static files only', as
   expect(manifest.display).toBe('standalone')
   for (const icon of manifest.icons) expect((await page.request.get(icon.src)).ok()).toBeTruthy()
   await page.waitForFunction(async () => (await navigator.serviceWorker.getRegistration())?.active, null, { timeout: 30_000 })
-  await page.getByRole('button', { name: 'Try the demo' }).first().click()
+  await page.getByRole('button', { name: /look around the demo|try the demo/i }).first().click()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 30_000 })
   const cached = await page.evaluate(async () => {
     const urls = []
@@ -115,7 +136,7 @@ test('installable: manifest, icons, service worker caches static files only', as
 
 test('demo chat: actions show a read-only card', async ({ page }, testInfo) => {
   await page.goto('/welcome')
-  await page.getByRole('button', { name: 'Try the demo' }).first().click()
+  await page.getByRole('button', { name: /look around the demo|try the demo/i }).first().click()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 30_000 })
   await openChatPanel(page)
   const chat = page.getByRole('complementary', { name: 'AI Assistant' })
@@ -130,9 +151,6 @@ test('demo chat: actions show a read-only card', async ({ page }, testInfo) => {
 test('reduced motion gets the designed still story', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'reduced-motion', 'reduced-motion project only')
   await page.goto('/welcome')
-  const story = page.getByRole('region', { name: 'How vaulta.in handles your statement' })
-  await expect(story.getByRole('figure')).toHaveCount(4)
-  await expect(story.getByText('Account number and IFSC')).toBeVisible()
 })
 
 test('public pages have their own title, description and canonical on vaulta.in; the app has none', async ({ page }) => {
@@ -154,8 +172,24 @@ test('a sleeping API: "Waking up vaulta.in…", then the demo opens on its own',
   // the API refuses connections for 5 seconds, as a free instance does while it starts
   const asleepUntil = Date.now() + 5000
   await page.route(`${API}/**`, (route) => (Date.now() < asleepUntil ? route.abort('connectionrefused') : route.continue()))
-  await page.getByRole('button', { name: 'Try the demo' }).first().click()
+  await page.getByRole('button', { name: /look around the demo|try the demo/i }).first().click()
   await expect(page.getByText('Waking up vaulta.in…')).toBeVisible()
   await expect(page.getByText('Safe to spend today')).toBeVisible({ timeout: 60_000 })
   await expect(page.getByText('Waking up vaulta.in…')).toHaveCount(0)
+})
+
+test('reduced motion: the statement story is still, and the animation code never loads', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  const scripts = []
+  page.on('request', (r) => { if (r.resourceType() === 'script') scripts.push(r.url()) })
+  await page.goto('/welcome')
+  const why = page.getByRole('region', { name: 'Many finance apps want everything. We want three columns.' })
+  await why.scrollIntoViewIfNeeded()
+  await expect(why.getByText('What reaches Vaulta')).toBeVisible()
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await page.waitForTimeout(500)
+  expect(scripts.filter((u) => /WhyStage|StatementStage/.test(u))).toEqual([])
+  // nothing waits to fade in
+  const hidden = await page.locator('main [class*="motion-safe:opacity-0"]').evaluateAll((els) => els.filter((e) => getComputedStyle(e).opacity !== '1').length)
+  expect(hidden).toBe(0)
 })
