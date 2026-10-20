@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     RECAPTCHA_MIN_SCORE: float = 0.5     # below it: slowed down, never refused for the score alone
     RECAPTCHA_DEBUG_TOKEN: str = ""      # never in production
 
-    # Merchant model (services/categorizer.py, docs/ml/model-card.md). false = the rule-based categories only.
+    # Merchant model (services/categorizer.py, docs/MODEL_CARD.md). false = the rule-based categories only.
     MERCHANT_MODEL_ENABLED: bool = True
 
     # New demo sessions per client IP per 10 minutes. Generous: mobile carriers put many people behind one address.

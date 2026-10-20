@@ -12,7 +12,7 @@ role, so they see past RLS, and each returns ids only):
   vaulta_telegram_code_user(code_hash)  → the user a Telegram link code belongs to
   vaulta_release_telegram_chat(chat_id) → unlinks a Telegram chat from whoever had it (one account per chat)
 
-Grants go to the role vaulta_app when it exists (docs/deploy.md creates it); default privileges cover later tables.
+Grants go to the role vaulta_app when it exists (docs/DEPLOY.md creates it); default privileges cover later tables.
 
 Revision ID: a7c3e9f1d2b4
 Revises: f6a2c8e0b1d3

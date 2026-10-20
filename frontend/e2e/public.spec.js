@@ -67,13 +67,15 @@ test('security page states the claims and how each works', async ({ page }, test
   await checkLayout(page, testInfo)
 })
 
-test('landing security tiles open their claim on /security, and the code on GitHub', async ({ page }) => {
+test('landing security tiles open their claim on /security, and the open-source code on GitHub', async ({ page }) => {
   await page.goto('/welcome')
+  await expect(page.getByText('Open source', { exact: true })).toBeVisible()                     // the hero chip
   const tiles = page.getByRole('region', { name: "Built so there's little to lose." }).getByRole('link')
   await expect(tiles).toHaveCount(6)
   const hrefs = await tiles.evaluateAll((as) => as.map((a) => a.getAttribute('href')))
   expect(hrefs.slice(0, 5).every((h) => /^\/security#claim-\d+$/.test(h))).toBe(true)
   expect(hrefs[5]).toBe('https://github.com/KanveerMadan/Vaulta')
+  await expect(tiles.nth(5)).toContainText('Open source')
   await tiles.first().click()
   await expect(page.locator(hrefs[0].replace('/security', ''))).toBeInViewport()
   await expect(page.locator(`${hrefs[0].replace('/security', '')} h2`)).toHaveText(/encrypted/)

@@ -53,14 +53,6 @@ await hide(page.getByRole("button", { name: "Ask the assistant" }));
 await save(page, "home");
 // 4a. feature cutouts from the same screen
 await save(page.locator("[data-tour='safe']"), "cut-safe");
-await save(page.locator("section[aria-label='Budgets']"), "cut-budgets");
-await save(page.locator("section[aria-label='Coming up']"), "cut-coming-up");
-
-// 2. transactions list
-await page.goto(`${BASE}/transactions`); await page.getByRole("list", { name: "Transactions" }).waitFor();
-await hide(banner()); await hide(page.getByRole("button", { name: "Ask the assistant" }));
-await hide(page.getByRole("list", { name: "Transactions" }).getByRole("listitem").filter({ hasText: "Own-account transfer" }));
-await save(page, "transactions");
 
 // 4b. recurring: rent and a subscription (other active series hidden)
 await page.goto(`${BASE}/recurring`); await settle(); await hide(banner()); await hide(page.getByRole("button", { name: "Ask the assistant" }));

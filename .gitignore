@@ -32,3 +32,28 @@ ml/data/narrations.jsonl
 ml/data/merchant_list.jsonl
 ml/data/labels.jsonl
 ml/artifacts/merchant_model.json
+
+# Secrets and credentials: never in git (SECURITY.md). Env files are covered above.
+*.env
+*.token
+*.pem
+*.key
+*.p12
+secrets/
+*-secrets/
+*-secrets.env
+*firebase-adminsdk*.json
+service-account*.json
+*backup-key*.txt
+*.dump
+*.dump.age
+
+# Build and test output
+dist/
+dist-*/
+dev-dist/
+.wrangler/
+.vercel/
+test-results/
+playwright-report/
+.pytest_cache/

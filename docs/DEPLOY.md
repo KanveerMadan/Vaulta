@@ -10,12 +10,70 @@
 | Web app (React, PWA) | Vercel, root directory `frontend` | `frontend/vercel.json` |
 | Database | Neon Postgres | roles: `docs/security/row-level-security.md` |
 | Inbound alert email | Cloudflare Email Routing + Worker `vaulta-inbound-email` | `infra/email-worker/` |
-| Sign-in | Firebase Authentication (project `vaulta-a3d7a`) | Firebase console |
+| Sign-in | Firebase Authentication | Firebase console |
 | Email out | Resend | Resend dashboard |
 | AI | Groq | Groq console |
 | Bot | Telegram (@BotFather) | `setWebhook` |
 
-The step-by-step first launch is `docs/go-live.md`.
+The first launch (2026-10-20) is recorded step by step in [go-live.md](go-live.md), with its post-launch checklist.
+What to do when something breaks: [RUNBOOK.md](RUNBOOK.md). How the pieces fit: [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Deploy flow
+
+```mermaid
+flowchart LR
+  B[branch] --> PR[pull request] --> CI["CI: tests, build, browser tests, security checks"]
+  PR --> PV[Vercel preview of the branch]
+  CI --> M[owner merges to main]
+  M --> VP["Vercel: production build of main → vaulta.in"]
+  M --> RD["Render: auto-deploy of main → api.vaulta.in"]
+  RD --> H{"/health/ready"}
+  H -- ok --> L[new API takes traffic]
+  H -- 503 --> O[old API keeps serving]
+```
+
+1. Work on a branch; never commit to `main`. Push it and open a pull request against `main`.
+2. CI (`.github/workflows/ci.yml`) runs on the push and on the pull request. Vercel builds a preview of every pushed
+   branch, behind Vercel's login, with no production API (below, "Vercel").
+3. Only the owner merges to `main`. A merge deploys both halves:
+   - **Vercel** builds `main` and serves it on vaulta.in.
+   - **Render** auto-deploys `main` (`vaulta-api`, auto-deploy on). The new instance takes traffic only once
+     `/health/ready` passes, so an API whose database isn't migrated never replaces the running one.
+4. A change with a migration: run the migration **before** merging (next section), as the launch did, so the new API
+   is ready the moment it starts. If a deploy already failed its health check for that reason, migrate, then Render →
+   `vaulta-api` → **Manual Deploy → Deploy latest commit**.
+
+## Migrations (Alembic)
+
+Migrations live in `alembic/versions/`, run from the repository root, and never run on Render: they need the tables'
+owner, which the API never gets. The code expects the head named in `backend/app/core/database.py`
+(`MIGRATION_HEAD`, currently `c8d4e6f0a1b3`); `/health/ready` reports `"migrations": "at <x>, expected <y>"` until the
+database matches.
+
+```sh
+# 1. a snapshot branch first (Neon keeps it until you delete it)
+npx neonctl@7.0.4 branches create --project-id <project-id> --name pre-<what>-<yyyymmdd>
+# 2. the migration, as the owner on the direct host ("Your machine" below). read -rs: nothing echoes or reaches history
+read -rs OWNER_URL; read -rs MASTER_KEY; read -rs BLIND_INDEX_KEY; export MASTER_KEY BLIND_INDEX_KEY
+cd ~/Desktop/vaulta && MIGRATION_DATABASE_URL="$OWNER_URL" DATABASE_URL="$OWNER_URL" \
+  FIREBASE_SERVICE_ACCOUNT_JSON='{}' backend/venv/bin/python -m alembic upgrade head
+# 3. check
+curl -s https://api.vaulta.in/health/ready
+```
+
+A new migration: `alembic revision -m "…"` from the repository root, then import any new model in `alembic/env.py`.
+`backend/tests/test_migrations.py` and CI's migration job upgrade a fresh database, downgrade to base, upgrade again
+and check the result matches the models (`alembic check`). More: `alembic/README`.
+
+## Rollback
+
+| What | How | Notes |
+|---|---|---|
+| Web app | Vercel → project → **Deployments** → the previous production deployment → **Instant Rollback** | Instant: no rebuild. On the Hobby plan only the previous production deployment can be restored. The next merge to `main` deploys normally again |
+| API | Render → `vaulta-api` → **Events** → the previous deploy → **Rollback** | Rolls back the code only, not the database |
+| Database | Neon → **Branches** → restore to a point in time, or the `pre-…` snapshot branch, or the weekly backup ("Backups") | Always into a new branch first; check it, then switch `DATABASE_URL`. A downgrade with `alembic downgrade <rev>` is possible: each migration has one, tested in CI |
+
+Roll back the API before the database: older code usually runs on a newer schema, not the other way round.
 
 ## Generating secrets
 
@@ -45,7 +103,7 @@ The service was created in the dashboard, so these are entered there (`render.ya
 | Start command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-1} --proxy-headers --forwarded-allow-ips='*' --no-access-log` |
 | Health check path | `/health/ready` (database up, migrations at head, row-level security enforced) |
 | Python | `PYTHON_VERSION=3.12.7` |
-| Auto-deploy | **off** until cutover (go-live stage 11); then on, from `main` |
+| Auto-deploy | **on**, from `main` (since the launch, 2026-10-20) |
 | Workers | `WEB_CONCURRENCY=1`: a 12-month import peaks near 390 MB in one process (`docs/ml/evaluation.md`, an upper bound), so two could pass 512 MB |
 
 ## Every variable
@@ -63,7 +121,7 @@ The service was created in the dashboard, so these are entered there (`render.ya
 | `MASTER_KEY` | yes | random. Wraps each user's data key (`docs/security/encryption.md`). |
 | `BLIND_INDEX_KEY` | yes | random, different from `MASTER_KEY`. Keys the blind indexes. |
 | `MASTER_KEY_PREVIOUS` | only during a rotation | the old `MASTER_KEY` while `scripts/rotate_master_key.py` runs |
-| `BACKEND_CORS_ORIGINS` | yes | `https://vaulta.in` (www and vaulta-henna.vercel.app redirect there; comma-separated https origins of the web app; production refuses `http://`, `localhost` and `*`; `http://localhost:5173` is only the local default) |
+| `BACKEND_CORS_ORIGINS` | yes | `https://vaulta.in` (www and the Vercel default domain redirect there; comma-separated https origins of the web app; production refuses `http://`, `localhost` and `*`; `http://localhost:5173` is only the local default) |
 | `BACKEND_CORS_ORIGIN_REGEX` | **leave unset in production** | it would let Vercel preview builds (any pushed branch) call the production API. Previews use their own Preview variables and a non-production API, or none |
 | `APP_BASE_URL` | yes | the web app's https URL (links in emails) |
 | `API_BASE_URL` | yes | the API's https URL (unsubscribe links) |
@@ -76,8 +134,9 @@ The service was created in the dashboard, so these are entered there (`render.ya
 | `RECAPTCHA_DEBUG_TOKEN` | never in production | local runs and browser tests only; production refuses to start with it |
 | `GROQ_API_KEY` | for chat and report summaries | console.groq.com → API keys |
 | `GROQ_MODEL` | optional | default `openai/gpt-oss-120b` (Groq retired `llama-3.3-70b-versatile`; unset it if it is still set to that) |
+| `GROQ_API_URL` | no | default Groq's chat completions endpoint; browser tests point it at a local fake |
 | `SENTRY_DSN` | optional | the API project's DSN (Sentry → Project settings → Client Keys). Unset = no error monitoring. Reports are scrubbed (`app/core/monitoring.py`) |
-| `MERCHANT_MODEL_ENABLED` | optional | default `true`: the merchant model categorises (docs/ml/model-card.md); `false` returns to the rule-based categories |
+| `MERCHANT_MODEL_ENABLED` | optional | default `true`: the merchant model categorises (docs/MODEL_CARD.md); `false` returns to the rule-based categories |
 | `RESEND_API_KEY` | for emails | resend.com → API keys (sending access, one domain) |
 | `EMAIL_FROM` | for emails | `vaulta.in <noreply@vaulta.in>` (vaulta.in verified in Resend; never a default host) |
 | `INBOUND_DOMAIN` | for alert forwarding | your domain; addresses become `<token>@in.<domain>` |
@@ -93,7 +152,7 @@ Repository → Settings → Secrets and variables → Actions:
 
 | Name | Kind | What |
 |---|---|---|
-| `API_URL` | variable | the API's public base URL, e.g. `https://vaulta-f6t8.onrender.com` (later `https://api.vaulta.in`) |
+| `API_URL` | variable | the API's public base URL, `https://api.vaulta.in` |
 | `INTERNAL_SECRET` | secret | the same value as the API's |
 
 It runs at minute 7 of every hour and can be started by hand (Actions → Hourly run → Run workflow). It waits for a

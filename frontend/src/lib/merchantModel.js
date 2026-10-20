@@ -1,4 +1,4 @@
-// The merchant model, run in the browser (docs/ml/model-card.md). The same arithmetic as
+// The merchant model, run in the browser (docs/MODEL_CARD.md). The same arithmetic as
 // backend/app/services/categorizer.py and ml/model_a.py: character 1–5-gram TF-IDF + logistic regression with a
 // temperature. backend/tests/test_categorizer.py and merchantModel.test.js check all three agree on the same strings.
 // The model file is served from this site (public/models/), never a third party, and kept by the service worker.

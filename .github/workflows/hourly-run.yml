@@ -6,7 +6,7 @@
 #
 # GitHub runs scheduled workflows late when it is busy (often 5–30 minutes, sometimes more) and may skip a run; the next
 # run catches up, since everything is "due and not done yet". GitHub also disables schedules in a public repository after
-# 60 days without commits: re-enable the workflow in the Actions tab if that happens. docs/deploy.md has the setup.
+# 60 days without commits: re-enable the workflow in the Actions tab if that happens. docs/DEPLOY.md has the setup.
 name: Hourly run
 
 on:
@@ -32,7 +32,7 @@ jobs:
           INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET }}
         run: |
           if [ -z "$API_URL" ] || [ -z "$INTERNAL_SECRET" ]; then
-            echo "::error::Set the repository variable API_URL and the secret INTERNAL_SECRET (docs/deploy.md)."
+            echo "::error::Set the repository variable API_URL and the secret INTERNAL_SECRET (docs/DEPLOY.md)."
             exit 1
           fi
           # the API sleeps when idle (no keep-awake) and takes up to about a minute to start: poll /health with

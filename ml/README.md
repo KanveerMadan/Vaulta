@@ -2,7 +2,7 @@
 
 Learns subcategories (`backend/app/data/taxonomy.json`) for bank narrations by **knowledge distillation**: an LLM
 teacher labels merchant names, a small model learns from those labels, and every metric is *agreement with teacher
-labels*, not accuracy. Results: `docs/ml/evaluation.md`; the shipped model: `docs/ml/model-card.md`.
+labels*, not accuracy. Results: `docs/ml/evaluation.md`; the shipped model: `docs/MODEL_CARD.md`.
 
 ```
 make setup     # Python 3.12 venv with requirements.txt

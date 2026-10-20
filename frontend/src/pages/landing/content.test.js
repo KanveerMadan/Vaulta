@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { BANKS } from "../../import/banks.js";
 import { ISSUERS } from "../../import/creditCard.js";
 import { UPI_SOURCES } from "../../import/upi.js";
-import { ALERT_SENDERS, CARD_ISSUERS, FAQ, FEATURES, STATEMENT_BANKS, STEPS, UPI_APPS } from "./content.js";
+import { ALERT_SENDERS, CARD_ISSUERS, CHIPS, FAQ, FEATURES, STATEMENT_BANKS, STEPS, TILES, UPI_APPS } from "./content.js";
 import { SHOTS } from "./shots.js";
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
@@ -27,5 +27,11 @@ describe("landing content", () => {
     }
     for (const file of ["Landing.jsx", "Shot.jsx"]) expect(read(`./${file}`)).not.toMatch(/<img[^>]+src=["'{`]*https?:/);
     for (const s of [...STEPS, ...FEATURES]) expect(s.alt.length, s.shot).toBeGreaterThan(30);
+  });
+
+  it("says open source only because the repository has an open-source licence", () => {
+    expect(read("../../../../LICENSE")).toMatch(/^MIT License\n\nCopyright \(c\) 2026 Kanveer Madan/);
+    expect(CHIPS).toContain("Open source");
+    expect(TILES.find((t) => t.icon === "code").body).toMatch(/^Open source: .*MIT licence/);
   });
 });

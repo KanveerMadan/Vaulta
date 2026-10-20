@@ -8,14 +8,6 @@ export const SHOTS = {
     "w": 358,
     "h": 644
   },
-  "cut-budgets": {
-    "w": 358,
-    "h": 308
-  },
-  "cut-coming-up": {
-    "w": 358,
-    "h": 237
-  },
   "cut-recurring": {
     "w": 358,
     "h": 433
@@ -33,10 +25,6 @@ export const SHOTS = {
     "h": 727
   },
   "home": {
-    "w": 390,
-    "h": 844
-  },
-  "transactions": {
     "w": 390,
     "h": 844
   }

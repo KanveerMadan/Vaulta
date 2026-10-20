@@ -14,4 +14,4 @@ State of `rebuild/phase6` before Phase 6.5. Evidence is quoted from the code at 
 | 8 | Recent login for sensitive actions | **Missing** | `auth_time` is read only to log sign-ins (`_note_sign_in`). No route checks its age. |
 | 9 | Session UX and activity | **Partial** | Activity log exists (`services/activity.py`: sign_in, export, deleted, telegram_linked/unlinked, address_regenerated, settings_changed, profile_changed). Sign-in method, sign-up, re-auth, reset, linking, sign-out-everywhere and deletion events are missing. An expired session sends the user to `/login` (`lib/api.js`) or `/welcome` (`App.jsx` `PrivateRoute`) with no way back to the page they were on. |
 
-Phase 6.5 builds every missing and partial item: see `docs/reports/phase-6-5.md`.
+Phase 6.5 builds every missing and partial item: see `docs/archive/reports/phase-6-5.md`.

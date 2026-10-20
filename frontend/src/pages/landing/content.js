@@ -4,8 +4,8 @@
 export const REPO_URL = 'https://github.com/KanveerMadan/Vaulta'
 export const LINKEDIN_URL = 'https://www.linkedin.com/in/kanveermadan/'
 
-// softened: "Open source" → the repository is public but has no licence yet, so it's "source-available"
-export const CHIPS = ['Free', 'No bank login', 'No SMS access', 'Code on GitHub', 'Delete anytime']
+// "Open source": the repository is public under the MIT licence (LICENSE); content.test.js checks the file
+export const CHIPS = ['Free', 'No bank login', 'No SMS access', 'Open source', 'Delete anytime']
 
 export const PAIN = [
   { title: '₹200 here. ₹450 there.', body: "UPI made spending effortless. Tracking it didn't." },
@@ -41,8 +41,7 @@ export const TILES = [
   // softened: "AI sees amounts, not identities" → it does see merchant names
   { icon: 'ai', title: 'AI sees totals, not your statement.', body: 'No bank narrations, no UPI IDs, no account details.', claim: 'ai' },
   { icon: 'leave', title: 'Leave anytime.', body: 'Export or delete everything, anytime.', claim: 'your-data' },
-  // softened: "Fully open source" → public code, no licence yet
-  { icon: 'code', title: "Don't trust us. Read the code.", body: 'Every line that runs vaulta.in is public on GitHub.', href: REPO_URL },
+  { icon: 'code', title: "Don't trust us. Read the code.", body: 'Open source: every line that runs vaulta.in is on GitHub, under the MIT licence.', href: REPO_URL },
 ]
 
 export const FEATURES = [
