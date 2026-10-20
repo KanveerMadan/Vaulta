@@ -9,7 +9,7 @@ This runbook takes vaulta.in from the old app (on `main`, old Render service, US
 | Thing | Value |
 |---|---|
 | Local repo | `~/Desktop/vaulta` |
-| GitHub | `KanveerMadan/vaulta.in`, release branch `release/v1`, PR #2 (`release/v1` → `main`, DO NOT MERGE until §9) |
+| GitHub | `KanveerMadan/Vaulta`, release branch `release/v1`, PR #2 (`release/v1` → `main`, DO NOT MERGE until §9) |
 | Domain | `vaulta.in` (Cloudflare, Active). App `https://vaulta.in`, API `https://api.vaulta.in`, inbound mail `in.vaulta.in` |
 | Old database | Neon project `steep-smoke-31221922`, branch `production`, AWS US East. **Never migrated** — it stays as the rollback copy |
 | New database | New Neon project in **AWS Asia Pacific (Singapore)**, created in §1 |
@@ -40,7 +40,7 @@ git fetch && git checkout release/v1 && git pull
 export DOMAIN=vaulta.in
 export OLD_NEON_PROJECT=steep-smoke-31221922
 export OLD_NEON_BRANCH=production
-gh pr checks 2 --repo KanveerMadan/vaulta.in      # every job green
+gh pr checks 2 --repo KanveerMadan/Vaulta      # every job green
 backend/venv/bin/python -m alembic heads        # prints the head revision (c8d4e6f0a1b3 today)
 export HEAD_REV=$(backend/venv/bin/python -m alembic heads | awk '{print $1}')
 # a secret from the generated file, without showing it:  secret NAME
@@ -170,7 +170,7 @@ The backup can't be run yet: GitHub only runs (and offers "Run workflow" for) wo
 Render can't change a service's region or runtime, so a new Python service in Singapore replaces the old one. The old
 one stays suspended (rollback) until a week after go-live.
 
-**2.1 Create it.** Render → **+ New → Web Service** → Git provider → `KanveerMadan/vaulta.in` → **Connect**:
+**2.1 Create it.** Render → **+ New → Web Service** → Git provider → `KanveerMadan/Vaulta` → **Connect**:
 - **Name** `vaulta-api` · **Language** `Python 3` · **Branch** `release/v1` (switched to `main` in §9)
 - **Region** `Singapore (Southeast Asia)` · **Root Directory** `backend`
 - **Build Command** `pip install -r requirements.txt`
@@ -423,8 +423,8 @@ python -m app.services.demo
 
 1. **Merge PR #2:**
    ```sh
-   gh pr checks 2 --repo KanveerMadan/vaulta.in --watch     # all green
-   gh pr merge 2 --repo KanveerMadan/vaulta.in --merge
+   gh pr checks 2 --repo KanveerMadan/Vaulta --watch     # all green
+   gh pr merge 2 --repo KanveerMadan/Vaulta --merge
    ```
    Vercel starts building production from `main`.
 2. **Render:** `vaulta-api` → Settings → Branch **`main`**, Auto-Deploy **On Commit** → Manual Deploy → latest
