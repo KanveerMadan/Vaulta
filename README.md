@@ -97,7 +97,8 @@ npx firebase emulators:start --only auth --project demo-vaulta --config e2e/fire
 npx vite --mode e2e --port 4173                        # the app on http://localhost:4173
 ```
 
-Open http://localhost:4173 and choose the demo, or sign up with any email (the emulator accepts it). `backend.py`
+Open http://localhost:4173 and choose the demo, or sign up with any email address: the emulator prints the
+verification link in its terminal instead of sending it. `backend.py`
 recreates the `vaulta_e2e` database on every start. To run against your own services instead, copy
 `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local` and fill them in; every
 variable is described in [docs/DEPLOY.md](docs/DEPLOY.md#every-variable).
@@ -107,7 +108,7 @@ variable is described in [docs/DEPLOY.md](docs/DEPLOY.md#every-variable).
 ```sh
 (cd backend && venv/bin/python -m pytest -q)             # API, migrations, RLS, encryption; uses vaulta_test
 (cd frontend && npm run lint && npm test)                # lint and unit tests
-(cd frontend && npx playwright test --project=chromium)  # browser tests; starts the four servers above itself
+(cd frontend && npx playwright test --project=desktop)   # browser tests, desktop Chromium; starts the four servers itself
 (cd infra/email-worker && npm ci && npm test)            # email worker
 ```
 
