@@ -7,6 +7,8 @@
     <meta name="theme-color" content="#0B0E0C" media="(prefers-color-scheme: dark)" />
     <script src="/theme-init.js"></script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- the landing page's hero image is its largest paint: start it with the HTML, not after the app has run -->
+    <link rel="preload" as="image" href="/landing/home.webp" imagesrcset="/landing/home.webp 1x, /landing/home@2x.webp 2x" fetchpriority="high" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="vaulta.in" />
