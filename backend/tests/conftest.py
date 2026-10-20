@@ -7,7 +7,7 @@ Default: postgresql://vaulta@localhost:54329/vaulta_test. Refuses non-local URLs
 
 The schema is built by the real migrations (alembic upgrade head) as that URL's user, the tables' owner. The API
 connects as vaulta_app, a role without superuser or BYPASSRLS created here if missing, exactly as in production
-(docs/deploy.md), so row-level security applies to every test.
+(docs/DEPLOY.md), so row-level security applies to every test.
 
 Auth: Firebase token verification is replaced so that the bearer token IS the
 user's uid ("Authorization: Bearer alice"); the real get_current_user runs.

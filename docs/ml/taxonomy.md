@@ -10,7 +10,7 @@ Source of truth: `backend/app/data/taxonomy.json` (the web app reads a copy, `fr
   Personal Care, Gifts & Donations and Income.
 - **Subcategories (130).** `subcategory` is optional and always inside its group. It is a taxonomy id
   (`food.delivery`) or one of the user's own (`custom:<uuid>`, Settings → Categories). The merchant model
-  (`docs/ml/model-card.md`) predicts a subcategory; the group is derived from it, never predicted separately.
+  (`docs/MODEL_CARD.md`) predicts a subcategory; the group is derived from it, never predicted separately.
 - **System groups** are never predicted: Sent to People and Received from People (set from the payment's nature),
   Misc cash (the weekly cash count), and Other (the user's own choice).
 - **Tags** are separate from categories: many-to-many labels ("Goa trip", "Reimbursable") with their own filter
@@ -35,8 +35,8 @@ Source of truth: `backend/app/data/taxonomy.json` (the web app reads a copy, `fr
 - Adds the `custom_subcategories`, `tags` and `transaction_tags` tables, each with row-level security. Their names are
   encrypted (`Searchable`), so they stay unique per user.
 - Existing values are untouched, because the groups are the old category names.
-- Existing rows get subcategories from the re-categorisation job (`docs/ml/model-card.md`, "Re-categorising existing
-  transactions"). It has a dry run, can be undone and never changes a row the user corrected. That includes
+- Existing rows get subcategories from the re-categorisation job (`backend/scripts/recategorise.py`,
+  [DEPLOY.md](../DEPLOY.md#your-machine-migrations-and-key-rotation-never-on-render-or-vercel)). It has a dry run, can be undone and never changes a row the user corrected. That includes
   Policybazaar, which moved from Finance to Insurance.
 
 ## Edge cases (how a merchant is labelled when the narration can't tell)

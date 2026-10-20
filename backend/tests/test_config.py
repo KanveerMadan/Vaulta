@@ -86,7 +86,7 @@ def test_production_refuses_a_recaptcha_debug_token_and_enforcing_without_a_secr
 
 
 def test_the_launch_origins_are_accepted_and_only_they_are_allowed():
-    """docs/deploy.md's BACKEND_CORS_ORIGINS for launch: the domain, www and the Vercel production URL."""
+    """docs/DEPLOY.md's BACKEND_CORS_ORIGINS for launch: the domain, www and the Vercel production URL."""
     launch = "https://vaulta.in,https://www.vaulta.in,https://vaulta-henna.vercel.app"
     s = make(**{**PROD, "BACKEND_CORS_ORIGINS": launch})
     assert s.cors_origins() == ["https://vaulta.in", "https://www.vaulta.in", "https://vaulta-henna.vercel.app"]

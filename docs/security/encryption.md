@@ -63,7 +63,7 @@ Both keys must be:
 - at least 32 characters long;
 - different from each other;
 - different in every environment (production, staging, local);
-- set on the Render API service only (`docs/deploy.md`).
+- set on the Render API service only (`docs/DEPLOY.md`).
 
 The API refuses to start without them. **Back up `MASTER_KEY` outside the database** (for example in a password
 manager). If it is lost, every encrypted field is lost too, and a database backup doesn't help.

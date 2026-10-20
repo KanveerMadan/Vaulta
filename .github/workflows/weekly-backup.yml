@@ -2,7 +2,7 @@
 # vaulta_backup role, encrypted on the runner with age to a public key whose private half only the owner holds
 # (offline, never in GitHub), then kept as a workflow artifact for 35 days. Nothing unencrypted is uploaded or
 # printed. Sensitive columns are also encrypted inside the database (docs/security/encryption.md), so a backup is
-# double-locked. Restore: docs/deploy.md, "Backups".
+# double-locked. Restore: docs/DEPLOY.md, "Backups".
 name: Weekly backup
 
 on:
@@ -36,7 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$BACKUP_DATABASE_URL" ] || [ -z "$BACKUP_AGE_RECIPIENT" ]; then
-            echo "::error::Set the secret BACKUP_DATABASE_URL and the variable BACKUP_AGE_RECIPIENT (docs/deploy.md, Backups)."
+            echo "::error::Set the secret BACKUP_DATABASE_URL and the variable BACKUP_AGE_RECIPIENT (docs/DEPLOY.md, Backups)."
             exit 1
           fi
           out="vaulta-$(date -u +%Y-%m-%d).dump.age"

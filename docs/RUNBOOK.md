@@ -1,7 +1,7 @@
 # Runbook: when something is wrong
 
-One page per symptom: what to check first, then what to do. Setup lives in `docs/deploy.md`; the first launch in
-`docs/go-live.md`. Never paste a secret into a terminal that echoes it, a chat or a ticket (read with `read -rs`).
+One page per symptom: what to check first, then what to do. Setup, the deploy flow, migrations and rollback live in
+[DEPLOY.md](DEPLOY.md); the first launch in [go-live.md](go-live.md). Never paste a secret into a terminal that echoes it, a chat or a ticket (read with `read -rs`).
 
 ## How you find out
 
@@ -20,7 +20,7 @@ The free API sleeps after 15 idle minutes and takes up to a minute to start; the
 2. `curl -s https://api.vaulta.in/health/ready`:
    - `"database":"unreachable"` → Neon (next section).
    - `"migrations":"at <x>, expected <y>"` → the code is newer than the database. Run the pending migration
-     (`docs/deploy.md`, "Your machine"), after a snapshot branch.
+     (`docs/DEPLOY.md`, "Your machine"), after a snapshot branch.
    - `"rls":"bypassed"` → the API is connecting as the wrong role. `DATABASE_URL` must be `vaulta_app`.
 3. Render → `vaulta-api` → **Events** and **Logs**. A deploy that just went bad: Events → the previous deploy →
    **Rollback**.
@@ -28,12 +28,25 @@ The free API sleeps after 15 idle minutes and takes up to a minute to start; the
 
 ## Database (Neon)
 
-- Neon console → project `vaulta` (Singapore) → **Monitoring** and the usage page: the free plan's storage and compute
+- Neon console → project `vaulta-sg` (Singapore) → **Monitoring** and the usage page: the free plan's storage and compute
   allowances. Over them, Neon suspends compute until the next cycle.
 - Restore something deleted by mistake: Neon → Branches → **Restore** to a point in time (the free plan keeps a short
-  history), or the weekly encrypted backup (`docs/deploy.md`, "Backups"). Always restore into a **new branch** first,
+  history), or the weekly encrypted backup (`docs/DEPLOY.md`, "Backups"). Always restore into a **new branch** first,
   check it, then switch.
 - Before any migration: a snapshot branch (`npx neonctl@7.0.4 branches create --project-id <id> --name pre-<what>-<date>`).
+
+## A deploy broke something
+
+Roll back first, fix after ([DEPLOY.md](DEPLOY.md#rollback)):
+- Web app: Vercel → Deployments → the previous production deployment → **Instant Rollback**.
+- API: Render → `vaulta-api` → Events → the previous deploy → **Rollback**. The database isn't rolled back with it.
+Then fix on a branch; the next merge to `main` deploys both again.
+
+## Restore a backup
+
+Into a new Neon branch, never straight over production: [DEPLOY.md](DEPLOY.md#backups) has the `gh run download` and
+`age -d | pg_restore` commands. Reading the restored data still needs the same `MASTER_KEY`. Check the branch, then
+point `DATABASE_URL` (Render) at it.
 
 ## Errors in Sentry
 
@@ -90,7 +103,7 @@ create a new one in the Groq console, set `GROQ_API_KEY`.
 
 ## A secret leaked
 
-Rotate first, investigate after. Where each one lives (`docs/deploy.md`, "Every variable"):
+Rotate first, investigate after. Where each one lives (`docs/DEPLOY.md`, "Every variable"):
 - `MASTER_KEY`, `BLIND_INDEX_KEY` → `docs/security/encryption.md` (rotation scripts; not a simple swap).
 - `INTERNAL_SECRET` → Render, GitHub secret, email worker (`npx wrangler secret put INTERNAL_SECRET`), all at once.
 - `SECRET_KEY` → Render only (demo sessions and unsubscribe links signed with the old one stop working; acceptable).

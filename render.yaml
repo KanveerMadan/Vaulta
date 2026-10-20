@@ -1,7 +1,7 @@
 # Render Blueprint: the API web service, on Render's free plan, in Singapore (Render's region nearest India). The
 # hourly run is a GitHub Actions schedule (.github/workflows/hourly-run.yml): Render's cron jobs aren't free.
 # Values are never in this file: every variable marked `sync: false` is entered in the Render dashboard (or asked
-# for when the Blueprint is first applied). docs/deploy.md lists each one, where it's set and how to generate it.
+# for when the Blueprint is first applied). docs/DEPLOY.md lists each one, where it's set and how to generate it.
 # Migrations are not run here: they need the database owner's URL, which the API never gets (docs/go-live.md).
 services:
   - type: web
@@ -9,7 +9,7 @@ services:
     runtime: python
     region: singapore
     plan: free                          # 512 MB; sleeps after 15 idle minutes, and every caller waits for it
-                                        # to start (docs/deploy.md, Cold starts)
+                                        # to start (docs/DEPLOY.md, Cold starts)
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     # One worker: a 12-month import peaks near 390 MB in one process (docs/ml/evaluation.md, an upper bound), so
@@ -19,7 +19,7 @@ services:
       uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-1}
       --proxy-headers --forwarded-allow-ips='*' --no-access-log
     healthCheckPath: /health/ready      # database up, migrations at head, row-level security enforced
-    autoDeploy: false                   # off until cutover (go-live stage 11), then on, from main
+    autoDeploy: true                    # on, from main, since the launch (the dashboard holds the live setting)
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7

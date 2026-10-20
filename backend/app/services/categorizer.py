@@ -4,7 +4,7 @@ Merchant categoriser: the order a new transaction's automatic category is decide
   1. the user's own rules                      (services/rules.py, applied by detection, unchanged)
   2. the user's own corrections, by similarity  (personal memory: a past correction of a similar narration)
   3. a known merchant                           (services/merchant_normalizer.py patterns, on the merchant's own words)
-  4. the merchant model, above its threshold    (ml/, docs/ml/model-card.md)
+  4. the merchant model, above its threshold    (ml/, docs/MODEL_CARD.md)
   5. otherwise nothing: the transaction goes to the review queue
 Payments to people keep their nature category and never reach 2–4.
 

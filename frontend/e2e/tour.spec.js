@@ -123,7 +123,7 @@ test('the checklist ticks from what was done, links to the next thing, hides and
 
 test('the demo has no tour, no checklist and no tour button', async ({ page }) => {
   await page.goto('/welcome')
-  await page.getByRole('button', { name: 'Try the demo' }).first().click()
+  await page.getByRole('button', { name: /look around the demo|try the demo/i }).first().click()
   await expect(page.getByText("You're viewing a demo with sample data.")).toBeVisible()
   await expect(page.getByText('Safe to spend today')).toBeVisible()
   await expect(tour(page)).toHaveCount(0)

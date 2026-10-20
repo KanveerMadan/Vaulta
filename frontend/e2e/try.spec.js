@@ -55,7 +55,7 @@ test('bank alert, statement and quick add samples, labelled and cleared in one c
 
 test('the demo can try everything, and nothing is saved', async ({ page }) => {
   await page.goto('/welcome')
-  await page.getByRole('button', { name: 'Try the demo' }).first().click()
+  await page.getByRole('button', { name: /look around the demo|try the demo/i }).first().click()
   await expect(page.getByText("You're viewing a demo with sample data.")).toBeVisible()
   await page.getByRole('link', { name: 'Try the simulations' }).click()
   const alert = page.getByRole('region', { name: 'A bank alert email' })
