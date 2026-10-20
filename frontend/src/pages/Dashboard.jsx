@@ -144,7 +144,7 @@ function Attention({ attention, onAnswered }) {
   return (
     <Panel title="Needs attention" action={count > 0 && <span className="num text-micro font-semibold px-2 py-0.5 rounded-sm bg-warn-tint text-warn">{count}</span>}>
       {count === 0 ? (
-        <Empty icon={CheckCircle} title="All caught up">New questions appear here when Vaulta isn't sure about something.</Empty>
+        <Empty icon={CheckCircle} title="All caught up">New questions appear here when vaulta.in isn't sure about something.</Empty>
       ) : (
         <div className="space-y-4">
           {anomalies > 0 && <p className="text-sm text-ink-2 flex items-center gap-2"><Warning size={16} className="text-warn" aria-hidden />{anomalies} unusual charge{anomalies === 1 ? "" : "s"} worth a second look.</p>}

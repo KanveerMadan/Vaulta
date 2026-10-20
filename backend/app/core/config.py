@@ -28,7 +28,7 @@ DEFAULT_HOSTS = r"vercel\.app|onrender\.com|firebaseapp\.com"
 
 class Settings(BaseSettings):
     # ── App ──────────────────────────────────────────────────────────────────
-    APP_NAME: str = "Vaulta"
+    APP_NAME: str = "vaulta.in"
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
     SECRET_KEY: str = "change-this-to-something-long-and-random"
@@ -107,7 +107,7 @@ class Settings(BaseSettings):
 
     # ── Reports by email (Resend) and the internal scheduler ────────────────
     RESEND_API_KEY: str = ""
-    EMAIL_FROM: str = ""             # e.g. "Vaulta <reports@yourdomain.in>" (a domain verified in Resend)
+    EMAIL_FROM: str = ""             # e.g. "vaulta.in <noreply@vaulta.in>" (a domain verified in Resend)
     APP_BASE_URL: str = "http://localhost:5173"   # frontend, for "view the full report" links
     API_BASE_URL: str = "http://localhost:8000"   # backend, for unsubscribe links
     INTERNAL_SECRET: str = ""        # X-Internal-Secret for /internal/*; unset → /internal refuses everything

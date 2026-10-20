@@ -1,4 +1,4 @@
-# Vaulta design (Phase 7)
+# vaulta.in design (Phase 7)
 
 - [directions.md](directions.md): three directions explored (Ledger, Monsoon Night, Paper Cut), and why **Ledger** was chosen.
 - [performance.md](performance.md): Lighthouse, accessibility checks and bundle sizes, before and after.

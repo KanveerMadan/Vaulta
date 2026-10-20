@@ -39,7 +39,7 @@ export default function Rules() {
       <div>
         <h1 className="font-display text-display-s text-ink">Rules</h1>
         <p className="text-sm text-ink-500 mt-1">
-          Correct the same merchant twice the same way and Vaulta makes a rule for it. Rules apply to past and future
+          Correct the same merchant twice the same way and vaulta.in makes a rule for it. Rules apply to past and future
           transactions, except ones you changed individually. Deleting a rule puts those transactions back.
         </p>
       </div>

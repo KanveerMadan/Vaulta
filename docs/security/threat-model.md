@@ -1,4 +1,4 @@
-# Vaulta threat model
+# vaulta.in threat model
 
 Scope: the API (`backend/`), the web app (`frontend/`), the Cloudflare email worker (`infra/email-worker/`), the
 hourly GitHub Actions run, and the Postgres database on Neon. Written for Phase 6; every mitigation names the code or test that
@@ -24,7 +24,7 @@ implements it. When you change one of those, update this file in the same commit
 | Actor | Can | Wants |
 |---|---|---|
 | Outside attacker | Reach every public URL, send any request, run scripts | Other people's data, account takeover, abuse (spam, LLM spend), defacement |
-| Another Vaulta user | Everything an outsider can, plus a valid session | Read or change someone else's data through the API |
+| Another vaulta.in user | Everything an outsider can, plus a valid session | Read or change someone else's data through the API |
 | Compromised dependency (npm, PyPI, GitHub Action) | Run code in the browser, the API or CI | Exfiltrate tokens, data or secrets |
 | Malicious email sender | Send any email to a forwarding address | Inject fake transactions, phish through the Gmail confirmation, exploit the parser |
 | Holder of a leaked database dump (backup, Neon branch, stolen credentials) | Read every row of every table | Read users' financial data |
@@ -79,7 +79,7 @@ Each row: the threat, then what stops it and where that is enforced or tested.
 | Forging demo, unsubscribe or confirm tokens | HMAC-SHA256 with `SECRET_KEY` (demo, unsubscribe); chat confirm tokens are 256-bit random and stored as SHA-256 only, bound to user and session, single use, 10 minutes. |
 | Guessing a forwarding address | 10 random characters from a 36-character alphabet (about 52 bits), looked up by a keyed HMAC (a dump can't be brute-forced back to addresses); the internal endpoint itself needs `X-Internal-Secret`, so guesses have to arrive as real email through Cloudflare; unknown recipients are dropped without a reply. |
 
-### Another Vaulta user
+### Another vaulta.in user
 
 | Threat | Mitigation |
 |---|---|
@@ -102,7 +102,7 @@ Each row: the threat, then what stops it and where that is enforced or tested.
 |---|---|
 | Fake bank alerts injecting transactions | Sender must be on the bank's allowlist (`app/core/alert_senders.py`) and the message must pass DKIM or SPF for that domain in Cloudflare's `Authentication-Results`; otherwise only an `untrusted_sender`/`auth_failed` event is recorded. |
 | Big or hostile payloads | The worker rejects messages over 1 MB, drops attachments, caps the payload at 256 KB; the API refuses bodies over 256 KB and parses in memory. Raw emails are never stored (`tests/test_inbound.py` dumps every table). |
-| Phishing through the Gmail forwarding confirmation | Only a message DKIM-signed by google.com is treated as a confirmation, and only a `https://mail.google.com/mail/…` or `mail-settings.google.com` link and the code are kept and shown; Vaulta never follows the link. |
+| Phishing through the Gmail forwarding confirmation | Only a message DKIM-signed by google.com is treated as a confirmation, and only a `https://mail.google.com/mail/…` or `mail-settings.google.com` link and the code are kept and shown; vaulta.in never follows the link. |
 | Script injection through email text into alert emails | Every value is HTML-escaped in emails; the app renders text, never HTML. |
 
 ### Leaked database dump
@@ -135,6 +135,6 @@ across the end-to-end fixture and searches them for every one of those.
 - Firebase ID tokens are accepted until expiry (≤ 1 hour) on non-sensitive routes after revocation.
 - Inbound DKIM trust relies on Cloudflare's `Authentication-Results` header (unverified against real bank mail).
 - No TOTP MFA (see `docs/security/mfa.md`).
-- Revocations made outside Vaulta (the Firebase console) are caught on sensitive routes at once and everywhere
+- Revocations made outside vaulta.in (the Firebase console) are caught on sensitive routes at once and everywhere
   else when the ID token expires (≤ 1 hour).
 - Firebase's own sign-up endpoint still reveals whether an address is in use (Firebase can't hide it).

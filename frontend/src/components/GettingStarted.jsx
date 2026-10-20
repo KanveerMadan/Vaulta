@@ -20,7 +20,7 @@ export default function GettingStarted({ checklist }) {
         <Ring percent={data.percent} size={72} stroke={7} ariaLabel="Getting started progress" caption="done" />
         <div className="min-w-0">
           <h2 id="getting-started-title" className="font-display text-lg text-ink">Getting started</h2>
-          <p className="text-sm text-ink-2">{data.done === data.total ? "All done. Vaulta is fully set up." : `${data.done} of ${data.total} done`}</p>
+          <p className="text-sm text-ink-2">{data.done === data.total ? "All done. vaulta.in is fully set up." : `${data.done} of ${data.total} done`}</p>
         </div>
       </div>
       <ul className="mt-3 divide-y divide-line">

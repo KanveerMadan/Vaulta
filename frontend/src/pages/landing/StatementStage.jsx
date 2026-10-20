@@ -151,7 +151,7 @@ export default function StatementStage({ progress }) {
         {/* where we are */}
         <div className="absolute flex gap-2" style={{ left: L.pad, top: L.pad + 4 }}>
           <motion.span className="absolute whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide text-muted" style={{ opacity: inVaulta, y: -2 }}>
-            In Vaulta · {ROWS.length} rows, nothing else
+            In vaulta.in · {ROWS.length} rows, nothing else
           </motion.span>
         </div>
         <motion.span className="absolute right-4 -top-7 text-[11px] font-semibold uppercase tracking-wide text-muted" style={{ opacity: onPhone }}>

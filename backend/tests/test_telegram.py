@@ -80,7 +80,7 @@ def test_unlinked_chat_gets_only_link_instructions(client, bot):
 
 def test_link_codes_are_single_use_expire_and_replace_each_other(client, bot):
     code = link(client)
-    assert replies(bot)[-1].startswith("Linked to Vaulta")
+    assert replies(bot)[-1].startswith("Linked to vaulta.in")
     assert client.get("/api/telegram", headers=ALICE).json()["linked"] is True
     say(client, f"/start {code}", chat=OTHER_CHAT)                   # reused by someone else
     assert replies(bot)[-1].startswith("That code is wrong or has expired")

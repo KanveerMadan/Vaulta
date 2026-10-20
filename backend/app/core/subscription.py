@@ -62,7 +62,7 @@ def require_active_subscription(current_user: User = Depends(get_current_user)) 
     if status_value == "cancelled":
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail="Your subscription has been cancelled. Subscribe to continue using Vaulta.",
+            detail="Your subscription has been cancelled. Subscribe to continue using vaulta.in.",
         )
 
     if status_value == "past_due":

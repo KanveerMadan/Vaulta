@@ -86,8 +86,8 @@ export default defineConfig(({ mode }) => {
         navigateFallbackDenylist: [/^\/api\//, /^\/auth\//, /^\/internal\//, /^\/unsubscribe/],
       },
       manifest: {
-        name: 'Vaulta',
-        short_name: 'Vaulta',
+        name: 'vaulta.in',
+        short_name: 'vaulta.in',
         description: 'Tracks every rupee you spend, automatically.',
         theme_color: '#0A1A0E',
         background_color: '#F2F7F3',

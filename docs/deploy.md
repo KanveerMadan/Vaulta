@@ -1,4 +1,4 @@
-# Deploying Vaulta
+# Deploying vaulta.in
 
 | Piece | Where it runs | Config |
 |---|---|---|
@@ -79,7 +79,7 @@ The service was created in the dashboard, so these are entered there (`render.ya
 | `SENTRY_DSN` | optional | the API project's DSN (Sentry → Project settings → Client Keys). Unset = no error monitoring. Reports are scrubbed (`app/core/monitoring.py`) |
 | `MERCHANT_MODEL_ENABLED` | optional | default `true`: the merchant model categorises (docs/ml/model-card.md); `false` returns to the rule-based categories |
 | `RESEND_API_KEY` | for emails | resend.com → API keys (sending access, one domain) |
-| `EMAIL_FROM` | for emails | `Vaulta <noreply@vaulta.in>` (vaulta.in verified in Resend; never a default host) |
+| `EMAIL_FROM` | for emails | `vaulta.in <noreply@vaulta.in>` (vaulta.in verified in Resend; never a default host) |
 | `INBOUND_DOMAIN` | for alert forwarding | your domain; addresses become `<token>@in.<domain>` |
 | `TELEGRAM_BOT_TOKEN` | for the bot | from @BotFather |
 | `TELEGRAM_BOT_USERNAME` | for the bot | the bot's username, without @ |
@@ -207,7 +207,7 @@ minutes. Nothing pings it to stay awake. Every caller waits for it instead:
 
 | Caller | What happens while the API starts |
 |---|---|
-| Web app | A request with no answer, or 502/503/504, shows "Waking up Vaulta…", polls `/health` with backoff for up to 2 minutes, then sends the request again (reads always; writes only if they never reached the server). After 2 minutes: "Vaulta is taking longer than usual" with Try again. The app also pings `/health` silently on load so the API starts early. `frontend/src/lib/wake.js`, `ui/WakeNotice.jsx`; tested in `wake.test.js` and `e2e/public.spec.js`. |
+| Web app | A request with no answer, or 502/503/504, shows "Waking up vaulta.in…", polls `/health` with backoff for up to 2 minutes, then sends the request again (reads always; writes only if they never reached the server). After 2 minutes: "vaulta.in is taking longer than usual" with Try again. The app also pings `/health` silently on load so the API starts early. `frontend/src/lib/wake.js`, `ui/WakeNotice.jsx`; tested in `wake.test.js` and `e2e/public.spec.js`. |
 | Hourly run | Polls `/health` with backoff (5, 10, 20, 30 s…) for up to 2 minutes, then calls the API; if it never wakes the run fails and the next hour catches up. |
 | Telegram webhook | Telegram keeps an update it couldn't deliver and tries again (pending updates are kept for up to 24 hours), so a message sent while the API sleeps arrives once it's up. |
 | Inbound alert email | The worker retries the API with backoff (2, 4, 8, 16, 30 s…) for up to 2 minutes, then fails the delivery. `infra/email-worker/src/deliver.js`, tested. |

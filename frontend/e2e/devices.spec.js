@@ -103,7 +103,7 @@ test('home, transactions, chat, sticky header, keyboard', async ({ page, request
   const input = chat.getByLabel('Ask the assistant')
   await input.fill('How much did I spend on food this month?')
   await chat.getByRole('button', { name: 'Send' }).click()
-  await expect(chat.getByLabel('Vaulta is answering')).toHaveCount(0, { timeout: 20_000 })   // the answer is in
+  await expect(chat.getByLabel('vaulta.in is answering')).toHaveCount(0, { timeout: 20_000 })   // the answer is in
   await settle(page)
   await expect(input).toBeInViewport()                             // the chat box isn't pushed off-screen
   await fits(page, testInfo)

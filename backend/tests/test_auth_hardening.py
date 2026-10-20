@@ -266,7 +266,7 @@ def test_delete_everything_deletes_the_login_and_confirms_by_email(client, monke
     client.get("/auth/me", headers=USER)
     assert client.delete("/auth/me", headers=USER).status_code == 204
     assert firebase_deletions == ["alice"]
-    assert sent == [("alice@test.local", "Your Vaulta account has been deleted")]
+    assert sent == [("alice@test.local", "Your vaulta.in account has been deleted")]
     assert _pending() == []
 
 

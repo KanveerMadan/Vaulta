@@ -62,9 +62,9 @@ function AfterLogin() {
 
 function Loader() {
   return (
-    <div className="min-h-dvh bg-canvas flex items-center justify-center" role="status" aria-label="Loading Vaulta">
+    <div className="min-h-dvh bg-canvas flex items-center justify-center" role="status" aria-label="Loading vaulta.in">
       <div className="flex flex-col items-center gap-4">
-        <span className="font-display text-2xl font-semibold tracking-tight text-ink">Vaulta</span>
+        <span className="font-display text-2xl font-semibold tracking-tight text-ink">vaulta.in</span>
         <span className="block w-24 h-px bg-line overflow-hidden"><span className="block h-px w-1/3 bg-accent animate-pulse" /></span>
       </div>
     </div>

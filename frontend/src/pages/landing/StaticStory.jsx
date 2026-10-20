@@ -6,7 +6,7 @@ const amount = (r) => `${r.flow === 'in' ? '+' : '−'}${formatINR(r.amount)}`
 /** The reduced-motion story: the same four states, side by side, nothing moves. */
 export default function StaticStory() {
   return (
-    <section aria-label="How Vaulta handles your statement" className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 grid gap-6 md:grid-cols-2">
+    <section aria-label="How vaulta.in handles your statement" className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 grid gap-6 md:grid-cols-2">
       <figure className="card p-5 space-y-3">
         <figcaption><h2 className="font-display text-xl text-ink">{CAPTIONS[0].title}</h2><p className="text-sm text-ink-2 mt-1">{CAPTIONS[0].body}</p></figcaption>
         <div className="rounded-sm border border-line p-3 text-[12px] space-y-1">

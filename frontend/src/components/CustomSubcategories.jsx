@@ -21,7 +21,7 @@ function Recheck() {
   const { plan } = state;
   return (
     <div className="border-t border-line pt-3 space-y-2" aria-live="polite">
-      <p className="text-sm text-ink-500">Re-check your past transactions with Vaulta's current categories. Ones you changed yourself are never touched, and you can undo it.</p>
+      <p className="text-sm text-ink-500">Re-check your past transactions with vaulta.in's current categories. Ones you changed yourself are never touched, and you can undo it.</p>
       {state.step === "idle" || state.step === "undone" || state.step === "error" ? (
         <>
           {state.step === "undone" && <p className="text-sm text-ink">Undone: {state.restored} transactions are back as they were.</p>}
@@ -104,7 +104,7 @@ export default function CustomSubcategories({ consent, onConsent }) {
         <div className="border-t border-line pt-3 space-y-1">
           <label className="flex items-center gap-2 text-sm text-ink">
             <input type="checkbox" checked={consent} onChange={(e) => onConsent(e.target.checked)} />
-            Let my category corrections help improve Vaulta's categories
+            Let my category corrections help improve vaulta.in's categories
           </label>
           <p className="text-xs text-ink-500">
             Off unless you turn it on. When on, the corrections you make (the merchant text with personal details already

@@ -61,13 +61,13 @@ def _rows(pairs: list[tuple[str, str]]) -> str:
 
 
 def shell(eyebrow: str, heading: str, body_html: str, footer_html: str) -> str:
-    """The frame every Vaulta email shares: wordmark, heading, white panel, quiet footer."""
+    """The frame every vaulta.in email shares: wordmark, heading, white panel, quiet footer."""
     return f"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light"><title>{escape(heading)}</title></head>
 <body style="margin:0;padding:0;background:{CANVAS};font-family:{FONT};color:{INK}">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{CANVAS}"><tr><td align="center" style="padding:28px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
-<tr><td style="padding:0 4px 20px"><span style="font-size:20px;font-weight:700;letter-spacing:-0.3px;color:{INK}"><span style="border-bottom:2px solid {ACCENT}">V</span>aulta</span></td></tr>
+<tr><td style="padding:0 4px 20px"><span style="font-size:20px;font-weight:700;letter-spacing:-0.3px;color:{INK}"><span style="border-bottom:2px solid {ACCENT}">v</span>aulta<span style="color:{ACCENT}">.in</span></span></td></tr>
 <tr><td style="padding:0 4px"><p style="margin:0;font-size:13px;color:{MUTED}">{escape(eyebrow)}</p>
 <h1 style="margin:4px 0 18px;font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-0.6px;color:{INK}">{escape(heading)}</h1></td></tr>
 <tr><td style="background:#FFFFFF;border:1px solid {LINE};border-radius:12px;padding:22px 22px 24px">{body_html}</td></tr>
@@ -88,7 +88,7 @@ def render(report: Report, user: User) -> tuple[str, str, str, dict]:
     """(subject, html, text, headers)."""
     d = report.json
     t, label = d["totals"], d["period"]["label"]
-    subject = f"Your {TYPE_NAMES[report.period_type]} Vaulta report: {label}"
+    subject = f"Your {TYPE_NAMES[report.period_type]} vaulta.in report: {label}"
     totals = [("Spent", inr(t["spend"])), ("Income", inr(t["income"])), ("Saved", inr(t["saved"]))]
     if t["savings_rate_pct"] is not None:
         totals.append(("Savings rate", f"{t['savings_rate_pct']}%"))
@@ -112,11 +112,11 @@ def render(report: Report, user: User) -> tuple[str, str, str, dict]:
     body = (f'<p style="margin:0;font-size:16px;line-height:1.6;color:{INK}">{narrative_html}</p>'
             f'{section("Totals", totals)}{section("Top categories", top)}{section("Goals", goals)}{section("Money Wrapped", wrapped)}'
             f'{button(link, "View the full report")}')
-    footer = (f'You get this because {escape(TYPE_NAMES[report.period_type])} reports are on in your Vaulta settings. '
+    footer = (f'You get this because {escape(TYPE_NAMES[report.period_type])} reports are on in your vaulta.in settings. '
               f'<a href="{escape(unsub)}" style="color:{MUTED}">Stop {escape(TYPE_NAMES[report.period_type])} emails</a>.')
     html = shell(f"Your {TYPE_NAMES[report.period_type]} report", label, body, footer)
     text = "\n".join(
-        [f"Vaulta {TYPE_NAMES[report.period_type]} report: {label}", "", report.narrative, ""]
+        [f"vaulta.in {TYPE_NAMES[report.period_type]} report: {label}", "", report.narrative, ""]
         + [f"{k}: {v}" for k, v in totals]
         + ([""] + ["Top categories:"] + [f"  {k}: {v}" for k, v in top] if top else [])
         + ([""] + ["Goals:"] + [f"  {k}: {v}" for k, v in goals] if goals else [])

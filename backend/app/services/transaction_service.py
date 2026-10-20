@@ -375,17 +375,17 @@ def explain(db: Session, txn: Transaction) -> dict:
     if txn.person_id and txn.category != txn.auto_category:
         return {**out, "source": "person", "text": "From the tag you gave this person."}
     if txn.category is None:
-        text = "No category yet: nothing Vaulta knows matched this merchant, so it's in your review queue."
+        text = "No category yet: nothing vaulta.in knows matched this merchant, so it's in your review queue."
         if auto.get("below_threshold") and alternatives:
             text = (f"No category yet. The merchant model's best guess was {alternatives[0]['name']} "
                     f"({round(alternatives[0]['probability'] * 100)}% sure), not sure enough to use, so it's in your review queue.")
         return {**out, "source": "none", "text": text}
     source = auto.get("source")
     if source == "known_merchant":
-        text = f"{auto.get('merchant') or txn.merchant_clean} is a merchant Vaulta knows: it's always {shown}."
+        text = f"{auto.get('merchant') or txn.merchant_clean} is a merchant vaulta.in knows: it's always {shown}."
     elif source == "model":
         where = " It was worked out on your device." if auto.get("on_device") else ""
-        text = f"Vaulta's merchant model is {round(auto['confidence'] * 100)}% sure this is {shown}.{where}"
+        text = f"vaulta.in's merchant model is {round(auto['confidence'] * 100)}% sure this is {shown}.{where}"
     elif source == "personal":
         like = f" ({auto['similar_to']})" if auto.get("similar_to") else ""
         text = f"You put a similar payment{like} in {shown}, so this one went there too."

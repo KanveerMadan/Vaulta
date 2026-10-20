@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 HEADER = "X-Recaptcha-Token"
 SITEVERIFY = "https://www.google.com/recaptcha/api/siteverify"
 LOW_SCORE_LIMIT, LOW_SCORE_WINDOW = 5, 3600
-FAILED = "We couldn't confirm this request came from the Vaulta app. Reload the page and try again."
+FAILED = "We couldn't confirm this request came from the vaulta.in app. Reload the page and try again."
 SLOWED = "We're seeing unusual activity from your connection. Try again in a little while."
 
 

@@ -99,7 +99,7 @@ const TransactionRow = forwardRef(function TransactionRow({ txn, onChanged, onRu
         <div className="flex-1 min-w-0">
           <p className="text-[15px] font-medium text-ink truncate">
             {name}
-            {txn.is_sample && <span className="ml-2 align-middle rounded-full bg-warn-tint px-2 py-0.5 text-micro font-medium text-ink" title="A sample from trying Vaulta out. It isn't counted anywhere and goes by itself within an hour.">Sample</span>}
+            {txn.is_sample && <span className="ml-2 align-middle rounded-full bg-warn-tint px-2 py-0.5 text-micro font-medium text-ink" title="A sample from trying vaulta.in out. It isn't counted anywhere and goes by itself within an hour.">Sample</span>}
           </p>
           <div className="text-micro text-muted flex items-center gap-1.5 flex-wrap">
             {txn.is_sample ? (

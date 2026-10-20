@@ -25,7 +25,7 @@ export default function SamplesBanner({ count: known, refreshKey = 0, onCleared 
   return (
     <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-warn-tint/60 px-4 py-3 text-sm text-ink">
       <span>
-        {count} sample transaction{count === 1 ? "" : "s"} from trying Vaulta out. They aren't counted anywhere and go by
+        {count} sample transaction{count === 1 ? "" : "s"} from trying vaulta.in out. They aren't counted anywhere and go by
         themselves within an hour.
       </span>
       <button onClick={clear} className="btn-secondary">Clear samples</button>
