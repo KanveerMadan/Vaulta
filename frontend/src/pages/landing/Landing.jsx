@@ -58,7 +58,7 @@ function Hero({ ctas }) {
           Kahan gaye <span className="text-accent-text">paise?</span>
         </h1>
         <p className="mt-6 text-[clamp(1.125rem,4.4vw,1.4rem)] leading-snug text-ink-2 max-w-[30ch]">
-          Vaulta knows. Without your bank login, your SMS, or a single typed entry.
+          vaulta.in knows. Without your bank login, your SMS, or a single typed entry.
         </p>
         <div className="mt-8">{ctas}</div>
         <ul aria-label="At a glance" className="mt-8 flex flex-wrap gap-2">
@@ -72,7 +72,7 @@ function Hero({ ctas }) {
       <div className="relative">
         <div className="absolute inset-x-6 top-10 bottom-0 rounded-[3rem] bg-accent-tint blur-2xl" aria-hidden="true" />
         <div className="relative">
-          <Phone name="home" eager alt="Vaulta's home screen on a phone: safe to spend today ₹2,239, ₹26,863 left this month for 12 days, on pace for ₹45,012 and ₹24,988 under budget, with recent transactions starting at Swiggy." />
+          <Phone name="home" eager alt="vaulta.in's home screen on a phone: safe to spend today ₹2,239, ₹26,863 left this month for 12 days, on pace for ₹45,012 and ₹24,988 under budget, with recent transactions starting at Swiggy." />
         </div>
       </div>
     </section>
@@ -127,7 +127,7 @@ function StillStage() {
         </ul>
       </div>
       <div>
-        <p className="text-micro font-semibold uppercase tracking-wide text-muted">What reaches Vaulta</p>
+        <p className="text-micro font-semibold uppercase tracking-wide text-muted">What reaches vaulta.in</p>
         <ul className="mt-2 divide-y divide-line text-sm">
           {ROWS.map((r) => <li key={r.raw} className="flex gap-3 py-1.5"><span className="num text-muted w-12">{r.date}</span><span className="flex-1 text-ink truncate">{r.clean}</span><span className="num font-semibold">{r.flow === 'in' ? '+' : '−'}{formatINR(r.amount)}</span></li>)}
         </ul>
@@ -150,30 +150,30 @@ function Why({ reduce }) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28 grid gap-12 [&>*]:min-w-0 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-14">
         <div>
           <Reveal>
-            <p className="text-micro font-semibold uppercase tracking-[0.14em] text-accent-text">Why Vaulta</p>
+            <p className="text-micro font-semibold uppercase tracking-[0.14em] text-accent-text">Why vaulta.in</p>
             <h2 id="why" className="mt-3 font-display text-[clamp(2rem,5.5vw,3.25rem)] leading-[1.02] tracking-[-0.03em] text-ink">
               Many finance apps want everything. We want three columns.
             </h2>
           </Reveal>
           {/* phones: one card per row; wider screens: the table */}
-          <ul className="mt-10 grid gap-3 sm:hidden" aria-label="Many finance apps compared with Vaulta">
+          <ul className="mt-10 grid gap-3 sm:hidden" aria-label="Many finance apps compared with vaulta.in">
             {COMPARE.map(([what, them, us]) => (
               <li key={what} className="rounded-lg border border-line bg-canvas p-4">
                 <p className="font-semibold text-ink">{what}</p>
                 <dl className="mt-2 grid grid-cols-2 gap-3 text-sm">
                   <div><dt className="text-muted">Many finance apps</dt><dd className="text-ink-2">{them}</dd></div>
-                  <div><dt className="text-muted">Vaulta</dt><dd className="font-semibold text-accent-text">{us}</dd></div>
+                  <div><dt className="text-muted">vaulta.in</dt><dd className="font-semibold text-accent-text">{us}</dd></div>
                 </dl>
               </li>
             ))}
           </ul>
           <table className="mt-10 hidden sm:table w-full text-left text-[15px]">
-            <caption className="sr-only">Many finance apps compared with Vaulta</caption>
+            <caption className="sr-only">Many finance apps compared with vaulta.in</caption>
             <thead>
               <tr className="border-b border-line-strong text-sm text-muted">
                 <th scope="col" className="py-3 pr-4 font-medium"><span className="sr-only">What</span></th>
                 <th scope="col" className="py-3 pr-4 font-medium">Many finance apps</th>
-                <th scope="col" className="py-3 font-semibold text-accent-text">Vaulta</th>
+                <th scope="col" className="py-3 font-semibold text-accent-text">vaulta.in</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -186,7 +186,7 @@ function Why({ reduce }) {
               ))}
             </tbody>
           </table>
-          <p className="mt-6 text-sm text-muted">Every Vaulta line here is checked against the code. <Link to="/security" className="text-accent-text underline underline-offset-2">How each one works</Link>.</p>
+          <p className="mt-6 text-sm text-muted">Every vaulta.in line here is checked against the code. <Link to="/security" className="text-accent-text underline underline-offset-2">How each one works</Link>.</p>
         </div>
         <div className="lg:sticky lg:top-0 lg:h-[100dvh] flex flex-col justify-center">
           <p className="mb-3 text-sm font-medium text-ink-2">Your statement, as it leaves your phone:</p>

@@ -19,8 +19,8 @@ h1 span{color:#17643F} p{font-size:30px;line-height:1.3;color:#3C463F;margin:28p
 .phone{position:absolute;right:96px;top:56px;width:300px;border-radius:44px;background:#101511;padding:11px;box-shadow:0 24px 60px rgba(16,32,22,.25)}
 .phone img{display:block;width:100%;border-radius:34px}
 .glow{position:absolute;right:60px;top:120px;width:380px;height:480px;border-radius:60px;background:#E3F0E8;filter:blur(30px)}
-</style></head><body><div class="wrap"><span class="brand">Vaulta</span>
-<h1>Kahan gaye <span>paise?</span></h1><p>Vaulta knows. No bank login, no SMS, no typing.</p>
+</style></head><body><div class="wrap"><span class="brand">vaulta<span style="color:#17643F">.in</span></span>
+<h1>Kahan gaye <span>paise?</span></h1><p>vaulta.in knows. No bank login, no SMS, no typing.</p>
 <div class="glow"></div><div class="phone"><img src="file://${f("public/landing/home@2x.webp")}"></div></div></body></html>`;
 const b = await chromium.launch(); const page = await b.newPage({ viewport: { width: 1200, height: 630 } });
 // a file page, so it may load the local fonts and screenshot

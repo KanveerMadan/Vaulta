@@ -98,7 +98,11 @@ test('sign in with Google is the big, filled action, in the hero and at the end;
     const bg = await primary.nth(i).evaluate((e) => getComputedStyle(e).backgroundColor)
     expect(bg).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/)                       // filled
   }
-  for (const el of [primary.first(), demo.first()]) { await el.focus(); await expect(el).toBeFocused() }   // keyboard-focusable buttons
+  await page.goto('/welcome')                                                      // fresh page, then: keyboard-focusable buttons
+  for (const [el, kind] of [[primary.first(), 'primary'], [demo.first(), 'demo']]) {
+    await el.focus()   // the page's active element (toBeFocused also needs the window focused, which parallel runs don't give)
+    expect(await page.evaluate(() => document.activeElement?.dataset?.cta)).toBe(kind)
+  }
 })
 
 test('privacy policy and security.txt', async ({ page, request }, testInfo) => {
@@ -185,7 +189,7 @@ test('reduced motion: the statement story is still, and the animation code never
   await page.goto('/welcome')
   const why = page.getByRole('region', { name: 'Many finance apps want everything. We want three columns.' })
   await why.scrollIntoViewIfNeeded()
-  await expect(why.getByText('What reaches Vaulta')).toBeVisible()
+  await expect(why.getByText('What reaches vaulta.in')).toBeVisible()
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await page.waitForTimeout(500)
   expect(scripts.filter((u) => /WhyStage|StatementStage/.test(u))).toEqual([])
