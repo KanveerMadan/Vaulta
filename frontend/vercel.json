@@ -40,7 +40,7 @@
   ],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/((?!__/).*)",
       "headers": [
         {
           "key": "Content-Security-Policy",

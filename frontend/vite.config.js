@@ -83,7 +83,8 @@ export default defineConfig(({ mode }) => {
           options: { cacheName: 'merchant-model', expiration: { maxEntries: 4 } },
         }],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/auth\//, /^\/internal\//, /^\/unsubscribe/],
+        // /__/: Firebase's sign-in handler and iframe, proxied to firebaseapp.com (vercel.json); never the app
+        navigateFallbackDenylist: [/^\/__\//, /^\/api\//, /^\/auth\//, /^\/internal\//, /^\/unsubscribe/],
       },
       manifest: {
         name: 'vaulta.in',
