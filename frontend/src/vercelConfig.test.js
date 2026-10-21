@@ -1,5 +1,6 @@
 // vercel.json is checked with Vercel's own route parser: an invalid pattern fails every deployment (it did, unnoticed,
 // from Phase 6 to the release branch), and nothing else in CI reads this file.
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { getTransformedRoutes } from '@vercel/routing-utils'
 import config from '../vercel.json'
@@ -45,5 +46,24 @@ describe('vercel.json', () => {
     expect(auth).toBeGreaterThan(-1)
     expect(matches(routes[auth], '/__/auth/handler')).toBe(true)
     expect(auth).toBeLessThan(routes.findIndex((r) => r.dest === '/index.html'))
+    const fb = routes.findIndex((r) => r.dest?.startsWith('https://vaulta-a3d7a.firebaseapp.com/__/firebase/'))
+    expect(fb).toBeGreaterThan(-1)
+    expect(fb).toBeLessThan(routes.findIndex((r) => r.dest === '/index.html'))
+  })
+
+  // Our CSP blocked the handler's inline script and frame-ancestors 'none' blocked the iframe vaulta.in embeds
+  it("leaves Firebase's sign-in pages with Firebase's own headers", () => {
+    for (const path of ['/__/auth/handler', '/__/auth/iframe', '/__/firebase/init.json']) {
+      const h = headersFor(path)
+      expect(h['Content-Security-Policy'], path).toBeUndefined()
+      expect(h['X-Frame-Options'], path).toBeUndefined()
+    }
+  })
+
+  // The service worker answered /__/auth/handler with the app, which redirected the Google popup to /welcome
+  it('the service worker never answers /__/ with the app', () => {
+    const viteConfig = readFileSync(new URL('../vite.config.js', import.meta.url), 'utf8')
+    const deny = viteConfig.match(/navigateFallbackDenylist: \[(.*)\]/)[1]
+    expect(deny).toContain(String.raw`/^\/__\//`)
   })
 })

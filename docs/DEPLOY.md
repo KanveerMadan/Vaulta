@@ -42,6 +42,9 @@ flowchart LR
 4. A change with a migration: run the migration **before** merging (next section), as the launch did, so the new API
    is ready the moment it starts. If a deploy already failed its health check for that reason, migrate, then Render →
    `vaulta-api` → **Manual Deploy → Deploy latest commit**.
+5. After a deploy that touches `vercel.json`, the service worker (`vite.config.js`) or sign-in, run the sign-in smoke
+   test against production: `cd frontend && node ../scripts/auth-smoke.mjs https://vaulta.in` (add `--browser webkit`
+   or `--device "iPhone 15 Pro"` for Safari and phones). It creates no account.
 
 ## Migrations (Alembic)
 
@@ -220,6 +223,10 @@ cd backend && python scripts/recategorise.py --apply
   - hashed `/assets/*`: one year, immutable;
   - `index.html`, the service worker, `registerSW.js`, the manifest and HTML navigations: `no-cache`.
 - **Routing:** unknown paths without a file extension fall back to `index.html` (SPA). A missing asset is a real 404.
+- **Firebase sign-in:** `/__/auth/*` and `/__/firebase/*` are proxied to `vaulta-a3d7a.firebaseapp.com` before the SPA
+  fallback, so the Google popup runs on vaulta.in. Those pages get none of the headers above (our CSP would block their
+  inline script and `frame-ancestors 'none'` the iframe the app embeds), and the service worker never answers `/__/`
+  with the app (`navigateFallbackDenylist`). `src/vercelConfig.test.js` checks all three.
 
 ## Backups
 

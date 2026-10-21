@@ -45,7 +45,7 @@ for (const scheme of ['light', 'dark']) {
       await page.goto('/budgets'); await settle(page)
       await expect(page).toHaveScreenshot(`budgets-${scheme}.png`, mask(page))
       await page.goto(`/reports/${report.id}`); await settle(page)
-      await expect(page).toHaveScreenshot(`report-${scheme}.png`, { ...mask(page), mask: [...dynamic(page), page.locator('h1'), page.locator('header p'), page.locator('section[aria-labelledby="summary-title"]'), page.locator('main section ul, main section ol, main section figure')] })
+      await expect(page).toHaveScreenshot(`report-${scheme}.png`, { ...mask(page), mask: [...dynamic(page), page.locator('h1'), page.locator('header p'), page.locator('section[aria-labelledby="summary-title"]'), page.locator('main section ul, main section ol, main section figure'), page.locator('main dl + p')] })   // dl + p: the change on the previous period, which moves with the date
       await page.goto('/settings'); await settle(page)
       await expect(page).toHaveScreenshot(`settings-${scheme}.png`, mask(page))
     })
