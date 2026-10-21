@@ -55,6 +55,19 @@ point `DATABASE_URL` (Render) at it.
    merge, Render deploys `main`.
 3. If it's breaking sign-ins or imports for everyone: Render → Rollback to the last good deploy first, fix after.
 
+## A statement import fails
+
+The app says why: the server's reason, the row it refused (with the field) or "took too long", and how many rows
+were saved before it stopped. Importing the file again is always safe: saved rows come back as duplicates.
+1. Render → `vaulta-api` → **Logs**, search `"route": "/api/import/batch"`: each request's `status` and
+   `latency_ms`. A batch is 50 rows and the app waits 90 s for each (`frontend/src/import/submit.js`); latencies
+   approaching that mean the database or the instance is slow (Neon's Monitoring page, Render's Metrics).
+2. `"status": 500` → the error line with the same `request_id` (the app shows it as "reference …") has the exception
+   type and where it was raised; Sentry has the issue.
+3. `import_rows: … row failed` lines → single rows the database refused; the app reports them as "rows couldn't be
+   saved" and a re-import retries just those.
+4. `"status": 429` → over 240 import requests in an hour for that user (`app/api/routes/imports.py`).
+
 ## Hourly run failed (GitHub email)
 
 Actions → **Hourly run** → the failed run's log.

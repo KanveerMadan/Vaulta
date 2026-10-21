@@ -17,10 +17,10 @@ from app.core import clock
 
 TRACKED = ("model", "on_device", "known_merchant", "personal")
 _BUMP = {
-    "categorised": text("INSERT INTO model_metrics (day, source, categorised) VALUES (:d, :s, 1) "
-                        "ON CONFLICT (day, source) DO UPDATE SET categorised = model_metrics.categorised + 1"),
-    "corrected": text("INSERT INTO model_metrics (day, source, corrected) VALUES (:d, :s, 1) "
-                      "ON CONFLICT (day, source) DO UPDATE SET corrected = model_metrics.corrected + 1"),
+    "categorised": text("INSERT INTO model_metrics (day, source, categorised) VALUES (:d, :s, :n) "
+                        "ON CONFLICT (day, source) DO UPDATE SET categorised = model_metrics.categorised + :n"),
+    "corrected": text("INSERT INTO model_metrics (day, source, corrected) VALUES (:d, :s, :n) "
+                      "ON CONFLICT (day, source) DO UPDATE SET corrected = model_metrics.corrected + :n"),
 }
 
 
@@ -33,11 +33,11 @@ def source_of(explanation: Optional[dict]) -> Optional[str]:
     return source if source in TRACKED else None
 
 
-def bump(db: Session, source: Optional[str], column: str) -> None:
-    """Add one to today's count. Caller commits."""
-    if source is None:
+def bump(db: Session, source: Optional[str], column: str, by: int = 1) -> None:
+    """Add `by` (one) to today's count. Caller commits."""
+    if source is None or by <= 0:
         return
-    db.execute(_BUMP[column], {"d": clock.today(), "s": source})
+    db.execute(_BUMP[column], {"d": clock.today(), "s": source, "n": by})
 
 
 def summary(db: Session, days: int = 30) -> dict:

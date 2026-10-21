@@ -14,6 +14,8 @@ RequestMiddleware (pure ASGI, outermost) per request:
   - MAX_BODY_BYTES on request bodies (413)
   - unhandled errors → 500 {"detail": "Something went wrong.", "request_id"}: no stack trace or message to the client;
     the log gets the exception type and where it was raised, not its message (which can hold SQL parameters)
+  - the CORS headers on the 500s and 413s it makes itself: they're sent from outside CORSMiddleware, and without them
+    the browser hides the answer and the web app sees only a network error
 """
 
 from __future__ import annotations
@@ -95,8 +97,16 @@ def _where(exc: BaseException) -> str:
 
 
 class RequestMiddleware:
-    def __init__(self, app):
+    def __init__(self, app, cors=None):
         self.app = app
+        self.cors = cors        # a CORSMiddleware with the app's settings, consulted for the replies made here
+
+    def _cors_headers(self, origin: Optional[str]) -> list[tuple[bytes, bytes]]:
+        if self.cors is None or not origin or not self.cors.is_allowed_origin(origin):
+            return []
+        out = [(b"access-control-allow-origin", origin.encode()), (b"vary", b"Origin")]
+        return out + [(k.lower().encode(), v.encode()) for k, v in self.cors.simple_headers.items()
+                      if k.lower() != "access-control-allow-origin"]
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
@@ -109,6 +119,7 @@ class RequestMiddleware:
 
         headers = dict((k.decode().lower(), v.decode()) for k, v in scope.get("headers", []))
         length = headers.get("content-length")
+        cors = self._cors_headers(headers.get("origin"))
 
         too_large = json.dumps({"detail": "Request too large.", "request_id": rid}).encode()
 
@@ -116,7 +127,7 @@ class RequestMiddleware:
             if state.get("too_large"):          # the body went over the limit mid-stream: answer 413 instead
                 if message["type"] == "http.response.start":
                     message = {"type": "http.response.start", "status": 413,
-                               "headers": [(b"content-type", b"application/json")]}
+                               "headers": [(b"content-type", b"application/json"), *cors]}
                 elif message["type"] == "http.response.body":
                     message = {"type": "http.response.body", "body": too_large if not state.get("sent_413") else b""}
                     state["sent_413"] = True
@@ -145,7 +156,7 @@ class RequestMiddleware:
 
         async def reply(status: int, body: dict):
             await send_wrapper({"type": "http.response.start", "status": status,
-                                "headers": [(b"content-type", b"application/json")]})
+                                "headers": [(b"content-type", b"application/json"), *cors]})
             await send({"type": "http.response.body", "body": json.dumps(body).encode()})
 
         with request_scope():

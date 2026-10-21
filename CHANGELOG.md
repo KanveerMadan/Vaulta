@@ -5,6 +5,15 @@ follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Statement import failed on larger statements** (a 218-row Kotak Mahindra statement, 21 Oct 2026) with only "Import
+  failed". Each 200-row batch cost the API about 2,500 database queries, enough on the free instance to run past the
+  app's 20-second limit, and a timed-out batch was never sent again. The app now sends 50 rows a request with 90 seconds each, resends a batch that timed out or met a waking
+  API (safe: saved rows come back as duplicates), and says what went wrong: the server's reason, the row it refused,
+  or how many rows were saved before a failure. The API writes the categorisation counts once per batch instead of
+  once per row, and its own 500 and 413 answers now carry CORS headers, so the browser can read them.
+
 ### Changed
 
 - **Brand: vaulta.in.** The name people see is now exactly "vaulta.in" (lowercase, with the .in) everywhere: the app,
