@@ -5,7 +5,16 @@ follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A UPI payment made between midnight and 5:30 am could be counted twice** when a Google Pay or PhonePe statement was
+  imported before the bank statement covering it and the bank row had no UTR: the date-and-merchant match compared the
+  bank's date with the payment's UTC date. It now compares Indian dates.
+
 ### Changed
+
+- The import dialog and onboarding say that UPI app statements cover past months only, and how to get this month in
+  (a bank statement for any date range, and forwarded bank alerts).
 
 - **Brand: vaulta.in.** The name people see is now exactly "vaulta.in" (lowercase, with the .in) everywhere: the app,
   page titles and share tags, the installable app's name, emails, the Telegram bot's messages and the docs. "Vaulta"

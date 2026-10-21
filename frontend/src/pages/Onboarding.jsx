@@ -4,7 +4,7 @@ import api from "../lib/api";
 import { useApi } from "../lib/format";
 import InboundCard from "../components/InboundCard";
 import TelegramLink from "../components/TelegramLink";
-import StatementUpload from "../components/StatementUpload";
+import StatementUpload, { UPI_MONTHS_HINT } from "../components/StatementUpload";
 import ReviewFlow from "../components/ReviewFlow";
 import { Ring, CoverageParts } from "../components/CoverageRing";
 import Wordmark from "../ui/Wordmark";
@@ -129,6 +129,7 @@ function ImportHistory({ state, save }) {
         Import the last 3 to 6 months so vaulta.in can spot your recurring payments, the people you pay and what's normal for you.
         Statements are read on this device; only the rows you confirm are sent.
       </p>
+      <p className="text-sm text-ink-600">{UPI_MONTHS_HINT}</p>
       {lines.length > 0 && (
         <div className="card p-5">
           <h3 className="text-sm font-medium text-ink-900 mb-2">What to download</h3>
