@@ -34,6 +34,9 @@ describe("search metadata", () => {
     for (const k of ["og:title", "twitter:title"]) {
       expect(html).toContain(`="${k}" content="Kahan gaye paise? vaulta.in does." />`); // the hero's answer line
     }
+    for (const k of ["og:description", "twitter:description"]) {
+      expect(html).toContain(`="${k}" content="The question every month ends with. You never quite know the answer. vaulta.in does. Without your bank login, your SMS, or a single typed entry." />`);
+    }
     const png = readFileSync(new URL("../../public/og.png", import.meta.url));
     expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
   });
