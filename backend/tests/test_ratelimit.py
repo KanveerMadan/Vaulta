@@ -40,8 +40,9 @@ def test_routes_answer_429_with_retry_after(client):
     res = client.post("/auth/demo")
     assert res.status_code == 429 and 0 < int(res.headers["retry-after"]) <= 600
     body = {"rows": [row()]}
-    statuses = [client.post("/api/import/batch", json=body, headers=USER).status_code for _ in range(61)]
-    assert statuses[:60] == [200] * 60 and statuses[60] == 429
+    from app.api.routes.imports import REQUESTS_PER_HOUR
+    statuses = [client.post("/api/import/batch", json=body, headers=USER).status_code for _ in range(REQUESTS_PER_HOUR + 1)]
+    assert statuses[:-1] == [200] * REQUESTS_PER_HOUR and statuses[-1] == 429
 
 
 def test_repeated_bad_tokens_from_one_ip_are_slowed_down(client, monkeypatch):

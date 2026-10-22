@@ -9,7 +9,7 @@ import { parseStatement, ImportError } from "../import";
 import { applyMapping, guessMapping, mappedBalanceCheck } from "../import/mapping";
 import { sanitizeRows } from "../import/pii";
 import RemovedPanel from "./RemovedPanel";
-import { sendRows, loadTemplate, saveTemplate } from "../import/submit";
+import { sendRows, loadTemplate, saveTemplate, importErrorMessage } from "../import/submit";
 import ColumnMapping from "./ColumnMapping";
 
 const MAX_FILE_SIZE_MB = 20;
@@ -338,7 +338,7 @@ export default function StatementUpload({ onSuccess, onClose, sample = null }) {
       setStep("done");
       onSuccess?.();
     } catch (err) {
-      setError(err?.response?.data?.detail?.[0]?.msg || err?.response?.data?.detail || "Import failed. Nothing is lost: try again and already-saved rows are skipped.");
+      setError(importErrorMessage(err, rows.length));
     } finally {
       setBusy(false);
       setProgress(null);

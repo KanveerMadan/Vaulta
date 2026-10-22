@@ -79,8 +79,7 @@ app = FastAPI(
 # ── CORS ───────────────────────────────────────────────────────────────────────
 from fastapi.middleware.cors import CORSMiddleware
 
-app.add_middleware(
-    CORSMiddleware,
+cors_options = dict(
     allow_origins=settings.cors_origins(),
     allow_origin_regex=settings.BACKEND_CORS_ORIGIN_REGEX or None,   # Vercel preview deployments
     allow_credentials=False,             # auth is a bearer header, never cookies
@@ -88,12 +87,13 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Recaptcha-Token"],
 )
+app.add_middleware(CORSMiddleware, **cors_options)
 
 # ── Request wrapper (app/core/logs.py), outermost: request id, user scope, security headers, body limit,
 #    generic 500s, one structured log line per request ──
 from app.core.logs import RequestMiddleware
 
-app.add_middleware(RequestMiddleware)
+app.add_middleware(RequestMiddleware, cors=CORSMiddleware(None, **cors_options))   # CORS on its own 500s and 413s
 
 # ── Errors the web app acts on (email_unverified, reauth_required, …): {"detail", "code"} ──
 from app.core.auth import CodedError  # noqa: E402

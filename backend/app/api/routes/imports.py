@@ -2,7 +2,7 @@
 Statement import routes. Statements are parsed in the browser; the server
 never receives the file.
 
-  POST /api/import/batch                   sanitized JSON rows (max 500) → saved via
+  POST /api/import/batch                   sanitized JSON rows (max 500; the web app sends 50) → saved via
                                            the merchant normalizer and dedup matcher
   GET /api/import/templates/{fingerprint}  saved column mapping for a header layout
   PUT /api/import/templates/{fingerprint}  save/replace it
@@ -29,7 +29,12 @@ router = APIRouter(prefix="/api/import", tags=["import"])
 Fingerprint = Path(pattern=r"^[0-9a-f]{64}$")
 
 
-@router.post("/batch", response_model=ImportBatchResult, dependencies=[Depends(recaptcha.require("import")), Depends(per_user("import", 60, 3600))])
+# The web app sends 50 rows a request (frontend/src/import/submit.js) and resends a batch that timed out, so the limit
+# counts requests generously: 240 an hour is 12,000 rows.
+REQUESTS_PER_HOUR = 240
+
+
+@router.post("/batch", response_model=ImportBatchResult, dependencies=[Depends(recaptcha.require("import")), Depends(per_user("import", REQUESTS_PER_HOUR, 3600))])
 def import_batch(
     payload: ImportBatch,
     current_user: User = Depends(get_current_user),

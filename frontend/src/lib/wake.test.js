@@ -23,6 +23,9 @@ describe('wake', () => {
     expect(canResend({ method: 'post' }, { code: 'ERR_NETWORK' })).toBe(true)
     expect(canResend({ method: 'post' }, { code: 'ECONNABORTED' })).toBe(false)       // timed out: it may have run
     expect(canResend({ method: 'post' }, { response: { status: 503 } })).toBe(false)
+    // the server makes these harmless to repeat (import batches: rows already saved come back as duplicates)
+    expect(canResend({ method: 'post', idempotent: true }, { code: 'ECONNABORTED' })).toBe(true)
+    expect(canResend({ method: 'post', idempotent: true }, { response: { status: 503 } })).toBe(true)
   })
 
   it('an API that is already up shows nothing', async () => {
