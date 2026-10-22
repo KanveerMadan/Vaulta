@@ -11,6 +11,7 @@ import hashlib
 import logging
 import re
 import uuid
+from collections import Counter
 from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
 from typing import List, Optional
@@ -124,6 +125,7 @@ def import_rows(db: Session, user: User, rows: List[ImportRow], simulation_id: O
     result = ImportBatchResult()
     seen: dict[tuple, int] = {}
     batch_txn_ids: set = set()
+    categorised: Counter = Counter()          # model_metrics, written once per batch rather than once per row
     memory = categorizer.load_memory(db, user.id) if categorizer.enabled() else []
 
     for row in rows:
@@ -195,10 +197,13 @@ def import_rows(db: Session, user: User, rows: List[ImportRow], simulation_id: O
         else:
             result.imported += 1
             if category is not None and simulation_id is None:
-                model_metrics.bump(db, model_metrics.source_of(explanation), "categorised")
-                db.commit()
+                categorised[model_metrics.source_of(explanation)] += 1
             if category is None:
                 result.rows_needing_review += 1
+
+    for source, n in categorised.items():
+        model_metrics.bump(db, source, "categorised", n)
+    db.commit()
 
     ctx = run_detection(db, user)
     result.transfers_flagged = sum(1 for t in ctx.txns if t.id in batch_txn_ids and t.kind == TransactionKind.transfer)
