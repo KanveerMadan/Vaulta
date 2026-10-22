@@ -43,6 +43,10 @@ logger = logging.getLogger(__name__)
 # tier 4, but tiers 2-3 are equally first-guess right now).
 TIER2_VPA_WINDOW = timedelta(minutes=2)
 TIER3_TIME_WINDOW = timedelta(minutes=10)
+# Statement dates are Indian calendar dates (import_rows reads row times as IST). Tier 4 compares them in IST, not in
+# the database session's timezone: on a UTC database a UPI payment at 01:15 IST fell on the previous day and a bank row
+# for it without a UTR was counted a second time.
+STATEMENT_TIMEZONE = "Asia/Kolkata"
 
 _MIN_TOKEN_LEN = 3
 
@@ -194,7 +198,7 @@ def _try_tier4_date_and_merchant(
             Transaction.user_id == user_id,
             Transaction.amount == amount,
             Transaction.split_parent_id.is_(None),
-            func.date(Transaction.transaction_date) == raw_date,
+            func.date(func.timezone(STATEMENT_TIMEZONE, Transaction.transaction_date)) == raw_date,
         )
         .all()
     )

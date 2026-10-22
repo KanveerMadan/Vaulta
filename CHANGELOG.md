@@ -13,9 +13,14 @@ follow [Semantic Versioning](https://semver.org/).
   API (safe: saved rows come back as duplicates), and says what went wrong: the server's reason, the row it refused,
   or how many rows were saved before a failure. The API writes the categorisation counts once per batch instead of
   once per row, and its own 500 and 413 answers now carry CORS headers, so the browser can read them.
+- **A UPI payment made between midnight and 5:30 am could be counted twice** when a Google Pay or PhonePe statement was
+  imported before the bank statement covering it and the bank row had no UTR: the date-and-merchant match compared the
+  bank's date with the payment's UTC date. It now compares Indian dates.
 
 ### Changed
 
+- The import dialog and onboarding say that UPI app statements cover past months only, and how to get this month in
+  (a bank statement for any date range, and forwarded bank alerts).
 - **Brand: vaulta.in.** The name people see is now exactly "vaulta.in" (lowercase, with the .in) everywhere: the app,
   page titles and share tags, the installable app's name, emails, the Telegram bot's messages and the docs. "Vaulta"
   alone collides in search with an EOS crypto rebrand and another finance app. Domains, email addresses, code,

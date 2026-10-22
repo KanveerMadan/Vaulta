@@ -19,6 +19,10 @@ const VALID = { date: /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/, amount: /^\d{1
 export const ON_DEVICE_NOTICE =
   "Your statement is processed on your device and never uploaded. Only the rows shown here are sent.";
 
+// Google Pay and PhonePe statements stop at the last completed month (shown here and in onboarding)
+export const UPI_MONTHS_HINT =
+  "UPI app statements cover past months only. For this month, import your bank statement (any date range) and forward bank alerts so new spends arrive automatically.";
+
 // Common password formats for e-statements. Banks change these; the email
 // that delivered the statement states the current rule.
 const PASSWORD_HINTS = [
@@ -345,6 +349,7 @@ export default function StatementUpload({ onSuccess, onClose, sample = null }) {
     <Sheet title={sample ? "Sample statement" : "Import statement"} onClose={onClose} wide={step === "preview" || step === "mapping"}>
       <div>
         <p className="text-sm text-muted -mt-1 mb-4">Bank CSV, Excel or PDF, credit card PDF, Google Pay, PhonePe or Paytm</p>
+        {step === "pick" && !sample && <p className="text-xs text-muted -mt-2 mb-4">{UPI_MONTHS_HINT}</p>}
 
         <div className="space-y-5">
           {error && <ErrorBox message={typeof error === "string" ? error : "Import failed."} />}
