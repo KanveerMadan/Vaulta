@@ -33,7 +33,7 @@ jobs:
       TEST_DATABASE_URL: postgresql://vaulta@localhost:54329/vaulta_test
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: { python-version: "${{ env.PYTHON_VERSION }}", cache: pip, cache-dependency-path: "backend/requirements*.txt" }
       - run: pip install -r backend/requirements.txt -r backend/requirements-dev.txt
       - name: pytest (includes migrations up/down/up, RLS, encryption, log checks)
@@ -94,7 +94,7 @@ jobs:
     defaults: { run: { working-directory: ml } }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: { python-version: "${{ env.PYTHON_VERSION }}", cache: pip, cache-dependency-path: "ml/requirements.txt" }
       - run: pip install -r requirements.txt
       - name: Regenerate the synthetic data (must match the committed summary exactly)
@@ -117,7 +117,7 @@ jobs:
       E2E_DATABASE_URL: postgresql://vaulta@localhost:54329/vaulta_e2e
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: { python-version: "${{ env.PYTHON_VERSION }}", cache: pip, cache-dependency-path: "backend/requirements*.txt" }
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with: { node-version: "${{ env.NODE_VERSION }}", cache: npm, cache-dependency-path: frontend/package-lock.json }
@@ -141,7 +141,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { fetch-depth: 0 }                # the secret check reads every version of every file
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: { python-version: "${{ env.PYTHON_VERSION }}" }
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with: { node-version: "${{ env.NODE_VERSION }}" }
@@ -185,7 +185,7 @@ jobs:
       E2E_DATABASE_URL: postgresql://vaulta@localhost:54329/vaulta_e2e
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: { python-version: "${{ env.PYTHON_VERSION }}", cache: pip, cache-dependency-path: "backend/requirements*.txt" }
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with: { node-version: "${{ env.NODE_VERSION }}", cache: npm, cache-dependency-path: frontend/package-lock.json }
